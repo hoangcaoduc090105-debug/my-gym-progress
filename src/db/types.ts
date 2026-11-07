@@ -84,6 +84,8 @@ export interface Settings {
   barbell: { barWeightKg: number; platesKg: number[] };
   /** v1.8: đơn vị hiển thị/nhập khối lượng. Lưu trữ luôn là kg. */
   weightUnit: 'kg' | 'lb';
+  /** v1.8: thông báo khi mở app nếu có buổi đến hạn. */
+  dueNotifications: boolean;
   updatedAt: string;
 }
 

@@ -87,6 +87,7 @@ export const settingsSchema = z.object({
     })
     .optional(),
   weightUnit: z.enum(['kg', 'lb']).optional(),
+  dueNotifications: z.boolean().optional(),
   updatedAt: timestamp,
 });
 

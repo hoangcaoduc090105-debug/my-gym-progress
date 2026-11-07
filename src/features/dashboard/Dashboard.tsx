@@ -10,7 +10,7 @@ import { useUnits } from '../../app/useUnits';
 import { activeCompleted } from '../../domain/sets';
 import { countWorkingSets } from '../../domain/volume';
 import { latest, weeklyWeightChange, daysSinceLastCircumference } from '../../domain/bodyTrends';
-import { nextWorkout } from '../../domain/schedule';
+import { dueSchedules, nextWorkout } from '../../domain/schedule';
 import { proteinProgress, sumLogs } from '../../domain/nutrition';
 import { endOfWeek, formatDate, formatShort, startOfWeek, todayISO } from '../../lib/date';
 import { fmt1, signed } from '../../lib/format';
@@ -43,6 +43,8 @@ export function Dashboard() {
   const change = weeklyWeightChange(data.metrics, today);
   const active = data.programs.find((p) => p.isActive) ?? null;
   const next = nextWorkout({ program: active, programs: data.programs, sessions: data.sessions, schedule: data.schedule, today });
+  // Cùng một định nghĩa "đến hạn" với huy hiệu app và thông báo (domain/schedule.dueSchedules).
+  const overdue = dueSchedules(data.schedule, data.sessions, today).filter((x) => x.date < today);
   const protein = proteinProgress(sumLogs(data.foodLogs).proteinG, profile.proteinTargetMinG, profile.proteinTargetMaxG);
   const sinceMeasure = daysSinceLastCircumference(data.metrics, today);
   const needMeasure = sinceMeasure == null || sinceMeasure >= settings.measurementReminderDays;
@@ -97,6 +99,11 @@ export function Dashboard() {
                 Bắt đầu
               </Button>
             </div>
+            {overdue.length > 0 && (
+              <Link to="/lich-tap?tab=calendar" className="mt-2 inline-block text-xs font-medium text-white underline" data-testid="overdue-schedules">
+                {overdue.length} lịch hẹn đã qua chưa tập — xem Lịch
+              </Link>
+            )}
             <ul className="mt-3 flex flex-wrap gap-1.5">
               {next.day.exercises.map((e) => (
                 <li key={e.id} className="rounded-full bg-white/20 px-2.5 py-0.5 text-xs font-medium">

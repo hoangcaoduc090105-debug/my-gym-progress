@@ -51,3 +51,17 @@ describe('nextWorkout', () => {
     expect(r?.source).toBe('rotation');
   });
 });
+
+describe('dueSchedules (v1.8.0)', () => {
+  it('đến hạn = hôm nay hoặc đã qua, chưa có buổi hoàn thành gắn scheduleId', async () => {
+    const { dueSchedules } = await import('../../src/domain/schedule');
+    const sch = (id: string, date: string) => ({ id, date, programId: program.id, programDayId: 'day-a', createdAt: '' });
+    const schedule = [sch('past', '2026-11-01'), sch('today', '2026-11-07'), sch('future', '2026-11-09'), sch('done', '2026-11-05'), sch('draft', '2026-11-06'), sch('deleted', '2026-11-04')];
+    const sessions = [
+      session('2026-11-05', [], { scheduleId: 'done' }),
+      session('2026-11-06', [], { scheduleId: 'draft', status: 'draft' }),
+      session('2026-11-04', [], { scheduleId: 'deleted', deletedAt: 'x' }),
+    ];
+    expect(dueSchedules(schedule, sessions, '2026-11-07').map((x) => x.id)).toEqual(['past', 'deleted', 'draft', 'today']);
+  });
+});

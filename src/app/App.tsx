@@ -12,6 +12,7 @@ import { requestAndRecordPersistence, retryPersistenceOnFirstInteraction, setPer
 import { UpdatePrompt } from '../pwa/UpdatePrompt';
 import { Layout } from './Layout';
 import { useSettings } from './useAppData';
+import { useDueReminders } from './dueReminders';
 import { RestTimerProvider } from '../features/workout/RestTimer';
 import { Dashboard } from '../features/dashboard/Dashboard';
 import { WorkoutHome } from '../features/workout/WorkoutHome';
@@ -38,6 +39,8 @@ const AnalyticsPage = lazy(() => import('../features/analytics/AnalyticsPage'));
 function Shell() {
   const settings = useSettings();
   const profile = useLiveQuery(async () => (await db.profile.get('me')) ?? null, []);
+  // Huy hiệu số buổi đến hạn + thông báo khi mở app (v1.8).
+  useDueReminders(settings.dueNotifications);
   if (profile === undefined) return <Spinner />;
   return (
     <RestTimerProvider sound={settings.timerSound} vibrate={settings.timerVibrate}>

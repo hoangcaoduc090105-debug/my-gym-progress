@@ -15,6 +15,7 @@ import { latest } from '../../domain/bodyTrends';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db/db';
 import { DataManagement } from './DataManagement';
+import { requestNotificationPermission } from '../../app/dueReminders';
 import { Trash } from './Trash';
 import { REFERENCES, USAGE_NOTES } from './References';
 
@@ -215,6 +216,18 @@ function TrainingForm({ settings }: { settings: Settings }) {
         </div>
         <Toggle label="Âm báo hết giờ nghỉ" checked={s.timerSound} onChange={(v) => setS((x) => ({ ...x, timerSound: v }))} />
         <Toggle label="Rung khi hết giờ nghỉ" hint="Chỉ trên thiết bị hỗ trợ (Android)" checked={s.timerVibrate} onChange={(v) => setS((x) => ({ ...x, timerVibrate: v }))} />
+        <Toggle
+          label="Thông báo khi có buổi đến hạn (lúc mở app)"
+          hint="Android / máy tính: hiện khi bạn mở app. iPhone: chỉ khi đã cài app lên màn hình chính. App không có máy chủ nên KHÔNG nhắc được khi đang đóng — muốn nhắc nền, dùng “Thêm vào Lịch (.ics)” ở tab Lịch."
+          checked={s.dueNotifications}
+          onChange={async (v) => {
+            if (!v) return setS((x) => ({ ...x, dueNotifications: false }));
+            // Xin quyền ngay trong cử chỉ bấm (yêu cầu của trình duyệt).
+            const perm = await requestNotificationPermission();
+            if (perm === 'granted') setS((x) => ({ ...x, dueNotifications: true }));
+            else toast(perm === 'unsupported' ? 'Trình duyệt này không hỗ trợ thông báo.' : 'Bạn chưa cho phép thông báo — bật lại trong cài đặt trình duyệt.', 'info');
+          }}
+        />
 
         <div className="rounded-xl bg-surface2 p-3">
           <div className="mb-2 text-sm font-semibold">Gợi ý tăng tạ (progressive overload)</div>

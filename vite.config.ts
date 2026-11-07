@@ -76,6 +76,8 @@ export default defineConfig({
         cleanupOutdatedCaches: true,
         // Không cache bất kỳ origin bên ngoài nào — app không gọi ra ngoài.
         runtimeCaching: [],
+        // v1.8: bấm thông báo "buổi đến hạn" => mở/focus app tại #/lich-tap.
+        importScripts: ['sw-notify.js'],
       },
       devOptions: { enabled: false },
     }),

@@ -5,6 +5,20 @@ export type NextWorkout =
   | { source: 'rotation'; day: ProgramDay; program: Program }
   | null;
 
+/** Lịch hẹn CHƯA được hoàn thành (không có buổi completed, chưa xóa, mang scheduleId của nó). Một nơi duy nhất. */
+export function openSchedules(schedule: ScheduledWorkout[], sessions: Pick<WorkoutSession, 'status' | 'deletedAt' | 'scheduleId'>[]): ScheduledWorkout[] {
+  const used = new Set(sessions.filter((s) => s.status === 'completed' && !s.deletedAt).map((s) => s.scheduleId).filter(Boolean));
+  return schedule.filter((x) => !used.has(x.id)).sort((a, b) => a.date.localeCompare(b.date));
+}
+
+/**
+ * Lịch hẹn ĐẾN HẠN: hôm nay hoặc đã qua mà chưa có buổi hoàn thành gắn scheduleId.
+ * Dùng chung cho huy hiệu app, thông báo khi mở app và thẻ trên trang Hôm nay.
+ */
+export function dueSchedules(schedule: ScheduledWorkout[], sessions: Pick<WorkoutSession, 'status' | 'deletedAt' | 'scheduleId'>[], today: string): ScheduledWorkout[] {
+  return openSchedules(schedule, sessions).filter((x) => x.date <= today);
+}
+
 /**
  * Buổi kế tiếp:
  * 1) Lịch đã đặt sớm nhất từ hôm nay trở đi mà chưa có buổi hoàn thành gắn với nó.
@@ -20,10 +34,7 @@ export function nextWorkout(params: {
 }): NextWorkout {
   const { program, programs, sessions, schedule, today } = params;
   const done = sessions.filter((s) => s.status === 'completed' && !s.deletedAt);
-  const usedScheduleIds = new Set(done.map((s) => s.scheduleId).filter(Boolean));
-  const upcoming = schedule
-    .filter((x) => x.date >= today && !usedScheduleIds.has(x.id))
-    .sort((a, b) => a.date.localeCompare(b.date));
+  const upcoming = openSchedules(schedule, sessions).filter((x) => x.date >= today);
   for (const sch of upcoming) {
     const p = programs.find((pp) => pp.id === sch.programId);
     const d = p?.days.find((dd) => dd.id === sch.programDayId);

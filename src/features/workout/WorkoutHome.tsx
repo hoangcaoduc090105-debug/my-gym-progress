@@ -1,13 +1,14 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { CalendarPlus, ChevronLeft, ChevronRight, Copy, History, Pencil, Play, Plus, Trash2, Zap } from 'lucide-react';
+import { CalendarDays, CalendarPlus, ChevronLeft, ChevronRight, Copy, History, Pencil, Play, Plus, Trash2, Zap } from 'lucide-react';
 import { db } from '../../db/db';
 import type { Program, ScheduledWorkout, WorkoutSession } from '../../db/types';
 import { Badge, Button, Card, EmptyState, IconButton, Modal, PageHeader, Spinner, Tabs, Toggle, cx } from '../../components/ui';
 import { useFeedback } from '../../components/feedback';
 import { addSchedule, deleteProgram, duplicateProgram, removeSchedule, setActiveProgram, startSession } from '../../db/repo';
-import { nextWorkout } from '../../domain/schedule';
+import { nextWorkout, openSchedules } from '../../domain/schedule';
+import { useExerciseMap } from '../../app/useAppData';
 import { countWorkingSets, totalVolume } from '../../domain/volume';
 import { activeCompleted } from '../../domain/sets';
 import { addDays, formatDate, formatDuration, parseISODate, startOfWeek, toISODate, todayISO } from '../../lib/date';
@@ -146,9 +147,34 @@ function CalendarTab({ programs, sessions, schedule }: { programs: Program[]; se
   const today = todayISO();
   const nav = useNavigate();
   const start = useStarter();
-  const { toastError, confirm } = useFeedback();
+  const { toast, toastError, confirm } = useFeedback();
+  const exMap = useExerciseMap();
   const [deload, setDeload] = useState(false);
   const [month, setMonth] = useState(today.slice(0, 7));
+  async function exportIcs() {
+    const { buildIcs } = await import('../../lib/ics');
+    const { downloadText } = await import('../../lib/download');
+    const upcoming = openSchedules(schedule, sessions).filter((x) => x.date >= today);
+    const events = upcoming.flatMap((x) => {
+      const p = programs.find((pp) => pp.id === x.programId);
+      const d = p?.days.find((dd) => dd.id === x.programDayId);
+      if (!p || !d) return [];
+      return [
+        {
+          uid: `${x.id}@my-gym-progress`,
+          date: x.date,
+          startTime: '18:00',
+          durationMin: 75,
+          summary: `Tập: ${d.name} · ${p.name}`,
+          description: d.exercises.map((e, i) => `${i + 1}. ${exMap?.get(e.exerciseId)?.nameVi ?? e.exerciseId} — ${e.sets}×${e.repMin}–${e.repMax}`).join('\n'),
+          alarmMinutesBefore: 60,
+        },
+      ];
+    });
+    if (events.length === 0) return toast('Chưa có lịch hẹn nào từ hôm nay. Bấm "Đặt lịch" trước.', 'info');
+    downloadText('my-gym-progress-lich-tap.ics', buildIcs(events), 'text/calendar;charset=utf-8');
+    toast(`Đã tạo tệp lịch ${events.length} buổi`, 'info');
+  }
   const [selected, setSelected] = useState(today);
   const [planOpen, setPlanOpen] = useState(false);
 
@@ -275,6 +301,10 @@ function CalendarTab({ programs, sessions, schedule }: { programs: Program[]; se
         <div className="mt-3">
           <DeloadToggle checked={deload} onChange={setDeload} />
         </div>
+        <Button className="mt-2" block variant="outline" icon={<CalendarDays size={18} />} onClick={() => void exportIcs()}>
+          Thêm vào Lịch (.ics)
+        </Button>
+        <p className="mt-1 text-xs text-muted">Tải tệp lịch các buổi đã đặt (từ hôm nay) rồi mở để thêm vào Lịch điện thoại — Lịch sẽ nhắc trước 1 giờ kể cả khi app đóng. Giờ mặc định 18:00, sửa được trong Lịch.</p>
         {selected > today && <p className="mt-2 text-xs text-muted">Chỉ ghi buổi tập cho hôm nay hoặc ngày đã qua. Ngày tương lai hãy dùng "Đặt lịch".</p>}
       </Card>
 

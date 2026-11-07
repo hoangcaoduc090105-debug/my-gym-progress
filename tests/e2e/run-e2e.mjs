@@ -58,6 +58,29 @@ const waitValue = async (locator, expected, timeout = 5000) => {
   }
   assert.equal(v, expected);
 };
+/** Đọc settings.app trực tiếp từ IndexedDB (không dựa vào toast — toast cũ có thể còn trên màn hình). */
+const savedUnit = () =>
+  page.evaluate(
+    () =>
+      new Promise((res) => {
+        const r = indexedDB.open('my-gym-progress');
+        r.onsuccess = () => {
+          const g = r.result.transaction('settings').objectStore('settings').get('app');
+          g.onsuccess = () => res(g.result?.weightUnit ?? 'kg');
+          g.onerror = () => res(null);
+        };
+        r.onerror = () => res(null);
+      }),
+  );
+const waitSavedUnit = async (u) => {
+  const end = Date.now() + 5000;
+  let v = await savedUnit();
+  while (v !== u && Date.now() < end) {
+    await page.waitForTimeout(100);
+    v = await savedUnit();
+  }
+  assert.equal(v, u, 'đơn vị đã lưu');
+};
 const noOverflow = async () => {
   const [sw, iw] = await page.evaluate(() => [document.documentElement.scrollWidth, window.innerWidth]);
   assert.ok(sw <= iw + 1, `tràn ngang: scrollWidth ${sw} > ${iw}`);
@@ -420,6 +443,19 @@ try {
     await shot('11-schedule');
   });
 
+  await check('Lịch: "Thêm vào Lịch (.ics)" tải tệp có BEGIN:VEVENT', async () => {
+    await page.goto(BASE + '#/lich-tap?tab=calendar');
+    await page.getByText(/^Lịch đã đặt · /).first().waitFor();
+    const [dl] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Thêm vào Lịch (.ics)' }).click()]);
+    const p = join(SHOTS ?? '/tmp', 'e2e-lich.ics');
+    await dl.saveAs(p);
+    const ics = readFileSync(p, 'utf8');
+    assert.ok(ics.startsWith('BEGIN:VCALENDAR'));
+    assert.ok(ics.includes('BEGIN:VEVENT'));
+    assert.ok(ics.includes('BEGIN:VALARM'));
+    assert.ok(ics.includes('\r\n'));
+  });
+
   await check('"Tập lại" một buổi đã hoàn thành', async () => {
     await page.goto(BASE + '#/lich-tap?tab=history');
     await page.getByText('2 hiệp').first().click();
@@ -481,7 +517,7 @@ try {
     await page.getByLabel('Đòn (lb)').waitFor();
     await waitValue(page.getByLabel('Đòn (lb)'), '45');
     await page.getByRole('button', { name: 'Lưu cài đặt tập luyện' }).click();
-    await page.getByText('Đã lưu cài đặt tập luyện').waitFor();
+    await waitSavedUnit('lb');
     await page.goto(BASE + '#/lich-tap');
     await page.getByRole('button', { name: /^Bắt đầu Buổi/ }).click();
     await page.getByRole('heading', { name: 'Đang tập' }).waitFor();
@@ -490,9 +526,12 @@ try {
     await shot('16-lb');
     await cancelCurrent();
     await page.goto(BASE + '#/cai-dat');
+    // Chờ form nạp cài đặt đã lưu (lb) rồi mới đổi — tránh bấm lúc form còn giá trị mặc định.
+    await page.getByLabel('Đòn (lb)').waitFor();
     await page.getByRole('tab', { name: 'kg', exact: true }).click();
+    await page.getByLabel('Đòn (kg)').waitFor();
     await page.getByRole('button', { name: 'Lưu cài đặt tập luyện' }).click();
-    await page.getByText('Đã lưu cài đặt tập luyện').waitFor();
+    await waitSavedUnit('kg');
   });
 
   await check('Offline: tắt mạng, tải lại — app và dữ liệu vẫn hoạt động', async () => {
