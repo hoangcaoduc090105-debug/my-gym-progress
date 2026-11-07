@@ -1,17 +1,18 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useSearchParams } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, ClipboardList, Pencil, Plus, Star, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, ClipboardList, Minus, Pencil, Plus, Star, Trash2 } from 'lucide-react';
 import { db } from '../../db/db';
 import { MEAL_LABELS, MEAL_SLOTS, type Food, type FoodLog, type MealPlan, type MealPlanItem, type MealSlot } from '../../db/types';
-import { Badge, Button, Card, EmptyState, Explain, Field, IconButton, Modal, NumberInput, PageHeader, Segmented, Spinner, Tabs, Toggle, cx } from '../../components/ui';
+import { Badge, Button, Card, EmptyState, Explain, Field, IconButton, Modal, NumberInput, PageHeader, Spinner, Tabs, Toggle, cx } from '../../components/ui';
 import { useFeedback } from '../../components/feedback';
 import { useProfile } from '../../app/useAppData';
 import { addFoodLog, applyMealPlan, installVietnameseMenus, deleteFood, deleteFoodLog, deleteMealPlan, saveFood, saveMealPlan, toggleFavoriteFood, updateFoodLogServings } from '../../db/repo';
 import { kcalFromMacros, proteinProgress, scale, sumLogs } from '../../domain/nutrition';
 import { addDays, formatDate, todayISO } from '../../lib/date';
 import { fmt0, fmt1 } from '../../lib/format';
-import { normalizeVi } from '../workout/ExercisePicker';
+import { FoodPicker } from './FoodPicker';
+import { customFoods, groupDishes, groupIngredients, kindOf } from './foodCatalog';
 import { checkMeal, proteinPerMeal, suggestProteinFill, type MealVerdict } from '../../domain/mealCheck';
 import { VN_FOODS } from '../../data/vnFoods';
 import { dishesAsFoods } from '../../data/southernDishes';
@@ -185,7 +186,7 @@ function DayLog() {
         );
       })}
 
-      <AddFoodModal meal={adding} date={date} onClose={() => setAdding(null)} />
+      <AddFoodModal meal={adding} date={date} perMeal={perMeal} onClose={() => setAdding(null)} />
       <Modal open={planOpen} onClose={() => setPlanOpen(false)} title="Áp dụng thực đơn">
         <ul className="space-y-2">
           {plans?.map((p) => (
@@ -284,9 +285,9 @@ function LogRow({ l, onDelete }: { l: FoodLog; onDelete: () => void }) {
   return (
     <li className="flex items-center gap-2 rounded-xl bg-surface2 p-2">
       <div className="min-w-0 flex-1">
-        <div className="flex min-w-0 items-center gap-1.5 text-sm font-medium">
-          <span className="truncate">{l.food.name}</span>
-          {!l.food.isVerified && <EstimateBadge />}
+        <div className="line-clamp-2 text-sm font-medium leading-snug">
+          {l.food.name}
+          {!l.food.isVerified && <span className="ml-1 text-xs font-normal text-brand2-text">(ước tính)</span>}
         </div>
         <div className="text-xs text-muted tabular">
           {fmt1(s.proteinG)} g P · {fmt1(s.carbG)} g C · {fmt1(s.fatG)} g F · {fmt0(s.kcal)} kcal
@@ -307,82 +308,60 @@ function useFoods() {
   return useLiveQuery(async () => (await db.foods.toArray()).sort((a, b) => Number(b.isFavorite) - Number(a.isFavorite) || a.name.localeCompare(b.name, 'vi')), []);
 }
 
-function AddFoodModal({ meal, date, onClose }: { meal: MealSlot | null; date: string; onClose: () => void }) {
+function AddFoodModal({ meal, date, perMeal, onClose }: { meal: MealSlot | null; date: string; perMeal: number; onClose: () => void }) {
   const foods = useFoods();
+  const logs = useLiveQuery(() => db.foodLogs.where('date').aboveOrEqual(addDays(date, -60)).toArray(), [date]);
   const { toast, toastError } = useFeedback();
-  const [q, setQ] = useState('');
   const [servings, setServings] = useState<number | null>(1);
   const [creating, setCreating] = useState(false);
   useEffect(() => {
-    if (meal) {
-      setQ('');
-      setServings(1);
-    }
+    if (meal) setServings(1);
   }, [meal]);
-  const [kind, setKind] = useState<'all' | 'dish' | 'ingredient'>('all');
-  const list = useMemo(
-    () =>
-      (foods ?? [])
-        .filter((f) => kind === 'all' || (kind === 'dish' ? f.id.startsWith('dish-') : !f.id.startsWith('dish-')))
-        .filter((f) => !q || normalizeVi(f.name).includes(normalizeVi(q))),
-    [foods, q, kind],
-  );
 
   async function add(f: Food) {
     if (!meal || !servings || servings <= 0) return toast('Nhập số khẩu phần > 0', 'error');
     try {
       await addFoodLog({ date, meal, foodId: f.id, servings });
-      toast(`Đã thêm ${f.name}`);
+      toast(`Đã thêm ${servings} × ${f.name}`);
       onClose();
     } catch (e) {
       toastError(e);
     }
   }
+  const step = (d: number) => setServings((v) => Math.max(0.5, Math.round(((v ?? 1) + d) * 2) / 2));
+  const missingPreset = ALL_PRESET().some((vf) => !(foods ?? []).some((f) => f.id === vf.id));
 
   return (
     <>
-      <Modal open={!!meal && !creating} onClose={onClose} title={meal ? `Thêm vào ${MEAL_LABELS[meal].toLowerCase()}` : ''}>
-        <div className="space-y-3">
-          <div className="grid grid-cols-[1fr_96px] gap-2">
-            <input aria-label="Tìm thực phẩm" placeholder="Tìm thực phẩm đã lưu…" value={q} onChange={(e) => setQ(e.target.value)} />
-            <NumberInput aria-label="Số khẩu phần" value={servings} min={0} max={100} onChange={setServings} className="text-center" placeholder="khẩu phần" />
+      <Modal
+        open={!!meal && !creating}
+        onClose={onClose}
+        title={meal ? `Thêm vào ${MEAL_LABELS[meal].toLowerCase()}` : ''}
+        wide
+        footer={
+          <div className="flex w-full items-center gap-2">
+            <span className="whitespace-nowrap text-sm text-muted">Phần</span>
+            <IconButton label="Bớt nửa phần" variant="secondary" className="h-10 w-10" onClick={() => step(-0.5)}>
+              <Minus size={16} />
+            </IconButton>
+            <NumberInput aria-label="Số khẩu phần" value={servings} min={0} max={100} onChange={setServings} className="h-10 w-14 px-1 text-center" />
+            <IconButton label="Thêm nửa phần" variant="secondary" className="h-10 w-10" onClick={() => step(0.5)}>
+              <Plus size={16} />
+            </IconButton>
+            <Button size="sm" variant="outline" className="ml-auto whitespace-nowrap" onClick={() => setCreating(true)}>
+              + Món mới
+            </Button>
           </div>
-          <Segmented
-            className="w-full"
-            value={kind}
-            onChange={setKind}
-            options={[
-              { value: 'all', label: 'Tất cả' },
-              { value: 'dish', label: 'Món ăn sẵn' },
-              { value: 'ingredient', label: 'Nguyên liệu' },
-            ]}
-          />
-          <ul className="divide-y divide-line/60">
-            {list.map((f) => (
-              <li key={f.id}>
-                <button type="button" className="flex w-full items-center gap-2 py-2.5 text-left" onClick={() => void add(f)}>
-                  {f.isFavorite && <Star size={14} className="shrink-0 fill-warn text-warn" />}
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1.5 text-sm font-medium">
-                      {f.name} {!f.isVerified && <EstimateBadge />}
-                    </div>
-                    <div className="text-xs text-muted tabular">
-                      {f.servingLabel}: {fmt1(f.proteinG)} g P · {fmt0(f.kcal)} kcal
-                    </div>
-                  </div>
-                  <Plus size={18} className="text-accent" />
-                </button>
-              </li>
-            ))}
-            {list.length === 0 && <li className="py-4 text-center text-sm text-muted">Chưa có thực phẩm phù hợp.</li>}
-          </ul>
-          {ALL_PRESET().some((vf) => !(foods ?? []).some((f) => f.id === vf.id)) && <StarterFoodsButton />}
-          <Button block variant="outline" icon={<Plus size={16} />} onClick={() => setCreating(true)}>
-            Tạo thực phẩm mới
-          </Button>
-        </div>
+        }
+      >
+        {meal && foods && logs && <FoodPicker foods={foods} logs={logs} meal={meal} perMeal={perMeal} onPick={(f) => void add(f)} />}
+        {missingPreset && (
+          <div className="mt-4">
+            <StarterFoodsButton />
+          </div>
+        )}
       </Modal>
-      <FoodFormModal open={creating} initial={null} defaultName={q} onClose={() => setCreating(false)} />
+      <FoodFormModal open={creating} initial={null} onClose={() => setCreating(false)} />
     </>
   );
 }
@@ -472,12 +451,62 @@ function FoodFormModal({ open, initial, onClose, defaultName = '' }: { open: boo
   );
 }
 
+function FoodRowManage({ f, onEdit }: { f: Food; onEdit: (f: Food) => void }) {
+  const { confirm, toastError } = useFeedback();
+  return (
+    <li className="flex items-center gap-1 py-1.5">
+      <IconButton label={f.isFavorite ? 'Bỏ thường dùng' : 'Đánh dấu thường dùng'} onClick={() => void toggleFavoriteFood(f.id)}>
+        <Star size={18} className={f.isFavorite ? 'fill-brand2 text-brand2' : 'text-muted'} />
+      </IconButton>
+      <div className="min-w-0 flex-1">
+        <div className="line-clamp-2 text-sm font-medium leading-snug">{f.name}</div>
+        <div className="truncate text-xs text-muted tabular">
+          {f.servingLabel}: {fmt1(f.proteinG)} g đạm · {fmt0(f.kcal)} kcal
+          {kindOf(f) === 'custom' && <span className="text-brand2-text">{f.isVerified ? ' · đã xác minh' : ' · ước tính'}</span>}
+        </div>
+      </div>
+      <IconButton label="Sửa" onClick={() => onEdit(f)}>
+        <Pencil size={16} />
+      </IconButton>
+      <IconButton
+        label="Xóa"
+        onClick={async () => {
+          if (await confirm({ title: `Xóa "${f.name}"?`, message: 'Nhật ký đã ghi vẫn giữ nguyên số liệu tại thời điểm ghi.', danger: true, confirmText: 'Xóa' }))
+            await deleteFood(f.id).catch(toastError);
+        }}
+      >
+        <Trash2 size={16} />
+      </IconButton>
+    </li>
+  );
+}
+
+function Collapsible({ title, count, defaultOpen, children }: { title: string; count: number; defaultOpen?: boolean; children: React.ReactNode }) {
+  const [open, setOpen] = useState(!!defaultOpen);
+  return (
+    <div className="rounded-2xl border border-line/70 bg-surface shadow-card">
+      <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} className="flex h-12 w-full items-center gap-2 px-4 text-left">
+        <span className="flex-1 font-semibold">{title}</span>
+        <span className="text-sm text-muted">{count}</span>
+        <ChevronDown size={18} className={cx('text-muted transition-transform', open && 'rotate-180')} />
+      </button>
+      {open && <ul className="divide-y divide-line/50 border-t border-line/60 px-2">{children}</ul>}
+    </div>
+  );
+}
+
 function FoodsTab() {
   const foods = useFoods();
-  const { confirm, toastError } = useFeedback();
   const [editing, setEditing] = useState<Food | null>(null);
   const [open, setOpen] = useState(false);
   if (!foods) return <Spinner />;
+  const edit = (f: Food) => {
+    setEditing(f);
+    setOpen(true);
+  };
+  const custom = customFoods(foods);
+  const fav = foods.filter((f) => f.isFavorite).sort((a, b) => a.name.localeCompare(b.name, 'vi'));
+  const missingPreset = ALL_PRESET().some((vf) => !foods.some((f) => f.id === vf.id));
   return (
     <div className="space-y-3">
       <Button
@@ -489,60 +518,42 @@ function FoodsTab() {
           setOpen(true);
         }}
       >
-        Thêm thực phẩm
+        Tạo món / thực phẩm mới
       </Button>
+      {missingPreset && <StarterFoodsButton />}
       {foods.length === 0 ? (
-        <>
-          <EmptyState title="Chưa có món nào">Thêm món theo nhãn bao bì, hoặc nạp nhanh thực phẩm Việt Nam quen thuộc với số liệu từ Bảng thành phần thực phẩm Việt Nam.</EmptyState>
-          <StarterFoodsButton />
-        </>
+        <EmptyState title="Chưa có món nào">Thêm món theo nhãn bao bì, hoặc nạp sẵn món ăn và thực phẩm Việt Nam bằng nút ở trên.</EmptyState>
       ) : (
-        <Card>
-          <ul className="divide-y divide-line/60">
-            {foods.map((f) => (
-              <li key={f.id} className="flex items-center gap-1 py-2">
-                <IconButton label={f.isFavorite ? 'Bỏ thường dùng' : 'Đánh dấu thường dùng'} onClick={() => void toggleFavoriteFood(f.id)}>
-                  <Star size={18} className={f.isFavorite ? 'fill-warn text-warn' : 'text-muted'} />
-                </IconButton>
-                <div className="min-w-0 flex-1">
-                  <div className="flex min-w-0 items-center gap-1.5 text-sm font-medium">
-                    <span className="truncate">{f.name}</span>
-                    {f.isVerified ? (
-                      <Badge tone="ok" className="shrink-0">
-                        Đã xác minh
-                      </Badge>
-                    ) : (
-                      <EstimateBadge />
-                    )}
-                  </div>
-                  <div className="text-xs text-muted tabular">
-                    {f.servingLabel}: {fmt1(f.proteinG)} P · {fmt1(f.carbG)} C · {fmt1(f.fatG)} F · {fmt0(f.kcal)} kcal
-                  </div>
-                </div>
-                <IconButton
-                  label="Sửa"
-                  onClick={() => {
-                    setEditing(f);
-                    setOpen(true);
-                  }}
-                >
-                  <Pencil size={16} />
-                </IconButton>
-                <IconButton
-                  label="Xóa"
-                  onClick={async () => {
-                    if (await confirm({ title: `Xóa "${f.name}"?`, message: 'Nhật ký đã ghi vẫn giữ nguyên số liệu tại thời điểm ghi.', danger: true, confirmText: 'Xóa' }))
-                      await deleteFood(f.id).catch(toastError);
-                  }}
-                >
-                  <Trash2 size={16} />
-                </IconButton>
-              </li>
-            ))}
-          </ul>
-        </Card>
+        <>
+          <p className="text-xs text-muted">Bấm ⭐ để đưa món hay ăn lên mục "Thường dùng" khi ghi bữa.</p>
+          {fav.length > 0 && (
+            <Collapsible title="Thường dùng ⭐" count={fav.length} defaultOpen>
+              {fav.map((f) => (
+                <FoodRowManage key={f.id} f={f} onEdit={edit} />
+              ))}
+            </Collapsible>
+          )}
+          <Collapsible title="Món tự tạo" count={custom.length} defaultOpen={custom.length > 0}>
+            {custom.length ? custom.map((f) => <FoodRowManage key={f.id} f={f} onEdit={edit} />) : <li className="py-3 text-sm text-muted">Chưa có món tự tạo.</li>}
+          </Collapsible>
+          <h2 className="pt-2 text-xs font-bold uppercase tracking-wide text-accent">Món ăn sẵn (ước tính)</h2>
+          {groupDishes(foods).map((g) => (
+            <Collapsible key={g.key} title={g.label} count={g.foods.length}>
+              {g.foods.map((f) => (
+                <FoodRowManage key={f.id} f={f} onEdit={edit} />
+              ))}
+            </Collapsible>
+          ))}
+          <h2 className="pt-2 text-xs font-bold uppercase tracking-wide text-accent">Nguyên liệu (Viện Dinh dưỡng)</h2>
+          {groupIngredients(foods).map((g) => (
+            <Collapsible key={g.key} title={g.label} count={g.foods.length}>
+              {g.foods.map((f) => (
+                <FoodRowManage key={f.id} f={f} onEdit={edit} />
+              ))}
+            </Collapsible>
+          ))}
+        </>
       )}
-      {foods.length > 0 && ALL_PRESET().some((vf) => !foods.some((f) => f.id === vf.id)) && <StarterFoodsButton />}
       <FoodFormModal open={open} initial={editing} onClose={() => setOpen(false)} />
     </div>
   );

@@ -137,12 +137,14 @@ try {
   await check('Dinh dưỡng: tạo thực phẩm (ước tính), ghi nhật ký, protein cập nhật', async () => {
     await page.goto(BASE + '#/dinh-duong');
     await page.getByRole('button', { name: 'Thêm món' }).first().click();
-    await page.getByRole('button', { name: 'Tạo thực phẩm mới' }).click();
+    await page.getByRole('button', { name: '+ Món mới' }).click();
     await page.getByLabel('Tên *').fill('Ức gà luộc');
     await page.getByLabel('Protein (g)').fill('31');
     await page.getByLabel('Fat (g)').fill('3,6');
     await page.getByRole('dialog').getByRole('button', { name: 'Lưu' }).click();
-    await page.getByRole('button', { name: /Ức gà luộc/ }).click();
+    // Tìm kiếm không dấu trong bộ chọn món
+    await page.getByLabel('Tìm món').fill('uc ga');
+    await page.getByRole('button', { name: 'Thêm Ức gà luộc' }).click();
     await page.getByText('/ 105–130 g').waitFor();
     await page.getByText('Còn 74 g').waitFor();
     await page.getByText('Ước tính').first().waitFor();
@@ -151,14 +153,22 @@ try {
     // Nạp món cơ bản rồi thêm 1 quả trứng vào bữa trưa → bữa thiếu đạm + có gợi ý bù
     await page.getByRole('tab', { name: 'Món của tôi' }).click();
     await page.getByRole('button', { name: /món ăn sẵn \+/ }).click();
+    await page.getByRole('button', { name: /Thịt · cá · trứng · đậu/ }).click();
     await page.getByText(/^Trứng gà/).first().waitFor();
+    await shot('05d-my-foods');
     await page.getByRole('tab', { name: 'Hôm nay' }).click();
     await page.getByRole('button', { name: 'Thêm món' }).nth(1).click();
+    // Tab Gợi ý: bữa trưa gợi ý nhóm Cơm trước
+    await page.getByText('Hợp cho bữa trưa').waitFor();
+    await page.getByRole('button', { name: 'Thêm Cơm tấm sườn', exact: true }).waitFor();
+    await page.getByText('Cơm tấm', { exact: true }).first().waitFor();
+    await shot('05e-picker-suggest');
     await page.getByRole('tab', { name: 'Món ăn sẵn' }).click();
-    await page.getByRole('button', { name: /Cơm tấm sườn bì chả/ }).waitFor();
+    await page.getByRole('button', { name: /Chè · trái cây/ }).click();
+    await page.getByRole('button', { name: 'Thêm Cơm tấm sườn bì chả', exact: true }).waitFor();
     await shot('05c-dishes');
     await page.getByRole('tab', { name: 'Nguyên liệu' }).click();
-    await page.getByRole('button', { name: /^Trứng gà/ }).first().click();
+    await page.getByRole('button', { name: 'Thêm Trứng gà', exact: true }).click();
     await page.getByText('Bữa này: Thiếu đạm').waitFor();
     await page.getByRole('button', { name: /\+ .*đạm/ }).first().waitFor();
     // Thực đơn Việt Nam mẫu: áp dụng cho hôm nay

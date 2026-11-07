@@ -49,6 +49,7 @@
 
 - Cách nhanh nhất: Ăn uống → tab "Thực đơn Việt" → chọn 1 trong 4 thực đơn mẫu (có 1 ngày ăn ngoài kiểu Sài Gòn) → "Dùng cho hôm nay".
 - Ăn ngoài quán: "Thêm món" → tab "Món ăn sẵn" → chọn cơm tấm, hủ tiếu, bánh mì, bún bò… (hơn 100 món: cơm, bún, phở, hủ tiếu, bánh mì, xôi, ăn vặt, chè, trái cây, đồ uống — số liệu ước tính theo công thức).
+- Màn hình chọn món có 4 tab: Gợi ý (món ăn gần đây, món thường dùng ⭐ và món hợp với bữa đang ghi) · Món ăn sẵn (chia nhóm: cơm tấm, cơm dĩa, bún, phở, hủ tiếu, bánh mì, xôi, chè, trái cây, đồ uống…) · Nguyên liệu · Tự tạo. Gõ tên không dấu để tìm nhanh, ví dụ "com tam". Đạm tô xanh nghĩa là món đủ đạm cho 1 bữa.
 - Lần đầu: tab "Món của tôi" → bấm "Thêm … món ăn sẵn + 36 thực phẩm Việt Nam", hoặc tự thêm món theo nhãn bao bì.
 - Hằng ngày: tab Hôm nay → "Thêm món" ở từng bữa → nhập số khẩu phần → chạm vào món.
 - Ngay dưới mỗi bữa, app chấm: Phù hợp / Hơi thiếu đạm / Thiếu đạm, và gợi ý món để bù (chạm là thêm luôn).
