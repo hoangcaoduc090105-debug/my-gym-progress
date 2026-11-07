@@ -14,7 +14,7 @@ import { isWorkingSet } from '../../domain/sets';
 import { formatClock, formatShort, todayISO } from '../../lib/date';
 import { fmt1 } from '../../lib/format';
 import { uid } from '../../lib/id';
-import { useRestTimer } from './RestTimer';
+import { useRestTimerActions } from './RestTimer';
 import { ExercisePicker } from './ExercisePicker';
 import { useSessionWriter, type SaveState } from './useSessionWriter';
 
@@ -30,7 +30,7 @@ export function SessionLogger() {
   const nav = useNavigate();
   const settings = useSettings();
   const exMap = useExerciseMap();
-  const timer = useRestTimer();
+  const timer = useRestTimerActions();
   const { toast, toastError, confirm } = useFeedback();
   const { s, latest, load, commit, commitText, flush, retry, saveState } = useSessionWriter(null);
   const [pickOpen, setPickOpen] = useState(false);

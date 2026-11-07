@@ -1,23 +1,32 @@
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Minus, Plus, SkipForward, Timer } from 'lucide-react';
 import { formatClock } from '../../lib/date';
 import { IconButton } from '../../components/ui';
 
-/** Đồng hồ nghỉ dựa trên mốc thời gian kết thúc (endAt) => chính xác cả khi khóa màn hình, giữ qua tải lại trang. */
-interface TimerState {
+/**
+ * Đồng hồ nghỉ dựa trên mốc kết thúc (endAt) => chính xác cả khi khóa màn hình, giữ qua tải lại trang.
+ *
+ * Tách 2 context để KHÔNG render lại cả app mỗi giây:
+ * - TimerActionsContext: start/adjust/stop — ổn định suốt vòng đời Provider.
+ * - TimerStateContext: { endAt, totalSec, label } — chỉ đổi khi bắt đầu/chỉnh/dừng.
+ * Số giây còn lại không nằm trong context nào: RestTimerBar tự đếm từ endAt.
+ */
+export interface TimerState {
   endAt: number;
   totalSec: number;
   label: string;
 }
-interface Ctx {
-  state: TimerState | null;
-  remaining: number;
+export interface TimerActions {
   start: (sec: number, label: string) => void;
   adjust: (delta: number) => void;
   stop: () => void;
 }
-const C = createContext<Ctx | null>(null);
+
+const TimerActionsContext = createContext<TimerActions | null>(null);
+const TimerStateContext = createContext<TimerState | null>(null);
 const KEY = 'mgp.restTimer';
+/** Thời gian giữ thông báo "Hết giờ nghỉ!" trước khi tự ẩn. */
+export const DONE_HOLD_MS = 4000;
 
 function load(): TimerState | null {
   try {
@@ -38,87 +47,141 @@ function persist(s: TimerState | null) {
   }
 }
 
-function beep() {
-  try {
-    const AC = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-    if (!AC) return;
-    const ctx = new AC();
-    [0, 0.25, 0.5].forEach((t) => {
-      const o = ctx.createOscillator();
-      const g = ctx.createGain();
-      o.frequency.value = 880;
-      g.gain.setValueAtTime(0.0001, ctx.currentTime + t);
-      g.gain.exponentialRampToValueAtTime(0.3, ctx.currentTime + t + 0.02);
-      g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + t + 0.18);
-      o.connect(g).connect(ctx.destination);
-      o.start(ctx.currentTime + t);
-      o.stop(ctx.currentTime + t + 0.2);
-    });
-    setTimeout(() => void ctx.close(), 1200);
-  } catch {
-    /* bỏ qua */
-  }
-}
+type AC = AudioContext;
+/**
+ * Âm báo. Đặt trong object để test có thể thay thế (vi.spyOn(timerSound, 'beep')).
+ * AudioContext được tạo trong cử chỉ người dùng (start) nên iOS Safari cho phát tiếng.
+ */
+export const timerSound = {
+  createContext(): AC | null {
+    const Ctor = typeof window !== 'undefined' ? (window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext) : undefined;
+    return Ctor ? new Ctor() : null;
+  },
+  beep(ctx: AC | null): void {
+    if (!ctx) return;
+    try {
+      void ctx.resume?.();
+      [0, 0.25, 0.5].forEach((t) => {
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.frequency.value = 880;
+        g.gain.setValueAtTime(0.0001, ctx.currentTime + t);
+        g.gain.exponentialRampToValueAtTime(0.3, ctx.currentTime + t + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + t + 0.18);
+        o.connect(g).connect(ctx.destination);
+        o.start(ctx.currentTime + t);
+        o.stop(ctx.currentTime + t + 0.2);
+      });
+    } catch {
+      /* bỏ qua */
+    }
+  },
+};
 
 export function RestTimerProvider({ children, sound, vibrate }: { children: ReactNode; sound: boolean; vibrate: boolean }) {
   const [state, setState] = useState<TimerState | null>(load);
-  const [now, setNow] = useState(Date.now());
+  const audio = useRef<AC | null>(null);
   const fired = useRef(false);
+  const opts = useRef({ sound, vibrate });
+  opts.current = { sound, vibrate };
 
-  useEffect(() => {
-    if (!state) return;
-    const t = setInterval(() => setNow(Date.now()), 250);
-    return () => clearInterval(t);
-  }, [state]);
-
-  const remaining = state ? Math.max(0, (state.endAt - now) / 1000) : 0;
-
-  useEffect(() => {
-    if (state && remaining <= 0 && !fired.current) {
-      fired.current = true;
-      if (sound) beep();
-      if (vibrate && 'vibrate' in navigator) navigator.vibrate?.([200, 100, 200]);
-      const t = setTimeout(() => {
+  const actions = useMemo<TimerActions>(
+    () => ({
+      start(sec, label) {
+        // Đang ở trong cử chỉ bấm => tạo/mở khóa AudioContext một lần, dùng lại khi hết giờ.
+        try {
+          if (!audio.current) audio.current = timerSound.createContext();
+          void audio.current?.resume?.();
+        } catch {
+          audio.current = null;
+        }
+        fired.current = false;
+        const s = { endAt: Date.now() + sec * 1000, totalSec: sec, label };
+        setState(s);
+        persist(s);
+      },
+      adjust(delta) {
+        setState((s) => {
+          if (!s) return s;
+          const n = { ...s, endAt: Math.max(Date.now() + 1000, s.endAt + delta * 1000), totalSec: Math.max(1, s.totalSec + delta) };
+          fired.current = false;
+          persist(n);
+          return n;
+        });
+      },
+      stop() {
         setState(null);
         persist(null);
-      }, 4000);
-      return () => clearTimeout(t);
-    }
-  }, [remaining, state, sound, vibrate]);
+      },
+    }),
+    [],
+  );
 
-  const start = useCallback((sec: number, label: string) => {
-    fired.current = false;
-    const s = { endAt: Date.now() + sec * 1000, totalSec: sec, label };
-    setNow(Date.now());
-    setState(s);
-    persist(s);
-  }, []);
-  const adjust = useCallback((delta: number) => {
-    setState((s) => {
-      if (!s) return s;
-      const n = { ...s, endAt: Math.max(Date.now() + 1000, s.endAt + delta * 1000), totalSec: Math.max(1, s.totalSec + delta) };
-      fired.current = false;
-      persist(n);
-      return n;
-    });
-  }, []);
-  const stop = useCallback(() => {
-    setState(null);
-    persist(null);
-  }, []);
+  // Hết giờ: setTimeout tới đúng endAt (không phụ thuộc interval vẽ); quay lại tab => tính lại ngay.
+  useEffect(() => {
+    if (!state) return;
+    let hold: ReturnType<typeof setTimeout> | null = null;
+    let end: ReturnType<typeof setTimeout> | null = null;
+    const fire = () => {
+      if (fired.current) return;
+      fired.current = true;
+      if (opts.current.sound) timerSound.beep(audio.current);
+      if (opts.current.vibrate && typeof navigator !== 'undefined' && 'vibrate' in navigator) navigator.vibrate?.([200, 100, 200]);
+      hold = setTimeout(() => actions.stop(), DONE_HOLD_MS);
+    };
+    const schedule = () => {
+      if (end) clearTimeout(end);
+      const ms = state.endAt - Date.now();
+      if (ms <= 0) fire();
+      else end = setTimeout(fire, ms);
+    };
+    schedule();
+    const onVis = () => {
+      if (document.visibilityState === 'visible') schedule();
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => {
+      if (end) clearTimeout(end);
+      if (hold) clearTimeout(hold);
+      document.removeEventListener('visibilitychange', onVis);
+    };
+  }, [state, actions]);
 
-  return <C.Provider value={{ state, remaining, start, adjust, stop }}>{children}</C.Provider>;
+  return (
+    <TimerActionsContext.Provider value={actions}>
+      <TimerStateContext.Provider value={state}>{children}</TimerStateContext.Provider>
+    </TimerActionsContext.Provider>
+  );
 }
 
-export function useRestTimer(): Ctx {
-  const c = useContext(C);
-  if (!c) throw new Error('useRestTimer ngoài RestTimerProvider');
+export function useRestTimerActions(): TimerActions {
+  const c = useContext(TimerActionsContext);
+  if (!c) throw new Error('useRestTimerActions ngoài RestTimerProvider');
   return c;
 }
 
+export function useRestTimerState(): TimerState | null {
+  return useContext(TimerStateContext);
+}
+
+/** Thanh đếm ngược — tự vẽ lại 4 lần/giây; chỉ thanh này render lại, không phải cả app. */
 export function RestTimerBar() {
-  const { state, remaining, adjust, stop } = useRestTimer();
+  const state = useRestTimerState();
+  const { adjust, stop } = useRestTimerActions();
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!state) return;
+    setNow(Date.now());
+    const t = setInterval(() => setNow(Date.now()), 250);
+    const onVis = () => document.visibilityState === 'visible' && setNow(Date.now());
+    document.addEventListener('visibilitychange', onVis);
+    return () => {
+      clearInterval(t);
+      document.removeEventListener('visibilitychange', onVis);
+    };
+  }, [state]);
   if (!state) return null;
+  const remaining = Math.max(0, (state.endAt - now) / 1000);
   const done = remaining <= 0;
   const pct = Math.min(100, (1 - remaining / state.totalSec) * 100);
   return (
@@ -127,7 +190,9 @@ export function RestTimerBar() {
         <div className="flex items-center gap-2 px-3 py-2">
           <Timer size={20} className={done ? '' : 'text-accent'} />
           <div className="min-w-0 flex-1">
-            <div className="text-2xl font-bold leading-none tabular">{done ? 'Hết giờ nghỉ!' : formatClock(remaining)}</div>
+            <div className="text-2xl font-bold leading-none tabular" data-testid="rest-remaining">
+              {done ? 'Hết giờ nghỉ!' : formatClock(remaining)}
+            </div>
             <div className={`truncate text-xs ${done ? '' : 'text-muted'}`}>Nghỉ · {state.label}</div>
           </div>
           {!done && (
