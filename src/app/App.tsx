@@ -7,9 +7,8 @@ import { Spinner } from '../components/ui';
 import { db } from '../db/db';
 import { ensureSeed } from '../db/seed';
 import { loadSchemas } from '../db/repo';
-import { ensureThumbnails } from '../db/migrations';
 import { errorMessage } from '../db/errors';
-import { requestPersistence } from '../lib/storage';
+import { requestAndRecordPersistence, retryPersistenceOnFirstInteraction, setPersistRecorder } from '../lib/storage';
 import { UpdatePrompt } from '../pwa/UpdatePrompt';
 import { Layout } from './Layout';
 import { useSettings } from './useAppData';
@@ -17,7 +16,6 @@ import { RestTimerProvider } from '../features/workout/RestTimer';
 import { Dashboard } from '../features/dashboard/Dashboard';
 import { WorkoutHome } from '../features/workout/WorkoutHome';
 import { SessionLogger } from '../features/workout/SessionLogger';
-import { SessionDetail } from '../features/workout/SessionDetail';
 
 // Trang có biểu đồ (Recharts) tải lười để mở app nhanh hơn.
 const BodyPage = lazy(() => import('../features/body/BodyPage'));
@@ -31,6 +29,7 @@ const Onboarding = lazy(() => import('../features/onboarding/Onboarding').then((
 const ProgramEditor = lazy(() => import('../features/workout/ProgramEditor').then((m) => ({ default: m.ProgramEditor })));
 const MorePage = lazy(() => import('../features/more/MorePage').then((m) => ({ default: m.MorePage })));
 const SettingsPage = lazy(() => import('../features/settings/SettingsPage').then((m) => ({ default: m.SettingsPage })));
+const SessionDetail = lazy(() => import('../features/workout/SessionDetail').then((m) => ({ default: m.SessionDetail })));
 const AnalyticsPage = lazy(() => import('../features/analytics/AnalyticsPage'));
 
 function Shell() {
@@ -81,12 +80,17 @@ export function App() {
       .then(() => {
         setReady(true);
         // Bước nền: tạo ảnh thu nhỏ còn thiếu (ảnh cũ/ảnh nhập) — không chặn giao diện.
-        setTimeout(() => void ensureThumbnails().catch(() => undefined), 1500);
+        setTimeout(() => void import('../db/migrations').then((m) => m.ensureThumbnails()).catch(() => undefined), 1500);
         // Tải sẵn schema kiểm tra dữ liệu để lần ghi đầu tiên không phải chờ.
         void loadSchemas();
       })
       .catch((e: unknown) => setFatal(errorMessage(e)));
-    void requestPersistence();
+    setPersistRecorder(async (v) => {
+      await db.meta.put({ key: 'persisted', value: v });
+    });
+    void requestAndRecordPersistence();
+    const stopRetry = retryPersistenceOnFirstInteraction();
+    return stopRetry;
   }, []);
 
   if (fatal) {

@@ -13,6 +13,7 @@ import { isWorkingSet } from '../../domain/sets';
 import { formatClock, formatShort, todayISO } from '../../lib/date';
 import { fmt1 } from '../../lib/format';
 import { uid } from '../../lib/id';
+import { persistAfterFirstWorkout } from '../../db/persistence';
 import { useRestTimerActions } from './RestTimer';
 import { ExercisePicker } from './ExercisePicker';
 import { useSessionWriter, type SaveState } from './useSessionWriter';
@@ -128,6 +129,8 @@ export function SessionLogger() {
       if (!(await flush())) return toast('Chưa lưu được thay đổi gần nhất — bấm "Thử lại" rồi hoàn thành.', 'error');
       await finishSession(cur.id);
       timer.stop();
+      // Sau buổi tập hoàn thành đầu tiên: xin lại lưu trữ bền vững (trình duyệt hay cấp khi trang "được dùng thật").
+      void persistAfterFirstWorkout();
       nav(`/lich-tap/buoi/${cur.id}?xong=1`, { replace: true });
     } catch (e) {
       toastError(e);

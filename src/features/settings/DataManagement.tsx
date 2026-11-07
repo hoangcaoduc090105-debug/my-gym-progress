@@ -7,7 +7,7 @@ import { useFeedback } from '../../components/feedback';
 import { countConflicts, countExisting, exportAllToBlob, importBackup, parseBackupText, TABLE_LABELS, type BackupFile, type ImportMode } from '../../backup/backup';
 import { bodyMetricsToCsv, workoutsToCsv } from '../../backup/csv';
 import { downloadText, stampedName } from '../../lib/download';
-import { checkFreeSpace, formatBytes, onStorageChanged, storageInfo } from '../../lib/storage';
+import { checkFreeSpace, formatBytes, onStorageChanged, requestAndRecordPersistence, SPACE_FACTOR, storageInfo } from '../../lib/storage';
 import { useSettings } from '../../app/useAppData';
 
 const MAX_IMPORT_BYTES = 200 * 1024 * 1024;
@@ -49,12 +49,19 @@ export function DataManagement() {
     }
   }
 
+  async function retryPersist() {
+    const r = await requestAndRecordPersistence();
+    setInfo(await storageInfo());
+    if (r === true) toast('Trình duyệt đã cấp lưu trữ bền vững');
+    else toast('Trình duyệt chưa cấp. Cài app lên màn hình chính rồi mở lại, sau đó thử lại.', 'info');
+  }
+
   async function onFile(f: File | undefined) {
     if (fileRef.current) fileRef.current.value = '';
     if (!f) return;
     setErrors(null);
     if (f.size > MAX_IMPORT_BYTES) return setErrors([`Tệp quá lớn (${formatBytes(f.size)}). Giới hạn ${formatBytes(MAX_IMPORT_BYTES)}.`]);
-    const space = await checkFreeSpace(f.size);
+    const space = await checkFreeSpace(f.size, SPACE_FACTOR);
     if (space) return setErrors([space]);
     setBusy(true);
     try {
@@ -167,7 +174,14 @@ export function DataManagement() {
       <div className="mt-3 text-xs text-muted">
         Dung lượng đang dùng: {formatBytes(info?.usage ?? null)} / {formatBytes(info?.quota ?? null)} · Lưu trữ bền vững:{' '}
         {info?.persisted == null ? 'không rõ' : info.persisted ? <Badge tone="ok">Đã bật</Badge> : <Badge tone="warn">Chưa được cấp</Badge>}
-        {info?.persisted === false && <div className="mt-1">Mẹo: cài ứng dụng lên màn hình chính (PWA) giúp trình duyệt giữ dữ liệu ổn định hơn.</div>}
+        {info?.persisted === false && (
+          <div className="mt-2 flex flex-wrap items-center gap-2 rounded-xl border border-warn/40 bg-warn/10 p-2.5 text-text" data-testid="persist-hint">
+            <span className="min-w-0 flex-1">Cài app lên màn hình chính rồi mở lại để trình duyệt cấp lưu trữ bền vững</span>
+            <Button size="sm" variant="outline" onClick={() => void retryPersist()}>
+              Thử cấp lại
+            </Button>
+          </div>
+        )}
       </div>
 
       <Modal

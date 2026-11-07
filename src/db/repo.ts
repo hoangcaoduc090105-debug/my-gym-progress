@@ -24,7 +24,7 @@ import { nowISO, todayISO } from '../lib/date';
 import { uid } from '../lib/id';
 import { isWorkingSet } from '../domain/sets';
 import { isArrayBuffer } from '../lib/image';
-import { notifyStorageChanged } from '../lib/storage';
+import { checkFreeSpace, notifyStorageChanged, SPACE_FACTOR } from '../lib/storage';
 
 /**
  * Schema Zod (kèm thư viện zod ~12 KB gzip) được tải lười để chunk chính nhỏ.
@@ -393,6 +393,10 @@ export async function addPhoto(
   const now = nowISO();
   const m = validate((x) => x.photoMetaSchema, { ...meta, id: uid('ph'), createdAt: now, deletedAt: null }, 'ảnh');
   if (!isArrayBuffer(data) || data.byteLength === 0) throw new AppError('Tệp ảnh rỗng hoặc không đọc được.');
+  // Kiểm tra chỗ trống TRƯỚC giao dịch (không await promise ngoài Dexie bên trong transaction).
+  const needed = data.byteLength + (isArrayBuffer(thumb) ? thumb.byteLength : 0);
+  const space = await checkFreeSpace(needed, SPACE_FACTOR);
+  if (space) throw new AppError(space);
   const p = { ...m, thumb: isArrayBuffer(thumb) ? thumb : null, bytes: data.byteLength } as ProgressPhoto;
   // Ghi siêu dữ liệu và bytes trong MỘT giao dịch.
   await db.transaction('rw', db.photos, db.photoBlobs, async () => {

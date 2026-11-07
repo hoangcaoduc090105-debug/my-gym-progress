@@ -56,3 +56,40 @@ export async function checkFreeSpace(needed: number, factor = 1): Promise<string
     return null;
   }
 }
+
+/* ---------- Xin lại lưu trữ bền vững ---------- */
+/** Hệ số an toàn: chỉ ghi khi còn trống ít nhất 2 × dung lượng cần. */
+export const SPACE_FACTOR = 2;
+
+type PersistRecorder = (v: boolean | null) => Promise<void> | void;
+let recorder: PersistRecorder | null = null;
+/** App đăng ký nơi lưu kết quả (meta.persisted) — tách để lib không phụ thuộc db. */
+export function setPersistRecorder(r: PersistRecorder | null): void {
+  recorder = r;
+}
+
+/** Xin lưu trữ bền vững rồi ghi kết quả (true/false/null) qua recorder. */
+export async function requestAndRecordPersistence(): Promise<boolean | null> {
+  const r = await requestPersistence();
+  try {
+    await recorder?.(r);
+  } catch {
+    /* ghi meta lỗi không ảnh hưởng kết quả */
+  }
+  notifyStorageChanged();
+  return r;
+}
+
+/**
+ * Chrome/Edge thường chỉ cấp persist() sau khi người dùng tương tác với trang:
+ * xin lại một lần ở lần chạm/nhấp đầu tiên. Trả về hàm hủy.
+ */
+export function retryPersistenceOnFirstInteraction(): () => void {
+  if (typeof window === 'undefined') return () => undefined;
+  const onDown = () => {
+    window.removeEventListener('pointerdown', onDown);
+    void requestAndRecordPersistence();
+  };
+  window.addEventListener('pointerdown', onDown, { once: true });
+  return () => window.removeEventListener('pointerdown', onDown);
+}
