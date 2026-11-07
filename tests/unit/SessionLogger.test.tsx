@@ -9,6 +9,8 @@ import { resetDb } from '../integration/helpers';
 
 // Test giao diện nặng (render cả trang + IndexedDB giả): runner CI chậm hơn máy dev ~3 lần — nới THỜI GIAN CHỜ, không nới điều kiện.
 vi.setConfig({ testTimeout: 20_000 });
+/** Hộp thoại tải lười (import động) + truy vấn IndexedDB: runner CI có thể quá 1 s mặc định của findBy*. */
+const LAZY_WAIT = 8000;
 
 vi.mock('../../src/db/repo', async (importOriginal) => {
   const m = await importOriginal<typeof import('../../src/db/repo')>();
@@ -121,9 +123,9 @@ describe('SessionLogger — Thay bài (v1.8.0)', () => {
     const orig = (await db.sessions.get(s.id))!.exercises[0]!;
 
     fireEvent.click(screen.getAllByRole('button', { name: 'Thay bài' })[0]!);
-    fireEvent.click(await screen.findByRole('button', { name: 'Thay bằng Đạp đùi máy' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Thay bằng Đạp đùi máy' }, { timeout: LAZY_WAIT }));
     // Buổi theo giáo án => hỏi phạm vi; chọn "Chỉ buổi này"
-    fireEvent.click(await screen.findByRole('button', { name: 'Chỉ buổi này' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Chỉ buổi này' }, { timeout: LAZY_WAIT }));
     await waitFor(async () => expect((await db.sessions.get(s.id))!.exercises[0]!.exerciseId).toBe('leg-press'));
 
     const se = (await db.sessions.get(s.id))!.exercises[0]!;
@@ -137,7 +139,7 @@ describe('SessionLogger — Thay bài (v1.8.0)', () => {
     expect(se.sets[1]!.replacedFrom).toBeUndefined();
     // "Chỉ buổi này" => giáo án không đổi
     expect((await repo.getActiveProgram())!.days).toEqual(before.days);
-    expect(await screen.findByRole('link', { name: 'Đạp đùi máy' })).toBeInTheDocument();
+    expect(await screen.findByRole('link', { name: 'Đạp đùi máy' }, { timeout: LAZY_WAIT })).toBeInTheDocument();
   });
 });
 
@@ -167,7 +169,7 @@ describe('SessionLogger — superset (v1.8.0)', () => {
       </FeedbackProvider>,
     );
     await screen.findByRole('heading', { name: 'Đang tập' });
-    expect(await screen.findByLabelText('Superset A')).toBeInTheDocument();
+    expect(await screen.findByLabelText('Superset A', undefined, { timeout: LAZY_WAIT })).toBeInTheDocument();
     expect(screen.getByText('A1')).toBeInTheDocument();
     expect(screen.getByText('A2')).toBeInTheDocument();
     timerStart.mockClear();
