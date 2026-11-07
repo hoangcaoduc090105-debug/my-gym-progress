@@ -7,6 +7,9 @@ import { RestTimerProvider } from '../../src/features/workout/RestTimer';
 import { SessionLogger } from '../../src/features/workout/SessionLogger';
 import { resetDb } from '../integration/helpers';
 
+// Test giao diện nặng (render cả trang + IndexedDB giả): runner CI chậm hơn máy dev ~3 lần — nới THỜI GIAN CHỜ, không nới điều kiện.
+vi.setConfig({ testTimeout: 20_000 });
+
 vi.mock('../../src/db/repo', async (importOriginal) => {
   const m = await importOriginal<typeof import('../../src/db/repo')>();
   return { ...m, saveSession: vi.fn(m.saveSession) };

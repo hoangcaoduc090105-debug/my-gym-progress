@@ -5,6 +5,9 @@ import { FeedbackProvider } from '../../src/components/feedback';
 import { ProgramEditor } from '../../src/features/workout/ProgramEditor';
 import { resetDb } from '../integration/helpers';
 
+// Test giao diện nặng (render cả trang + IndexedDB giả): runner CI chậm hơn máy dev ~3 lần — nới THỜI GIAN CHỜ, không nới điều kiện.
+vi.setConfig({ testTimeout: 20_000 });
+
 async function renderEditor() {
   await resetDb();
   const p = (await repo.getActiveProgram())!;
