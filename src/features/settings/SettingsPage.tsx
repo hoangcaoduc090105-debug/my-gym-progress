@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Save, ShieldCheck } from 'lucide-react';
+import { BookOpen, ChevronRight, Save, ShieldCheck } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { getThemePref, setThemePref, type ThemePref } from '../../lib/theme';
 import type { Profile, Settings } from '../../db/types';
 import { Button, Card, Field, NumberInput, PageHeader, Segmented, Spinner, Toggle } from '../../components/ui';
 import { useFeedback } from '../../components/feedback';
@@ -21,6 +23,14 @@ export function SettingsPage() {
   return (
     <div className="space-y-4">
       <PageHeader title="Cài đặt" subtitle={`Phiên bản ${__APP_VERSION__}`} />
+      <Card title="Giao diện & hướng dẫn">
+        <ThemePicker />
+        <Link to="/huong-dan" className="mt-3 flex items-center gap-2 rounded-xl bg-surface2 p-3 text-sm font-medium">
+          <BookOpen size={18} className="text-accent" />
+          <span className="flex-1">Hướng dẫn sử dụng & tập đúng cách</span>
+          <ChevronRight size={18} className="text-muted" />
+        </Link>
+      </Card>
       <ProfileForm profile={profile} />
       <TrainingForm settings={settings} />
       <DataManagement />
@@ -209,5 +219,24 @@ function TrainingForm({ settings }: { settings: Settings }) {
         </Button>
       </div>
     </Card>
+  );
+}
+
+function ThemePicker() {
+  const [pref, setPref] = useState<ThemePref>(getThemePref);
+  return (
+    <Segmented
+      className="w-full"
+      value={pref}
+      onChange={(v) => {
+        setPref(v);
+        setThemePref(v);
+      }}
+      options={[
+        { value: 'light', label: '☀️ Sáng' },
+        { value: 'dark', label: '🌙 Tối' },
+        { value: 'system', label: 'Theo máy' },
+      ]}
+    />
   );
 }

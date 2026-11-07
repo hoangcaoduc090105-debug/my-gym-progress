@@ -11,7 +11,7 @@ const BASE = `http://localhost:${PORT}/`;
 const SHOTS = process.env.SCREENSHOT_DIR;
 if (SHOTS) mkdirSync(SHOTS, { recursive: true });
 
-const server = spawn('npx', ['vite', 'preview', '--port', String(PORT), '--strictPort'], { stdio: 'pipe' });
+const server = spawn('npx', ['vite', 'preview', '--port', String(PORT), '--strictPort'], { stdio: 'pipe', detached: true });
 await new Promise((res, rej) => {
   const t = setTimeout(() => rej(new Error('preview không khởi động')), 20000);
   server.stdout.on('data', (d) => String(d).includes(String(PORT)) && (clearTimeout(t), res()));
@@ -89,6 +89,11 @@ try {
     await page.getByRole('button', { name: 'Hoàn thành hiệp 2' }).first().click();
     await noOverflow();
     await shot('03-logger');
+    await page.getByRole('button', { name: 'Xem kỹ thuật' }).first().click();
+    await page.getByRole('dialog').getByText('1. Chuẩn bị tư thế').waitFor();
+    await page.getByRole('dialog').getByText('Hít thở').waitFor();
+    await shot('03b-technique');
+    await page.getByRole('dialog').getByRole('button', { name: 'Đóng' }).click();
   });
 
   await check('Tải lại trang giữa buổi: không mất hiệp đã ghi', async () => {
@@ -139,6 +144,19 @@ try {
     await page.getByText('Ước tính').first().waitFor();
     await noOverflow();
     await shot('05-nutrition');
+  });
+
+  await check('Trang Hướng dẫn: dùng app, tập đúng cách, từng động tác', async () => {
+    await page.goto(BASE + '#/huong-dan');
+    await page.getByText('Ghi từng hiệp khi đang tập').waitFor();
+    await page.getByRole('tab', { name: 'Tập đúng cách' }).click();
+    await page.getByText('Chọn mức tạ khởi đầu').waitFor();
+    await page.getByText(/Cheung, K\., Hume/).waitFor();
+    await shot('08-guide');
+    await page.getByRole('tab', { name: 'Từng động tác' }).click();
+    await page.getByRole('link', { name: /Squat tạ ấm/ }).click();
+    await page.getByText('Mẹo cho người mới').waitFor();
+    await noOverflow();
   });
 
   await check('Phân tích: biểu đồ và kỷ lục hiển thị', async () => {
@@ -203,6 +221,20 @@ try {
     await context.setOffline(false);
   });
 
+  await check('Chuyển giao diện Tối và quay lại Sáng (lưu trên thiết bị)', async () => {
+    await page.goto(BASE + '#/cai-dat');
+    await page.getByRole('tab', { name: /Tối/ }).click();
+    assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), 'dark');
+    await page.goto(BASE);
+    await page.getByRole('heading', { name: 'Tổng quan' }).waitFor();
+    await shot('09-dashboard-dark');
+    await page.reload();
+    assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), 'dark');
+    await page.goto(BASE + '#/cai-dat');
+    await page.getByRole('tab', { name: /Sáng/ }).click();
+    assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), 'light');
+  });
+
   await check('Desktop: thanh điều hướng bên, không tràn', async () => {
     await page.setViewportSize({ width: 1280, height: 860 });
     await page.goto(BASE);
@@ -223,5 +255,10 @@ try {
   throw e;
 } finally {
   await browser.close();
-  server.kill();
+  try {
+    process.kill(-server.pid, 'SIGTERM'); // tắt cả nhóm tiến trình (npx + vite preview)
+  } catch {
+    server.kill();
+  }
+  setTimeout(() => process.exit(process.exitCode ?? 0), 200);
 }

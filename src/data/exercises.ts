@@ -1,3 +1,4 @@
+import { EXERCISE_GUIDES } from './exerciseGuides';
 import type { BodyRegion, Equipment, Exercise, MuscleGroup } from '../db/types';
 
 /**
@@ -6,7 +7,8 @@ import type { BodyRegion, Equipment, Exercise, MuscleGroup } from '../db/types';
  * Đây là hướng dẫn tham khảo, không thay thế huấn luyện viên trực tiếp.
  */
 export const LIBRARY_SOURCE = 'Haff & Triplett (2016), Essentials of Strength Training and Conditioning (4th ed.)';
-export const SEED_VERSION = 1;
+/** Tăng khi cập nhật nội dung bài tập gốc — bản cài cũ sẽ nhận nội dung mới, không đụng dữ liệu người dùng. */
+export const SEED_VERSION = 2;
 const SEED_DATE = '2026-01-01T00:00:00.000Z';
 
 type Def = [
@@ -288,6 +290,7 @@ export const BUILTIN_EXERCISES: Exercise[] = D.map(([id, nameVi, nameEn, primary
   alternativeIds: alternatives,
   isCustom: false,
   source: LIBRARY_SOURCE,
+  ...(EXERCISE_GUIDES[id] ?? {}),
   createdAt: SEED_DATE,
   updatedAt: SEED_DATE,
 }));

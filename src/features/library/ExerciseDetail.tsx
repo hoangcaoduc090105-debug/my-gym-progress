@@ -1,6 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { AlertTriangle, Pencil, Trash2, Trophy } from 'lucide-react';
+import { Pencil, Trash2, Trophy } from 'lucide-react';
+import { ExerciseTechnique } from './ExerciseTechnique';
 import { db } from '../../db/db';
 import { EQUIPMENT_LABELS, MUSCLE_LABELS } from '../../db/types';
 import { Badge, Button, Card, PageHeader, Spinner } from '../../components/ui';
@@ -41,27 +42,9 @@ export function ExerciseDetail() {
         {ex.isCustom && <Badge tone="info">Tự tạo</Badge>}
       </div>
 
-      {ex.instructions.length > 0 && (
-        <Card title="Hướng dẫn thực hiện">
-          <ol className="list-decimal space-y-1.5 pl-5 text-sm leading-relaxed">
-            {ex.instructions.map((s, i) => (
-              <li key={i}>{s}</li>
-            ))}
-          </ol>
-        </Card>
-      )}
-      {ex.commonMistakes.length > 0 && (
-        <Card title="Lỗi kỹ thuật thường gặp">
-          <ul className="space-y-1.5 text-sm">
-            {ex.commonMistakes.map((s, i) => (
-              <li key={i} className="flex gap-2">
-                <AlertTriangle size={16} className="mt-0.5 shrink-0 text-warn" />
-                {s}
-              </li>
-            ))}
-          </ul>
-        </Card>
-      )}
+      <Card title="Hướng dẫn kỹ thuật">
+        <ExerciseTechnique ex={ex} />
+      </Card>
       {alts.length > 0 && (
         <Card title="Bài tập thay thế">
           <div className="flex flex-wrap gap-2">

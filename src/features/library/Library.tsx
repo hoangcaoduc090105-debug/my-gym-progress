@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { ChevronRight, Plus, Search } from 'lucide-react';
 import { db } from '../../db/db';
 import { EQUIPMENT, EQUIPMENT_LABELS, MUSCLE_GROUPS, MUSCLE_LABELS, type Equipment, type MuscleGroup } from '../../db/types';
@@ -28,7 +28,14 @@ export function Library() {
     <div className="space-y-4">
       <PageHeader
         title="Thư viện bài tập"
-        subtitle={`${all.length} bài · ${all.filter((e) => e.isCustom).length} bài tự tạo`}
+        subtitle={
+          <>
+            {all.length} bài · bấm vào bài để xem cách tập đúng ·{' '}
+            <Link to="/huong-dan?tab=train" className="text-info underline">
+              Nguyên tắc cho người mới
+            </Link>
+          </>
+        }
         action={
           <Button variant="primary" size="sm" icon={<Plus size={16} />} onClick={() => nav('/thu-vien/moi')}>
             Thêm

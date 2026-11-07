@@ -1,9 +1,9 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Link, useNavigate } from 'react-router-dom';
-import { Bell, ChevronRight, Dumbbell, Play, Trophy } from 'lucide-react';
+import { Bell, BookOpen, ChevronRight, Dumbbell, Play, Trophy } from 'lucide-react';
 import { db } from '../../db/db';
 import { MUSCLE_GROUPS, MUSCLE_LABELS } from '../../db/types';
-import { Badge, Button, Card, Explain, PageHeader, Spinner, Stat, cx } from '../../components/ui';
+import { Button, Card, Explain, PageHeader, Spinner, Stat, cx } from '../../components/ui';
 import { useFeedback } from '../../components/feedback';
 import { useExerciseMap, useProfile, useSettings } from '../../app/useAppData';
 import { activeCompleted } from '../../domain/sets';
@@ -68,7 +68,15 @@ export function Dashboard() {
 
   return (
     <div className="space-y-4">
-      <PageHeader title="Tổng quan" subtitle={formatDate(today)} />
+      <PageHeader
+        title="Tổng quan"
+        subtitle={formatDate(today)}
+        action={
+          <Button size="sm" variant="outline" icon={<BookOpen size={16} />} onClick={() => nav('/huong-dan')}>
+            Hướng dẫn
+          </Button>
+        }
+      />
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Stat label="Cân nặng hiện tại" value={weight ? fmt1(weight.value) : '—'} unit="kg" hint={weight ? `đo ${formatShort(weight.date)}` : 'chưa có dữ liệu'} />
@@ -82,48 +90,49 @@ export function Dashboard() {
         <Stat label="Buổi tập tuần này" value={thisWeek.length} hint={`${weekSets} hiệp làm việc`} tone={thisWeek.length > 0 ? 'accent' : undefined} />
       </div>
 
-      <Card title="Buổi tập kế tiếp">
+      <section className="hero rounded-2xl p-5 shadow-card">
+        <div className="text-xs font-semibold uppercase tracking-wide text-white/80">{draft ? 'Đang tập dở' : 'Buổi tập kế tiếp'}</div>
         {draft ? (
-          <div className="flex items-center gap-3">
+          <div className="mt-1 flex items-center gap-3">
             <div className="flex-1">
-              <div className="font-semibold">{draft.dayName}</div>
-              <div className="text-sm text-muted">Đang tập dở — dữ liệu đã được lưu tự động.</div>
+              <div className="text-xl font-bold">{draft.dayName}</div>
+              <div className="text-sm text-white/80">Dữ liệu đã được lưu tự động.</div>
             </div>
-            <Button variant="primary" icon={<Play size={18} />} onClick={() => nav(`/tap/${draft.id}`)}>
+            <Button className="bg-white text-[#065f46] hover:bg-white/90" icon={<Play size={18} />} onClick={() => nav(`/tap/${draft.id}`)}>
               Tiếp tục
             </Button>
           </div>
         ) : next ? (
           <div>
-            <div className="flex items-start gap-3">
+            <div className="mt-1 flex items-start gap-3">
               <div className="flex-1">
-                <div className="text-lg font-semibold">{next.day.name}</div>
-                <div className="text-sm text-muted">
+                <div className="text-2xl font-bold">{next.day.name}</div>
+                <div className="text-sm text-white/80">
                   {next.program.name}
                   {next.source === 'scheduled' ? ` · đã đặt lịch ${formatDate(next.date)}` : ' · theo vòng giáo án'}
                 </div>
               </div>
-              <Button variant="primary" icon={<Play size={18} />} onClick={() => void startNext()}>
+              <Button className="bg-white font-semibold text-[#065f46] hover:bg-white/90" icon={<Play size={18} />} onClick={() => void startNext()}>
                 Bắt đầu
               </Button>
             </div>
             <ul className="mt-3 flex flex-wrap gap-1.5">
               {next.day.exercises.map((e) => (
-                <li key={e.id}>
-                  <Badge>{exMap.get(e.exerciseId)?.nameVi ?? e.exerciseId}</Badge>
+                <li key={e.id} className="rounded-full bg-white/20 px-2.5 py-0.5 text-xs font-medium">
+                  {exMap.get(e.exerciseId)?.nameVi ?? e.exerciseId}
                 </li>
               ))}
             </ul>
           </div>
         ) : (
-          <div className="text-sm text-muted">
+          <div className="mt-1 text-sm">
             Chưa có giáo án đang dùng.{' '}
-            <Link className="text-accent" to="/lich-tap">
+            <Link className="font-semibold underline" to="/lich-tap?tab=programs">
               Chọn giáo án
             </Link>
           </div>
         )}
-      </Card>
+      </section>
 
       <Card title="Nhóm cơ đã tập tuần này" action={<span className="text-xs text-muted">số hiệp</span>}>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">

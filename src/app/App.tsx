@@ -23,6 +23,7 @@ import { ExerciseDetail } from '../features/library/ExerciseDetail';
 import { ExerciseForm } from '../features/library/ExerciseForm';
 import { NutritionPage } from '../features/nutrition/NutritionPage';
 import { SettingsPage } from '../features/settings/SettingsPage';
+import { GuidePage } from '../features/guide/GuidePage';
 
 // Trang có biểu đồ (Recharts) tải lười để mở app nhanh hơn.
 const BodyPage = lazy(() => import('../features/body/BodyPage'));
@@ -56,6 +57,7 @@ function Shell() {
               <Route path="dinh-duong" element={<NutritionPage />} />
               <Route path="phan-tich" element={<AnalyticsPage />} />
               <Route path="cai-dat" element={<SettingsPage />} />
+              <Route path="huong-dan" element={<GuidePage />} />
               <Route path="chao-mung" element={<Navigate to="/" replace />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>

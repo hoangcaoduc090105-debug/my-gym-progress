@@ -20,7 +20,7 @@ export function UpdatePrompt() {
   if (!needRefresh && !offlineReady) return null;
   return (
     <div className="fixed inset-x-0 top-0 z-[55] flex justify-center p-3 pt-safe">
-      <div className="flex w-full max-w-md items-center gap-3 rounded-xl border border-info/40 bg-[#0f2230] p-3 text-sm shadow-xl">
+      <div className="flex w-full max-w-md items-center gap-3 rounded-xl border border-info/40 bg-surface p-3 text-sm shadow-xl">
         {needRefresh ? <RefreshCw size={18} className="shrink-0 text-info" /> : <WifiOff size={18} className="shrink-0 text-info" />}
         <div className="flex-1">
           {needRefresh ? 'Có phiên bản mới. Dữ liệu của bạn được giữ nguyên.' : 'Ứng dụng đã sẵn sàng dùng offline.'}

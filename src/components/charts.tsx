@@ -2,13 +2,20 @@ import { useState, type ReactNode } from 'react';
 import { Bar, BarChart, CartesianGrid, Cell, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { Table2, LineChart as LineIcon } from 'lucide-react';
 
+import { useResolvedTheme, type ResolvedTheme } from '../lib/theme';
+
 /**
- * Bảng màu biểu đồ đã kiểm định (dataviz validate_palette, nền tối #121821):
- * dải sáng, chroma, tách biệt khi mù màu (ΔE 23,2) và tương phản ≥ 3:1 đều PASS.
+ * Bảng màu biểu đồ đã kiểm định bằng validate_palette (dataviz) cho từng nền:
+ * - Sáng (nền #ffffff): #059669, #2563eb — PASS dải sáng, chroma, CVD ΔE 24,9, tương phản ≥ 3:1.
+ * - Tối (nền #121821): #7a9a10, #2b88c4 — PASS dải sáng, chroma, CVD ΔE 23,2, tương phản ≥ 3:1.
  */
-export const SERIES = ['#7a9a10', '#2b88c4'] as const;
-const GRID = '#1f2836';
-const AXIS = '#8a97a8';
+const PALETTE: Record<ResolvedTheme, { series: [string, string]; grid: string; axis: string; surface: string; muted: string }> = {
+  light: { series: ['#059669', '#2563eb'], grid: '#e8eeed', axis: '#6b7280', surface: '#ffffff', muted: '#cbd5d3' },
+  dark: { series: ['#7a9a10', '#2b88c4'], grid: '#1f2836', axis: '#8a97a8', surface: '#121821', muted: '#3b4656' },
+};
+function usePalette() {
+  return PALETTE[useResolvedTheme()];
+}
 
 export interface Datum {
   label: string;
@@ -40,6 +47,7 @@ function TooltipBox({ active, payload, label, series }: { active?: boolean; payl
 }
 
 function Legend({ series }: { series: SeriesDef[] }) {
+  const SERIES = usePalette().series;
   if (series.length < 2) return null;
   return (
     <div className="mb-2 flex flex-wrap gap-3 text-xs text-muted">
@@ -101,6 +109,7 @@ export function ChartFrame({ data, series, children, height = 220 }: { data: Dat
 }
 
 export function TrendLineChart({ data, series, height, zeroBased = false }: { data: Datum[]; series: SeriesDef[]; height?: number; zeroBased?: boolean }) {
+  const { series: SERIES, grid: GRID, axis: AXIS, surface } = usePalette();
   return (
     <ChartFrame data={data} series={series} height={height}>
       <ResponsiveContainer width="100%" height="100%">
@@ -116,8 +125,8 @@ export function TrendLineChart({ data, series, height, zeroBased = false }: { da
               dataKey={s.key}
               stroke={SERIES[i]}
               strokeWidth={2}
-              dot={{ r: 4, strokeWidth: 2, stroke: '#121821', fill: SERIES[i] }}
-              activeDot={{ r: 6, strokeWidth: 2, stroke: '#121821' }}
+              dot={{ r: 4, strokeWidth: 2, stroke: surface, fill: SERIES[i] }}
+              activeDot={{ r: 6, strokeWidth: 2, stroke: surface }}
               connectNulls
               isAnimationActive={false}
             />
@@ -141,6 +150,7 @@ export function SimpleBarChart({
   horizontal?: boolean;
   highlight?: (d: Datum) => boolean;
 }) {
+  const { series: SERIES, grid: GRID, axis: AXIS, muted } = usePalette();
   return (
     <ChartFrame data={data} series={[series]} height={height}>
       <ResponsiveContainer width="100%" height="100%">
@@ -157,10 +167,10 @@ export function SimpleBarChart({
               <YAxis stroke={AXIS} tickLine={false} axisLine={false} width={44} allowDecimals={false} />
             </>
           )}
-          <Tooltip content={<TooltipBox series={[series]} />} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
+          <Tooltip content={<TooltipBox series={[series]} />} cursor={{ fill: 'rgba(127,127,127,0.08)' }} />
           <Bar dataKey={series.key} radius={horizontal ? [0, 4, 4, 0] : [4, 4, 0, 0]} isAnimationActive={false} maxBarSize={36}>
             {data.map((d) => (
-              <Cell key={d.label} fill={highlight && !highlight(d) ? '#3b4656' : SERIES[0]} />
+              <Cell key={d.label} fill={highlight && !highlight(d) ? muted : SERIES[0]} />
             ))}
           </Bar>
         </BarChart>

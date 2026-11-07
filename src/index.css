@@ -2,9 +2,52 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Giao diện SÁNG (mặc định): nền xanh-xám rất nhạt, thẻ trắng, màu chủ đạo xanh ngọc. */
+:root {
+  --c-bg: 243 247 246;
+  --c-surface: 255 255 255;
+  --c-surface2: 236 242 241;
+  --c-line: 220 229 228;
+  --c-muted: 94 108 120;
+  --c-text: 17 24 39;
+  --c-accent: 3 134 92;
+  --c-accent-dim: 4 110 77;
+  --c-accent-ink: 255 255 255;
+  --c-info: 3 105 161;
+  --c-warn: 180 83 9;
+  --c-danger: 200 30 30;
+  --c-ok: 21 128 61;
+  --hero-from: 5 150 105;
+  --hero-to: 2 132 199;
+  --shadow-card: 0 1px 2px rgba(16, 24, 40, 0.04), 0 4px 16px rgba(16, 24, 40, 0.04);
+  --chart-axis: 107 114 128;
+  color-scheme: light;
+}
+
+/* Giao diện TỐI */
+:root[data-theme='dark'] {
+  --c-bg: 10 13 18;
+  --c-surface: 18 24 33;
+  --c-surface2: 26 34 46;
+  --c-line: 38 49 66;
+  --c-muted: 138 151 168;
+  --c-text: 232 237 243;
+  --c-accent: 198 244 50;
+  --c-accent-dim: 159 196 37;
+  --c-accent-ink: 17 22 10;
+  --c-info: 92 200 255;
+  --c-warn: 255 181 71;
+  --c-danger: 255 93 108;
+  --c-ok: 61 220 151;
+  --hero-from: 22 101 52;
+  --hero-to: 7 89 133;
+  --shadow-card: none;
+  --chart-axis: 138 151 168;
+  color-scheme: dark;
+}
+
 @layer base {
   html {
-    color-scheme: dark;
     -webkit-tap-highlight-color: transparent;
     text-size-adjust: 100%;
   }
@@ -57,10 +100,15 @@
   .pt-safe {
     padding-top: env(safe-area-inset-top);
   }
+  /* Thẻ nổi bật (buổi tập kế tiếp) — chuyển màu xanh ngọc → xanh dương, chữ trắng. */
+  .hero {
+    background-image: linear-gradient(135deg, rgb(var(--hero-from)), rgb(var(--hero-to)));
+    color: #fff;
+  }
 }
 
 .recharts-cartesian-axis-tick-value {
-  fill: #8a97a8;
+  fill: rgb(var(--chart-axis));
   font-size: 11px;
 }
 .recharts-tooltip-wrapper {

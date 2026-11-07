@@ -66,6 +66,10 @@ export const exerciseSchema = z.object({
   alternativeIds: z.array(id).max(20),
   isCustom: z.boolean(),
   source: z.string().max(500).optional(),
+  setup: z.array(z.string().max(1000)).max(30).optional(),
+  breathing: z.string().max(1000).optional(),
+  feel: z.string().max(1000).optional(),
+  tips: z.array(z.string().max(1000)).max(30).optional(),
   createdAt: timestamp,
   updatedAt: timestamp,
 });

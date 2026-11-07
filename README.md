@@ -1,6 +1,6 @@
 # My Gym Progress
 
-Ứng dụng web **local-first** để theo dõi tập gym, tăng cơ, số đo cơ thể và dinh dưỡng. Chạy hoàn toàn trên thiết bị, **dùng được offline**, cài được lên điện thoại dưới dạng PWA.
+Ứng dụng web **local-first**, giao diện sáng (có chế độ tối), để theo dõi tập gym, tăng cơ, số đo cơ thể và dinh dưỡng. Chạy hoàn toàn trên thiết bị, **dùng được offline**, cài được lên điện thoại dưới dạng PWA.
 
 - **Không backend, không tài khoản, không AI/LLM API, không API key.** Mọi phép tính chạy bằng JavaScript trên thiết bị.
 - **Dữ liệu chỉ nằm trong IndexedDB của trình duyệt.** Repository này không chứa dữ liệu cá nhân nào. Hồ sơ được nhập ở lần mở đầu tiên.
@@ -36,7 +36,9 @@ Lần đầu chạy E2E trên máy mới, cài trình duyệt Chromium cho Playw
 
 ## Tài liệu
 
+- **Ứng dụng:** https://hoangcaoduc090105-debug.github.io/my-gym-progress/
 - [Hướng dẫn sử dụng](docs/HUONG_DAN_SU_DUNG.md)
+- [Hướng dẫn tập luyện cho người mới — từng động tác](docs/HUONG_DAN_TAP_LUYEN.md)
 - [Triển khai lên GitHub Pages](docs/TRIEN_KHAI_GITHUB_PAGES.md)
 - [Cách tính chỉ số và nguồn tham khảo](docs/CACH_TINH_CHI_SO.md)
 - [Kiến trúc](docs/KIEN_TRUC.md)

@@ -61,7 +61,7 @@ export function IconButton({
 
 export function Card({ children, className, title, action, id }: { children: ReactNode; className?: string; title?: ReactNode; action?: ReactNode; id?: string }) {
   return (
-    <section id={id} className={cx('rounded-2xl border border-line/70 bg-surface p-4', className)}>
+    <section id={id} className={cx('rounded-2xl border border-line/70 bg-surface p-4 shadow-card', className)}>
       {(title || action) && (
         <div className="mb-3 flex items-center justify-between gap-2">
           {title && <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">{title}</h2>}
@@ -94,7 +94,7 @@ export function PageHeader({ title, subtitle, back, action }: { title: string; s
 export function Stat({ label, value, unit, hint, tone }: { label: string; value: ReactNode; unit?: string; hint?: ReactNode; tone?: 'ok' | 'warn' | 'danger' | 'accent' }) {
   const toneCls = tone === 'ok' ? 'text-ok' : tone === 'warn' ? 'text-warn' : tone === 'danger' ? 'text-danger' : tone === 'accent' ? 'text-accent' : 'text-text';
   return (
-    <div className="rounded-2xl border border-line/70 bg-surface p-3.5">
+    <div className="rounded-2xl border border-line/70 bg-surface p-3.5 shadow-card">
       <div className="text-xs font-medium text-muted">{label}</div>
       <div className={cx('mt-1 text-2xl font-bold tabular', toneCls)}>
         {value}
@@ -200,7 +200,7 @@ export function Segmented<T extends string>({ value, onChange, options, classNam
           onClick={() => onChange(o.value)}
           className={cx(
             'h-9 flex-1 whitespace-nowrap rounded-lg px-3 text-sm font-medium transition-colors',
-            value === o.value ? 'bg-bg text-text shadow' : 'text-muted hover:text-text',
+            value === o.value ? 'bg-surface text-text shadow' : 'text-muted hover:text-text',
           )}
         >
           {o.label}
@@ -246,7 +246,7 @@ export function Modal({ open, onClose, title, children, footer, wide }: { open: 
   }, [open, onClose]);
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 sm:items-center sm:p-4" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center sm:p-4" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div
         role="dialog"
         aria-modal="true"

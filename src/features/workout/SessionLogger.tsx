@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { ArrowDown, ArrowUp, Check, ClipboardCopy, Info, Minus, Plus, Timer, Trash2, TrendingUp } from 'lucide-react';
+import { ArrowDown, ArrowUp, BookOpen, Check, ClipboardCopy, Info, Minus, Plus, Timer, Trash2, TrendingUp } from 'lucide-react';
+import { ExerciseTechnique } from '../library/ExerciseTechnique';
 import { db } from '../../db/db';
 import { MUSCLE_LABELS, type Exercise, type SessionExercise, type SetEntry, type Settings, type WorkoutSession } from '../../db/types';
-import { Badge, Button, Card, IconButton, NumberInput, PageHeader, Spinner, cx } from '../../components/ui';
+import { Badge, Button, Card, IconButton, Modal, NumberInput, PageHeader, Spinner, cx } from '../../components/ui';
 import { useFeedback } from '../../components/feedback';
 import { useExerciseMap, useSettings } from '../../app/useAppData';
 import { emptySet, finishSession, lastPerformance, saveSession, softDeleteSession } from '../../db/repo';
@@ -322,6 +323,7 @@ function ExerciseBlock(props: {
   const sg = ex
     ? suggestProgression({ target: t, lastSets: hint?.sets ?? [], region: ex.region, isBodyweight: ex.isBodyweight, settings: settings.progression })
     : null;
+  const [howOpen, setHowOpen] = useState(false);
   const setField = (i: number, patch: Partial<SetEntry>) => onChange((e) => ({ ...e, sets: e.sets.map((x, k) => (k === i ? { ...x, ...patch } : x)) }));
   let workIdx = 0;
 
@@ -341,6 +343,11 @@ function ExerciseBlock(props: {
             )}
           </div>
         </div>
+        {ex && (
+          <IconButton label="Xem kỹ thuật" onClick={() => setHowOpen(true)} className="text-info">
+            <BookOpen size={18} />
+          </IconButton>
+        )}
         <IconButton label="Đưa lên" disabled={props.first} onClick={() => props.onMove(-1)}>
           <ArrowUp size={16} />
         </IconButton>
@@ -462,6 +469,11 @@ function ExerciseBlock(props: {
         value={se.note}
         onChange={(e) => onChange((x) => ({ ...x, note: e.target.value }))}
       />
+      {ex && (
+        <Modal open={howOpen} onClose={() => setHowOpen(false)} title={`Kỹ thuật: ${ex.nameVi}`} wide>
+          <ExerciseTechnique ex={ex} compact />
+        </Modal>
+      )}
     </Card>
   );
 }

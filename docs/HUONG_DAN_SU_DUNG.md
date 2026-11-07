@@ -1,41 +1,91 @@
-# Hướng dẫn sử dụng
+# Hướng dẫn sử dụng My Gym Progress
 
-## 1. Lần đầu mở ứng dụng
-1. Nhập **chiều cao** và **cân nặng hiện tại**. App gợi ý protein **1,6–2,0 g/kg/ngày**, làm tròn 5 g (với 65 kg là 105–130 g). Bạn có thể sửa.
-2. Bấm **Bắt đầu**. Cân nặng vừa nhập trở thành lần đo đầu tiên.
+> Bản đơn giản, đi theo từng bước. Nội dung này cũng có trong app: **Tổng quan → nút "Hướng dẫn"**.
 
-## 2. Cài lên điện thoại (PWA)
-- **iPhone (Safari):** nút Chia sẻ, chọn **Thêm vào MH chính**.
-- **Android (Chrome):** menu ⋮, chọn **Cài đặt ứng dụng** (hoặc **Thêm vào màn hình chính**).
-- Sau lần mở đầu tiên khi có mạng, app dùng được hoàn toàn **offline**.
+**Địa chỉ ứng dụng:** https://hoangcaoduc090105-debug.github.io/my-gym-progress/
 
-## 3. Tập luyện
-1. Vào **Lịch tập → Bắt đầu**. App gợi ý buổi kế tiếp theo vòng **A → B → C**, không gắn với thứ cố định trong tuần. Nên nghỉ ít nhất 1 ngày giữa hai buổi.
-2. Trong mỗi bài, nhập **kg**, **số lần** và **RIR** (số lần còn có thể làm thêm), rồi bấm **✓**.
-   - Ô trống hiện **số liệu buổi trước** (chữ mờ). Bấm ✓ khi ô trống thì app dùng đúng số đó.
-   - Chạm số thứ tự hiệp để chuyển thành **hiệp khởi động (K)**. Hiệp khởi động không được tính vào thống kê.
-   - Bấm ✓ thì **đồng hồ nghỉ** tự chạy theo thời gian nghỉ của bài (có nút ±15 giây và bỏ qua).
-   - **Chép lần trước** điền nhanh toàn bộ thông số buổi trước.
-3. Dòng chữ xanh **"Gợi ý: X kg"** chỉ xuất hiện khi buổi trước bạn đạt số lần tối đa ở mọi hiệp với RIR ≥ ngưỡng. App **không tự đổi giáo án**.
-4. Bấm **Hoàn thành** để lưu vào lịch sử. **Hủy buổi** chuyển buổi tập vào Thùng rác.
-5. Thoát app giữa chừng không sao: mọi thay đổi được **lưu tự động**.
+## Bước 1. Lần đầu mở ứng dụng
 
-**Giáo án**: vào Lịch tập → Giáo án để sửa bài, số hiệp, khoảng số lần, RIR và thời gian nghỉ, hoặc tạo giáo án mới.
-**Lịch**: chọn ngày, rồi **Đặt lịch** cho ngày tương lai hoặc **Ghi buổi tự do** cho ngày đã qua.
+- Nhập chiều cao và cân nặng hiện tại, rồi bấm "Bắt đầu".
+- Ứng dụng tự gợi ý mục tiêu protein mỗi ngày; bạn sửa được bất kỳ lúc nào trong Cài đặt.
+- Mọi dữ liệu chỉ lưu trên điện thoại của bạn, không gửi đi đâu.
 
-## 4. Tiến độ cơ thể
-- **Ghi số đo**: chỉ nhập chỉ số bạn đo. Nên đo buổi sáng, trước khi ăn, cùng vị trí thước dây.
-- **Biểu đồ**: xem theo Ngày, Tuần hoặc Tháng. Xu hướng chỉ hiện khi có ≥ 3 lần đo trải dài ≥ 14 ngày.
-- **Ảnh**: ảnh được thu nhỏ và lưu trên máy. Chọn 2 ảnh bằng nút **So sánh** để đặt cạnh nhau.
+## Bước 2. Cài ứng dụng lên màn hình chính
 
-## 5. Dinh dưỡng
-- Tự thêm thực phẩm theo nhãn bao bì hoặc nguồn tin cậy. Muốn đánh dấu **Đã xác minh** thì phải ghi nguồn. Thực phẩm không đánh dấu hiện nhãn **Ước tính**.
-- Ghi món theo bữa và chỉnh số khẩu phần ngay trong nhật ký.
-- **Thực đơn**: tạo thực đơn mẫu (ví dụ "Ngày tập"), rồi thêm cả thực đơn vào nhật ký bằng 1 lần bấm.
+- iPhone: mở trang bằng Safari → nút Chia sẻ (ô vuông có mũi tên) → "Thêm vào MH chính".
+- Android: mở bằng Chrome → menu ⋮ → "Cài đặt ứng dụng" hoặc "Thêm vào màn hình chính".
+- Sau đó mở app từ biểu tượng, dùng được cả khi không có mạng.
 
-## 6. Sao lưu (quan trọng)
-Dữ liệu chỉ nằm trong trình duyệt trên thiết bị. Xóa dữ liệu duyệt web hoặc gỡ app sẽ **mất dữ liệu**.
-- **Cài đặt → Xuất toàn bộ dữ liệu (JSON)**, nên làm mỗi tuần. Lưu tệp vào Google Drive, iCloud hoặc máy tính.
-- **Nhập dữ liệu JSON**: app kiểm tra tệp trước khi ghi, hiện bảng số bản ghi, cho chọn **Gộp** hoặc **Thay thế toàn bộ**, và luôn hỏi xác nhận. Tệp lỗi sẽ bị từ chối mà không thay đổi dữ liệu.
-- **CSV lịch sử tập** và **CSV số đo** mở được bằng Excel hoặc Google Sheets.
-- Chuyển sang điện thoại mới: xuất JSON ở máy cũ, rồi nhập JSON ở máy mới.
+## Bước 3. Bắt đầu một buổi tập
+
+- Ở Tổng quan hoặc Lịch tập, bấm "Bắt đầu" ở thẻ Buổi tập kế tiếp. App tự xoay vòng Buổi A → B → C.
+- Không bắt buộc tập vào thứ cố định. Nên nghỉ ít nhất 1 ngày giữa 2 buổi.
+- Muốn tự chọn bài: Lịch tập → "Buổi tự do".
+
+## Bước 4. Ghi từng hiệp khi đang tập
+
+- Mỗi dòng là 1 hiệp: nhập số kg, số lần, RIR (số lần còn có thể làm thêm), rồi bấm ✓.
+- Ô trống có chữ mờ là số liệu buổi trước — bấm ✓ luôn nếu bạn làm đúng như vậy.
+- Bấm ✓ thì đồng hồ nghỉ tự chạy ở cuối màn hình (có nút +15 giây, −15 giây, bỏ qua).
+- Bấm biểu tượng quyển sách 📖 cạnh tên bài để xem kỹ thuật ngay trong lúc tập.
+- Chạm vào số thứ tự hiệp để đổi thành hiệp khởi động (K); hiệp K không tính vào thống kê.
+- Dòng xanh "Gợi ý: … kg" xuất hiện khi bạn đủ điều kiện tăng tạ. Đây chỉ là gợi ý, giáo án không tự đổi.
+
+## Bước 5. Kết thúc buổi tập
+
+- Bấm "Hoàn thành" ở cuối trang. Chỉ các hiệp đã ✓ được lưu vào lịch sử.
+- Thoát app giữa chừng không sao: mọi thứ được lưu tự động, mở lại sẽ thấy nút "Tiếp tục".
+- Lỡ tay hủy hoặc xóa: vào Cài đặt → Thùng rác để khôi phục.
+
+## Bước 6. Ghi cân nặng và số đo
+
+- Tiến độ cơ thể → "Ghi số đo". Chỉ cần nhập chỉ số bạn có.
+- Nên cân 2–3 lần mỗi tuần, buổi sáng sau khi vệ sinh, trước khi ăn.
+- Đo vòng mỗi 2 tuần, cùng vị trí thước dây. App sẽ nhắc bạn ở trang Tổng quan.
+- Ảnh tiến độ: tab Ảnh → chọn góc chụp → "Chọn / chụp ảnh". Dùng nút "So sánh" để xem 2 ảnh cạnh nhau.
+
+## Bước 7. Ghi dinh dưỡng
+
+- Lần đầu: Dinh dưỡng → tab Thực phẩm → "Thêm thực phẩm", nhập số liệu theo nhãn bao bì.
+- Hằng ngày: tab Nhật ký ngày → "Thêm món" ở từng bữa → chọn món → nhập số khẩu phần.
+- Thanh protein cho biết bạn đã đạt bao nhiêu so với mục tiêu ngày.
+- Thực phẩm ăn thường xuyên: bấm ngôi sao ⭐ để đưa lên đầu danh sách.
+- Thực đơn: tạo sẵn "Ngày tập", rồi thêm cả thực đơn bằng 1 lần bấm.
+
+## Bước 8. Xem tiến bộ
+
+- Phân tích: số buổi mỗi tuần, số hiệp theo nhóm cơ, tổng khối lượng, sức mạnh từng bài, kỷ lục cá nhân.
+- Mỗi chỉ số có nút "Cách tính" giải thích ý nghĩa.
+- Khi dữ liệu còn ít, app hiện "Chưa đủ dữ liệu" thay vì đưa kết luận sai.
+
+## Bước 9. Sao lưu dữ liệu — làm mỗi tuần
+
+- Cài đặt → "Xuất toàn bộ dữ liệu (JSON)" → lưu tệp vào Google Drive hoặc iCloud.
+- Đổi điện thoại: cài app ở máy mới → Cài đặt → "Nhập dữ liệu JSON" → chọn tệp đã lưu.
+- Xóa dữ liệu trình duyệt mà không có tệp sao lưu sẽ mất toàn bộ nhật ký.
+
+## Giải thích nhanh các nút trên màn hình tập
+
+| Thành phần | Ý nghĩa |
+|---|---|
+| **Hiệp** (1, 2, 3 hoặc K) | Số thứ tự hiệp. Chạm để chuyển thành hiệp khởi động **K** (không tính thống kê) |
+| **kg** | Mức tạ. Bài không dùng tạ (hít đất, plank…) ghi **0** |
+| **Lần** | Số lần lặp. Bài giữ tư thế (plank) ghi **số giây** |
+| **RIR** | Số lần **còn có thể làm thêm** khi dừng. 0 = hết sức, 2 = còn dư 2 lần |
+| **✓** | Đánh dấu hiệp đã xong; đồng hồ nghỉ tự chạy |
+| **📖** | Xem cách tập đúng của bài |
+| **Chép lần trước** | Điền nhanh số liệu buổi trước |
+
+## Câu hỏi thường gặp
+
+**Tôi lỡ đóng app khi đang tập?** Mở lại sẽ thấy thẻ "Buổi tập đang diễn ra" → bấm **Tiếp tục**. Không mất dữ liệu.
+
+**Tôi muốn ghi buổi tập của hôm qua?** Lịch tập → tab **Lịch** → chọn ngày → **Ghi buổi tự do**. Hoặc đổi ngày ở đầu màn hình tập.
+
+**Tôi muốn đổi bài tập trong giáo án?** Lịch tập → tab **Giáo án** → **Sửa** → bỏ bài cũ, **Thêm bài tập** mới → **Lưu**.
+
+**Màn hình quá sáng khi tập buổi tối?** Cài đặt → **Giao diện** → chọn **Tối**.
+
+**Có cần mạng không?** Chỉ cần ở lần mở đầu tiên. Sau đó dùng offline hoàn toàn.
+
+**Dữ liệu có bị gửi đi đâu không?** Không. Mọi thứ nằm trên điện thoại của bạn. Vì vậy hãy **xuất sao lưu mỗi tuần**.

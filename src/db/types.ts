@@ -95,6 +95,11 @@ export interface Exercise {
   alternativeIds: string[];
   isCustom: boolean;
   source?: string;
+  /** Hướng dẫn chi tiết cho người mới (không bắt buộc). */
+  setup?: string[];
+  breathing?: string;
+  feel?: string;
+  tips?: string[];
   createdAt: string;
   updatedAt: string;
 }

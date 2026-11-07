@@ -62,7 +62,7 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
             role={t.kind === 'error' ? 'alert' : 'status'}
             className={cx(
               'pointer-events-auto flex w-full max-w-md items-start gap-2 whitespace-pre-line rounded-xl border px-3 py-2.5 text-sm shadow-lg',
-              t.kind === 'error' ? 'border-danger/40 bg-[#2a1216] text-danger' : t.kind === 'info' ? 'border-info/40 bg-[#0f2230] text-info' : 'border-ok/40 bg-[#0f2a20] text-ok',
+              t.kind === 'error' ? 'border-danger/40 bg-surface text-danger' : t.kind === 'info' ? 'border-info/40 bg-surface text-info' : 'border-ok/40 bg-surface text-ok',
             )}
           >
             {t.kind === 'error' ? <AlertTriangle size={18} className="mt-0.5 shrink-0" /> : <CheckCircle2 size={18} className="mt-0.5 shrink-0" />}

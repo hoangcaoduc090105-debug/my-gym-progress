@@ -1,4 +1,5 @@
 /** @type {import('tailwindcss').Config} */
+const v = (name) => `rgb(var(--c-${name}) / <alpha-value>)`;
 export default {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
   theme: {
@@ -6,20 +7,24 @@ export default {
       fontFamily: {
         sans: ['"Be Vietnam Pro"', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
       },
+      // Màu lấy từ biến CSS (src/index.css) để đổi Sáng/Tối không cần sửa component.
       colors: {
-        bg: '#0a0d12',
-        surface: '#121821',
-        surface2: '#1a222e',
-        line: '#263142',
-        muted: '#8a97a8',
-        text: '#e8edf3',
-        accent: { DEFAULT: '#c6f432', dim: '#9fc425', ink: '#11160a' },
-        info: '#5cc8ff',
-        warn: '#ffb547',
-        danger: '#ff5d6c',
-        ok: '#3ddc97',
+        bg: v('bg'),
+        surface: v('surface'),
+        surface2: v('surface2'),
+        line: v('line'),
+        muted: v('muted'),
+        text: v('text'),
+        accent: { DEFAULT: v('accent'), dim: v('accent-dim'), ink: v('accent-ink') },
+        info: v('info'),
+        warn: v('warn'),
+        danger: v('danger'),
+        ok: v('ok'),
       },
       borderRadius: { xl: '14px', '2xl': '18px' },
+      boxShadow: {
+        card: 'var(--shadow-card)',
+      },
     },
   },
   plugins: [],

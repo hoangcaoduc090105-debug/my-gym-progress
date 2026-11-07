@@ -22,6 +22,34 @@ describe('seed', () => {
     expect(await db.programs.count()).toBe(0);
     expect(await db.exercises.count()).toBe(BUILTIN_EXERCISES.length);
   });
+  it('nâng cấp từ bản cũ (seed v1): cập nhật nội dung bài gốc, giữ bài tự tạo và giáo án của người dùng', async () => {
+    const custom = await repo.saveCustomExercise({
+      nameVi: 'Bài riêng', nameEn: '', primaryMuscle: 'abs', secondaryMuscles: [], equipment: 'other', region: 'core',
+      isBodyweight: true, instructions: [], commonMistakes: [], alternativeIds: [],
+    });
+    const p = (await repo.getActiveProgram())!;
+    await repo.saveProgram({ ...p, name: 'Giáo án đã sửa' });
+    const old = (await db.exercises.get('goblet-squat'))!;
+    const { setup: _s, breathing: _b, feel: _f, tips: _t, ...withoutGuide } = old;
+    void _s, _b, _f, _t;
+    await db.exercises.put(withoutGuide);
+    await db.meta.put({ key: 'seedVersion', value: 1 });
+    await ensureSeed();
+    expect((await db.exercises.get('goblet-squat'))?.setup?.length).toBeGreaterThan(0);
+    expect(await db.exercises.get(custom.id)).toBeDefined();
+    expect((await db.programs.toArray()).map((x) => x.name)).toEqual(['Giáo án đã sửa']);
+  });
+  it('mọi bài trong giáo án mặc định có hướng dẫn chi tiết cho người mới', async () => {
+    const p = (await repo.getActiveProgram())!;
+    for (const d of p.days)
+      for (const x of d.exercises) {
+        const e = (await db.exercises.get(x.exerciseId))!;
+        expect(e.setup?.length, e.id).toBeGreaterThan(0);
+        expect(e.breathing, e.id).toBeTruthy();
+        expect(e.feel, e.id).toBeTruthy();
+        expect(e.tips?.length, e.id).toBeGreaterThan(0);
+      }
+  });
   it('mọi bài thay thế và bài trong giáo án đều tồn tại', async () => {
     const ids = new Set(BUILTIN_EXERCISES.map((e) => e.id));
     for (const e of BUILTIN_EXERCISES) for (const a of e.alternativeIds) expect(ids.has(a), `${e.id} → ${a}`).toBe(true);
