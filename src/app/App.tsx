@@ -6,6 +6,7 @@ import { FeedbackProvider } from '../components/feedback';
 import { Spinner } from '../components/ui';
 import { db } from '../db/db';
 import { ensureSeed } from '../db/seed';
+import { ensureThumbnails } from '../db/migrations';
 import { errorMessage } from '../db/errors';
 import { requestPersistence } from '../lib/storage';
 import { UpdatePrompt } from '../pwa/UpdatePrompt';
@@ -75,7 +76,11 @@ export function App() {
   const [fatal, setFatal] = useState<string | null>(null);
   useEffect(() => {
     ensureSeed()
-      .then(() => setReady(true))
+      .then(() => {
+        setReady(true);
+        // Bước nền: tạo ảnh thu nhỏ còn thiếu (ảnh cũ/ảnh nhập) — không chặn giao diện.
+        setTimeout(() => void ensureThumbnails().catch(() => undefined), 1500);
+      })
       .catch((e: unknown) => setFatal(errorMessage(e)));
     void requestPersistence();
   }, []);

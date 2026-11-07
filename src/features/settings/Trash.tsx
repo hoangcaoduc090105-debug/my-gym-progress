@@ -14,6 +14,7 @@ export function Trash() {
   const data = useLiveQuery(async () => ({
     sessions: await db.sessions.filter((s) => !!s.deletedAt).toArray(),
     metrics: await db.bodyMetrics.filter((s) => !!s.deletedAt).toArray(),
+    // Chỉ đọc siêu dữ liệu (bảng photos không còn chứa bytes ảnh gốc).
     photos: (await db.photos.filter((s) => !!s.deletedAt).toArray()).map((p) => ({ id: p.id, date: p.date, pose: p.pose })),
   }), []);
   if (!data) return null;

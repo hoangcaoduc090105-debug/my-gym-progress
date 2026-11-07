@@ -22,6 +22,15 @@ src/
 - **Nâng cấp schema**: thêm `db.version(n+1).stores(...).upgrade(...)` trong `src/db/db.ts`. Không sửa phiên bản cũ. Bản sao lưu có `formatVersion` để chuyển đổi khi định dạng thay đổi.
 - **Seed** chỉ nạp thư viện bài tập và giáo án mặc định, không bao giờ tạo dữ liệu cá nhân.
 
+## Lịch sử schema IndexedDB (Dexie)
+
+| Version | Thay đổi | Nâng cấp dữ liệu cũ |
+|---|---|---|
+| 1 | Schema ban đầu | — |
+| 2 (v1.7.0) | Bảng `photoBlobs` (`id`, `data`) tách bytes ảnh gốc khỏi `photos`; `photos` còn siêu dữ liệu + `thumb` (JPEG 320 px) + `bytes`; `sessions` thêm chỉ mục kép `[status+date]` | `upgrade()` chuyển `data` của từng ảnh sang `photoBlobs` trong cùng giao dịch, đặt `thumb = null`; `ensureThumbnails()` (src/db/migrations.ts) tạo thumbnail nền sau khi app mở, mỗi lượt tối đa 5 ảnh |
+
+Tệp sao lưu giữ nguyên định dạng v1.6 (ảnh = siêu dữ liệu + `dataBase64`), nên tệp cũ nhập được vào bản mới và ngược lại.
+
 ## Cập nhật ứng dụng
 
 Service worker dùng chế độ `prompt`. Khi có bản mới, app chỉ hiện thông báo và người dùng chọn thời điểm cập nhật. IndexedDB nằm tách biệt với cache của service worker nên cập nhật không chạm vào dữ liệu.

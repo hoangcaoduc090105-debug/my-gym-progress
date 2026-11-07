@@ -7,7 +7,7 @@ import { BODY_FIELDS, BODY_FIELD_LABELS, BODY_FIELD_UNITS, POSE_LABELS, type Bod
 import { Badge, Button, Card, EmptyState, Explain, Field, IconButton, Insufficient, Modal, NumberInput, PageHeader, Segmented, Spinner, Tabs, cx } from '../../components/ui';
 import { useFeedback } from '../../components/feedback';
 import { TrendLineChart } from '../../components/charts';
-import { addPhoto, saveBodyMetric, softDeleteBodyMetric, softDeletePhoto } from '../../db/repo';
+import { addPhoto, getPhotoData, saveBodyMetric, softDeleteBodyMetric, softDeletePhoto } from '../../db/repo';
 import { aggregate, linearTrend, seriesOf, type Granularity } from '../../domain/bodyTrends';
 import { THRESHOLDS } from '../../domain/thresholds';
 import { formatDate, formatMonth, formatShort, todayISO } from '../../lib/date';
@@ -237,20 +237,49 @@ function MetricCharts({ metrics }: { metrics: BodyMetric[] }) {
   );
 }
 
+/** Ô ảnh trong lưới: dùng ảnh thu nhỏ (thumb). Ảnh cũ chưa có thumb hiện ô chờ — bước nền sẽ tạo. */
 function PhotoThumb({ p, selected, onClick }: { p: ProgressPhoto; selected?: boolean; onClick?: () => void }) {
   const [url, setUrl] = useState<string | null>(null);
   useEffect(() => {
-    const u = photoUrl(p.data, p.mimeType);
+    if (!p.thumb) return setUrl(null);
+    const u = photoUrl(p.thumb, 'image/jpeg');
     setUrl(u);
     return () => URL.revokeObjectURL(u);
-  }, [p]);
+  }, [p.thumb]);
   return (
     <button type="button" onClick={onClick} className={cx('relative aspect-[3/4] overflow-hidden rounded-xl bg-surface2', selected && 'ring-2 ring-accent')}>
-      {url && <img src={url} alt={`Ảnh ${POSE_LABELS[p.pose]} ngày ${formatShort(p.date)}`} className="h-full w-full object-cover" loading="lazy" />}
-      <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-1.5 text-left text-[11px] font-medium">
+      {url ? (
+        <img src={url} alt={`Ảnh ${POSE_LABELS[p.pose]} ngày ${formatShort(p.date)}`} className="h-full w-full object-cover" loading="lazy" />
+      ) : (
+        <span className="flex h-full items-center justify-center text-[11px] text-muted">Đang tạo ảnh thu nhỏ…</span>
+      )}
+      <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-1.5 text-left text-[11px] font-medium text-white">
         {formatShort(p.date)} · {POSE_LABELS[p.pose]}
       </span>
     </button>
+  );
+}
+
+/** Ảnh gốc — chỉ tải bytes từ photoBlobs khi xem lớn hoặc so sánh. */
+function PhotoFull({ p }: { p: ProgressPhoto }) {
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    let u: string | null = null;
+    let alive = true;
+    void getPhotoData(p.id).then((data) => {
+      if (!alive || !data) return;
+      u = photoUrl(data, p.mimeType);
+      setUrl(u);
+    });
+    return () => {
+      alive = false;
+      if (u) URL.revokeObjectURL(u);
+    };
+  }, [p.id, p.mimeType]);
+  return (
+    <div className="relative aspect-[3/4] overflow-hidden rounded-xl bg-surface2">
+      {url ? <img src={url} alt={`Ảnh ${POSE_LABELS[p.pose]} ngày ${formatShort(p.date)}`} className="h-full w-full object-contain" /> : <span className="flex h-full items-center justify-center text-xs text-muted">Đang tải…</span>}
+    </div>
   );
 }
 
@@ -352,7 +381,7 @@ function Photos() {
         <div className="grid grid-cols-2 gap-2">
           {pair.map((p) => (
             <div key={p.id}>
-              <PhotoThumb p={p} />
+              <PhotoFull p={p} />
               <div className="mt-1 text-center text-xs text-muted">{formatDate(p.date)}</div>
             </div>
           ))}
@@ -367,7 +396,7 @@ function Photos() {
       <Modal open={!!viewing} onClose={() => setViewing(null)} title={viewing ? `${formatDate(viewing.date)} · ${POSE_LABELS[viewing.pose]}` : ''}>
         {viewing && (
           <div className="space-y-3">
-            <PhotoThumb p={viewing} />
+            <PhotoFull p={viewing} />
             <Button
               block
               variant="danger"

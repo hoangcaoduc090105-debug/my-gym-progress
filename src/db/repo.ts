@@ -1,3 +1,4 @@
+import Dexie from 'dexie';
 import type { z } from 'zod';
 import { db } from './db';
 import { defaultSettings } from './defaults';
@@ -35,6 +36,7 @@ import type {
 import { nowISO, todayISO } from '../lib/date';
 import { uid } from '../lib/id';
 import { isWorkingSet } from '../domain/sets';
+import { isArrayBuffer } from '../lib/image';
 
 function validate<T>(schema: z.ZodType<T>, value: unknown, what: string): T {
   const r = schema.safeParse(value);
@@ -187,18 +189,49 @@ export async function getDraftSession(): Promise<WorkoutSession | undefined> {
   return db.sessions.where('status').equals('draft').filter((s) => !s.deletedAt).first();
 }
 
-/** Lần tập gần nhất (đã hoàn thành) của một bài, trừ buổi hiện tại. */
+export interface LastPerformance {
+  date: string;
+  startedAt: string;
+  exercise: SessionExercise;
+}
+
+/**
+ * Lần tập gần nhất (đã hoàn thành, có hiệp làm việc) cho NHIỀU bài, quét chỉ mục [status+date] từ mới đến cũ MỘT lần.
+ * Dừng khi mọi bài đã tìm thấy và đã đi qua ngày của chúng (cùng ngày thì so startedAt).
+ */
+export async function lastPerformances(exerciseIds: string[], excludeSessionId?: string): Promise<Map<string, LastPerformance>> {
+  const want = new Set(exerciseIds);
+  const best = new Map<string, LastPerformance>();
+  if (want.size === 0) return best;
+  const done = (date: string) => {
+    for (const id of want) {
+      const b = best.get(id);
+      if (!b || date >= b.date) return false;
+    }
+    return true;
+  };
+  await db.sessions
+    .where('[status+date]')
+    .between(['completed', Dexie.minKey], ['completed', Dexie.maxKey])
+    .reverse()
+    .until((s) => done(s.date))
+    .each((s) => {
+      if (s.deletedAt || s.id === excludeSessionId) return;
+      for (const e of s.exercises) {
+        if (!want.has(e.exerciseId) || !e.sets.some(isWorkingSet)) continue;
+        const cur = best.get(e.exerciseId);
+        if (!cur || s.date > cur.date || (s.date === cur.date && s.startedAt > cur.startedAt)) {
+          best.set(e.exerciseId, { date: s.date, startedAt: s.startedAt, exercise: e });
+        }
+      }
+    });
+  return best;
+}
+
+/** Lần tập gần nhất của một bài, trừ buổi hiện tại. */
 export async function lastPerformance(exerciseId: string, excludeSessionId?: string): Promise<{ date: string; exercise: SessionExercise } | null> {
-  const list = await db.sessions
-    .where('status')
-    .equals('completed')
-    .filter((s) => !s.deletedAt && s.id !== excludeSessionId && s.exercises.some((e) => e.exerciseId === exerciseId && e.sets.some(isWorkingSet)))
-    .toArray();
-  list.sort((a, b) => (a.date === b.date ? b.startedAt.localeCompare(a.startedAt) : b.date.localeCompare(a.date)));
-  const s = list[0];
-  if (!s) return null;
-  const ex = s.exercises.find((e) => e.exerciseId === exerciseId && e.sets.some(isWorkingSet));
-  return ex ? { date: s.date, exercise: ex } : null;
+  const r = (await lastPerformances([exerciseId], excludeSessionId)).get(exerciseId);
+  return r ? { date: r.date, exercise: r.exercise } : null;
 }
 
 export function emptySet(): SetEntry {
@@ -337,14 +370,25 @@ export async function purgeBodyMetric(id: string): Promise<void> {
 
 // ---------------- ẢNH TIẾN ĐỘ ----------------
 
-export async function addPhoto(input: Omit<ProgressPhoto, 'id' | 'createdAt' | 'deletedAt'>): Promise<ProgressPhoto> {
-  const { data, ...meta } = input;
+export async function addPhoto(
+  input: Omit<ProgressPhoto, 'id' | 'createdAt' | 'deletedAt' | 'bytes' | 'thumb'> & { data: ArrayBuffer; thumb?: ArrayBuffer | null },
+): Promise<ProgressPhoto> {
+  const { data, thumb, ...meta } = input;
   const now = nowISO();
   const m = validate(photoMetaSchema, { ...meta, id: uid('ph'), createdAt: now, deletedAt: null }, 'ảnh');
-  if (!(data instanceof ArrayBuffer) || data.byteLength === 0) throw new AppError('Tệp ảnh rỗng hoặc không đọc được.');
-  const p = { ...m, data } as ProgressPhoto;
-  await db.photos.add(p);
+  if (!isArrayBuffer(data) || data.byteLength === 0) throw new AppError('Tệp ảnh rỗng hoặc không đọc được.');
+  const p = { ...m, thumb: isArrayBuffer(thumb) ? thumb : null, bytes: data.byteLength } as ProgressPhoto;
+  // Ghi siêu dữ liệu và bytes trong MỘT giao dịch.
+  await db.transaction('rw', db.photos, db.photoBlobs, async () => {
+    await db.photos.add(p);
+    await db.photoBlobs.add({ id: p.id, data });
+  });
   return p;
+}
+
+/** Bytes ảnh gốc — chỉ tải khi xem lớn hoặc so sánh. */
+export async function getPhotoData(id: string): Promise<ArrayBuffer | undefined> {
+  return (await db.photoBlobs.get(id))?.data;
 }
 export async function softDeletePhoto(id: string): Promise<void> {
   await db.photos.update(id, { deletedAt: nowISO() });
@@ -353,7 +397,10 @@ export async function restorePhoto(id: string): Promise<void> {
   await db.photos.update(id, { deletedAt: null });
 }
 export async function purgePhoto(id: string): Promise<void> {
-  await db.photos.delete(id);
+  await db.transaction('rw', db.photos, db.photoBlobs, async () => {
+    await db.photos.delete(id);
+    await db.photoBlobs.delete(id);
+  });
 }
 
 // ---------------- DINH DƯỠNG ----------------

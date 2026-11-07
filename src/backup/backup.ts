@@ -63,17 +63,31 @@ export interface BackupFile {
   data: BackupData;
 }
 
+/** Chỉ các trường siêu dữ liệu của ảnh (đúng định dạng tệp sao lưu v1.6). */
+export function photoMeta(p: ProgressPhoto): Record<string, unknown> {
+  const { thumb: _t, bytes: _b, ...meta } = p;
+  void _t, _b;
+  return meta;
+}
+
 export async function exportAll(opts: { includePhotos: boolean; appVersion: string }): Promise<BackupFile> {
   const data = {} as BackupData;
-  await db.transaction('r', USER_TABLES.map((t) => db.table(t)), async () => {
+  await db.transaction('r', [...USER_TABLES.map((t) => db.table(t)), db.photoBlobs], async () => {
     for (const t of USER_TABLES) {
       if (t === 'photos') {
         if (!opts.includePhotos) {
           data.photos = [];
           continue;
         }
+        // Định dạng tệp giữ như v1.6: siêu dữ liệu + dataBase64 (ghép từ photoBlobs); không xuất thumb/bytes.
         const photos = (await db.photos.toArray()) as ProgressPhoto[];
-        data.photos = photos.map(({ data: buf, ...meta }) => ({ ...meta, dataBase64: arrayBufferToBase64(buf) }));
+        const out: unknown[] = [];
+        for (const p of photos) {
+          const blob = await db.photoBlobs.get(p.id);
+          if (!blob) continue;
+          out.push({ ...photoMeta(p), dataBase64: arrayBufferToBase64(blob.data) });
+        }
+        data.photos = out;
       } else {
         data[t] = await db.table(t).toArray();
       }
@@ -187,18 +201,30 @@ export async function importBackup(backup: BackupFile, mode: ImportMode): Promis
   if (!check.ok || !check.backup) throw new AppError('Dữ liệu nhập không hợp lệ', check.errors);
   backup = check.backup;
   const written = {} as Record<UserTable, number>;
-  await db.transaction('rw', USER_TABLES.map((t) => db.table(t)), async () => {
+  await db.transaction('rw', [...USER_TABLES.map((t) => db.table(t)), db.photoBlobs], async () => {
     for (const t of USER_TABLES) {
       const rows = (backup.data[t] ?? []) as Record<string, unknown>[];
       const table = db.table(t);
       if (mode === 'replace') {
         // Không xóa ảnh hiện có nếu tệp không kèm ảnh.
-        if (!(t === 'photos' && !backup.includesPhotos)) await table.clear();
+        if (!(t === 'photos' && !backup.includesPhotos)) {
+          await table.clear();
+          if (t === 'photos') await db.photoBlobs.clear();
+        }
       }
-      const prepared =
-        t === 'photos'
-          ? rows.map(({ dataBase64, ...meta }) => ({ ...meta, data: base64ToArrayBuffer(String(dataBase64)) }))
-          : rows;
+      if (t === 'photos') {
+        // Ảnh: siêu dữ liệu vào photos (thumb tạo nền sau), bytes vào photoBlobs.
+        for (const { dataBase64, ...meta } of rows) {
+          const data = base64ToArrayBuffer(String(dataBase64));
+          const id = String(meta.id);
+          const existing = (await db.photos.get(id)) as ProgressPhoto | undefined;
+          await db.photos.put({ ...meta, thumb: existing?.thumb ?? null, bytes: data.byteLength } as unknown as ProgressPhoto);
+          await db.photoBlobs.put({ id, data });
+        }
+        written[t] = rows.length;
+        continue;
+      }
+      const prepared = rows;
       if (t === 'programs' && mode === 'merge' && prepared.some((p) => (p as { isActive?: boolean }).isActive)) {
         const current = await db.programs.toArray();
         for (const p of current) if (p.isActive) await db.programs.put({ ...p, isActive: false });

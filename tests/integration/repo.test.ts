@@ -172,6 +172,40 @@ describe('workout sessions', () => {
   });
 });
 
+describe('lastPerformances', () => {
+  it('trả đúng buổi gần nhất cho 2 bài (3 ngày khác nhau + 2 buổi cùng ngày), bỏ buổi đang tập và buổi đã xóa', async () => {
+    const mk = async (date: string, startedAt: string, items: [string, number][], extra: { deletedAt?: string } = {}) => {
+      const s = await repo.startSession({ date });
+      await repo.saveSession({
+        ...s,
+        startedAt,
+        exercises: items.map(([exerciseId, kg], i) => ({
+          id: `se${date}${startedAt}${i}`,
+          exerciseId,
+          target: null,
+          note: '',
+          sets: [{ id: `x${date}${startedAt}${i}`, weightKg: kg, reps: 10, rir: 2, isWarmup: false, done: true }],
+        })),
+      });
+      await repo.finishSession(s.id);
+      if (Object.keys(extra).length) await db.sessions.update(s.id, extra);
+      return s.id;
+    };
+    await mk('2026-10-01', '2026-10-01T09:00:00Z', [['db-curl', 8], ['goblet-squat', 16]]);
+    await mk('2026-10-05', '2026-10-05T09:00:00Z', [['db-curl', 9]]);
+    await mk('2026-10-10', '2026-10-10T07:00:00Z', [['db-curl', 10]]);
+    await mk('2026-10-10', '2026-10-10T18:00:00Z', [['db-curl', 11]]); // cùng ngày, muộn hơn
+    await mk('2026-10-12', '2026-10-12T09:00:00Z', [['db-curl', 99]], { deletedAt: 'x' }); // đã xóa
+    const r = await repo.lastPerformances(['db-curl', 'goblet-squat']);
+    expect(r.get('db-curl')).toMatchObject({ date: '2026-10-10', startedAt: '2026-10-10T18:00:00Z' });
+    expect(r.get('db-curl')!.exercise.sets[0]!.weightKg).toBe(11);
+    expect(r.get('goblet-squat')).toMatchObject({ date: '2026-10-01' });
+    expect((await repo.lastPerformances(['khong-co'])).size).toBe(0);
+    // lastPerformance (1 bài) dùng cùng logic
+    expect((await repo.lastPerformance('db-curl'))?.date).toBe('2026-10-10');
+  });
+});
+
 describe('body metrics & photos', () => {
   it('lưu số đo, cần ít nhất 1 chỉ số, sửa giữ id', async () => {
     const m = await repo.saveBodyMetric({ date: '2026-11-07', weightKg: 65 });
@@ -185,7 +219,12 @@ describe('body metrics & photos', () => {
   it('ảnh: lưu ArrayBuffer, từ chối định dạng lạ', async () => {
     const p = await repo.addPhoto({ date: '2026-11-07', pose: 'front', mimeType: 'image/jpeg', data: new Uint8Array([1, 2, 3]).buffer });
     const got = await db.photos.get(p.id);
-    expect(new Uint8Array(got!.data)).toEqual(new Uint8Array([1, 2, 3]));
+    expect(got).not.toHaveProperty('data');
+    expect(got!.bytes).toBe(3);
+    expect(new Uint8Array((await repo.getPhotoData(p.id))!)).toEqual(new Uint8Array([1, 2, 3]));
+    await repo.purgePhoto(p.id);
+    expect(await db.photos.get(p.id)).toBeUndefined();
+    expect(await db.photoBlobs.get(p.id)).toBeUndefined();
     await expect(repo.addPhoto({ date: '2026-11-07', pose: 'front', mimeType: 'image/gif', data: new ArrayBuffer(3) })).rejects.toBeInstanceOf(AppError);
   });
 });

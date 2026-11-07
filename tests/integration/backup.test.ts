@@ -38,7 +38,7 @@ describe('export / import', () => {
     expect(await db.bodyMetrics.toArray()).toEqual(before.metrics);
     expect(await db.profile.toArray()).toEqual(before.profile);
     const photo = (await db.photos.toArray())[0]!;
-    expect(new Uint8Array(photo.data)).toEqual(new Uint8Array([9, 8, 7, 6]));
+    expect(new Uint8Array((await db.photoBlobs.get(photo.id))!.data)).toEqual(new Uint8Array([9, 8, 7, 6]));
     expect(await db.foodLogs.count()).toBe(1);
   });
 
@@ -86,6 +86,51 @@ describe('export / import', () => {
     const row = { id: 'a', date: '2026-11-07', weightKg: 65, createdAt: 'x', updatedAt: 'x' };
     const r = validateBackup({ app: 'my-gym-progress', formatVersion: 1, data: { bodyMetrics: [row, row] } });
     expect(r.errors.join()).toMatch(/trùng id/);
+  });
+
+  it('nhập tệp v1.6 có ảnh: ảnh vào đủ 2 bảng (photos + photoBlobs)', async () => {
+    const b64 = (bytes: number[]) => btoa(String.fromCharCode(...bytes));
+    const v16 = {
+      app: 'my-gym-progress',
+      formatVersion: 1,
+      exportedAt: '2026-11-07T00:00:00Z',
+      appVersion: '1.6.1',
+      includesPhotos: true,
+      data: {
+        photos: [
+          { id: 'p1', date: '2026-11-01', pose: 'front', mimeType: 'image/jpeg', deletedAt: null, createdAt: 'x', dataBase64: b64([1, 2, 3]) },
+          { id: 'p2', date: '2026-11-02', pose: 'side', mimeType: 'image/png', deletedAt: null, createdAt: 'x', dataBase64: b64([4, 5]) },
+        ],
+      },
+    };
+    const v = validateBackup(JSON.parse(JSON.stringify(v16)));
+    expect(v.ok).toBe(true);
+    await importBackup(v.backup!, 'replace');
+    const photos = await db.photos.orderBy('id').toArray();
+    expect(photos.map((p) => [p.id, p.bytes, p.thumb])).toEqual([
+      ['p1', 3, null],
+      ['p2', 2, null],
+    ]);
+    expect(photos[0]).not.toHaveProperty('data');
+    expect(new Uint8Array((await db.photoBlobs.get('p2'))!.data)).toEqual(new Uint8Array([4, 5]));
+  });
+
+  it('xuất rồi nhập lại (replace): số ảnh và bytes bằng nhau, tệp xuất đúng định dạng cũ', async () => {
+    await repo.addPhoto({ date: '2026-11-01', pose: 'front', mimeType: 'image/jpeg', data: new Uint8Array([1, 2, 3, 4]).buffer, thumb: new Uint8Array([7]).buffer });
+    await repo.addPhoto({ date: '2026-11-02', pose: 'back', mimeType: 'image/jpeg', data: new Uint8Array([5, 6]).buffer });
+    const before = await db.photos.toArray();
+    const beforeBytes = (await db.photoBlobs.toArray()).reduce((n, b) => n + b.data.byteLength, 0);
+    const file = JSON.parse(JSON.stringify(await exportAll({ includePhotos: true, appVersion: 't' })));
+    for (const p of file.data.photos) {
+      expect(p).toHaveProperty('dataBase64');
+      expect(p).not.toHaveProperty('thumb');
+      expect(p).not.toHaveProperty('bytes');
+    }
+    await importBackup(validateBackup(file).backup!, 'replace');
+    expect(await db.photos.count()).toBe(before.length);
+    expect(await db.photoBlobs.count()).toBe(before.length);
+    expect((await db.photoBlobs.toArray()).reduce((n, b) => n + b.data.byteLength, 0)).toBe(beforeBytes);
+    expect((await db.photos.toArray()).reduce((n, p) => n + p.bytes, 0)).toBe(beforeBytes);
   });
 
   it('loại bỏ trường lạ khi nhập', async () => {

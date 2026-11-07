@@ -219,18 +219,26 @@ export interface BodyMetric {
 export type PhotoPose = 'front' | 'side' | 'back' | 'other';
 export const POSE_LABELS: Record<PhotoPose, string> = { front: 'Trước', side: 'Bên', back: 'Sau', other: 'Khác' };
 
+/** Siêu dữ liệu ảnh + ảnh thu nhỏ. Bytes ảnh gốc nằm ở bảng photoBlobs (cùng id) để danh sách không phải tải ảnh lớn. */
 export interface ProgressPhoto {
   id: string;
   date: string;
   pose: PhotoPose;
   mimeType: string;
-  /** Lưu ArrayBuffer (an toàn hơn Blob trên một số trình duyệt). */
-  data: ArrayBuffer;
+  /** JPEG cạnh dài 320 px; null khi chưa tạo (ảnh từ bản cũ/tệp nhập — được tạo nền sau khi mở app). */
+  thumb: ArrayBuffer | null;
+  /** Kích thước ảnh gốc (byte). */
+  bytes: number;
   width?: number;
   height?: number;
   note?: string;
   deletedAt?: string | null;
   createdAt: string;
+}
+
+export interface PhotoBlob {
+  id: string;
+  data: ArrayBuffer;
 }
 
 export interface Food {

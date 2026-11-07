@@ -8,7 +8,7 @@ import { MUSCLE_LABELS, type Exercise, type SessionExercise, type SetEntry, type
 import { Badge, Button, Card, IconButton, Modal, NumberInput, PageHeader, Spinner, cx } from '../../components/ui';
 import { useFeedback } from '../../components/feedback';
 import { useExerciseMap, useSettings } from '../../app/useAppData';
-import { emptySet, finishSession, lastPerformance, saveSession, softDeleteSession } from '../../db/repo';
+import { emptySet, finishSession, lastPerformances, saveSession, softDeleteSession } from '../../db/repo';
 import { suggestProgression, type Suggestion } from '../../domain/progression';
 import { isWorkingSet } from '../../domain/sets';
 import { formatClock, formatShort, todayISO } from '../../lib/date';
@@ -72,11 +72,10 @@ export function SessionLogger() {
 
   const exKey = s?.exercises.map((e) => e.exerciseId).join('|') ?? '';
   const hints = useLiveQuery(async () => {
+    // Quét MỘT lần cho mọi bài trong buổi (chỉ mục [status+date]).
+    const map = await lastPerformances([...new Set(exKey.split('|').filter(Boolean))], id);
     const out: Record<string, Hint> = {};
-    for (const exId of new Set(exKey.split('|').filter(Boolean))) {
-      const lp = await lastPerformance(exId, id);
-      if (lp) out[exId] = { date: lp.date, sets: lp.exercise.sets };
-    }
+    for (const [exId, lp] of map) out[exId] = { date: lp.date, sets: lp.exercise.sets };
     return out;
   }, [exKey, id]);
 
