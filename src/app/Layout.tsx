@@ -24,7 +24,8 @@ const MORE_PATHS = ['/them', ...MORE.map((m) => m.to)];
 function ActiveWorkoutBanner() {
   const loc = useLocation();
   const draft = useLiveQuery(() => db.sessions.where('status').equals('draft').filter((s) => !s.deletedAt).first(), []);
-  if (!draft || loc.pathname.startsWith('/tap/')) return null;
+  // Trang Hôm nay đã có thẻ "Đang tập dở" nên không hiện banner trùng.
+  if (!draft || loc.pathname === '/' || loc.pathname.startsWith('/tap/')) return null;
   return (
     <Link
       to={`/tap/${draft.id}`}

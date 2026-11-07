@@ -32,11 +32,16 @@ export default function AnalyticsPage() {
   const from = period === 'all' ? (completed[0]?.date ?? today) : addDays(today, -PERIOD_DAYS[period] + 1);
   const inPeriod = completed.filter((s) => s.date >= from && s.date <= today);
   const weeks = weeklyBuckets(inPeriod, from, today);
-  const nWeeks = Math.max(1, weeks.length);
+  // Trung bình/tuần chỉ tính từ tuần có buổi tập đầu tiên trong kỳ,
+  // để người mới tập 1 buổi không thấy "0,1 buổi/tuần" vì chia cho 12 tuần trống.
+  const firstInPeriod = inPeriod[0]?.date ?? from;
+  const nWeeks = Math.max(1, weeks.filter((w) => w.weekStart >= startOfWeek(firstInPeriod)).length);
   const muscle = setsByMuscle(inPeriod, exMap, settings.secondaryMuscleFactor);
   const records = recordsByExercise(completed, settings.oneRmFormula);
   const trainedIds = [...records.keys()].sort((a, b) => (exMap.get(a)?.nameVi ?? '').localeCompare(exMap.get(b)?.nameVi ?? '', 'vi'));
-  const selected = exId && records.has(exId) ? exId : (trainedIds[0] ?? '');
+  // Mặc định chọn bài đã có e1RM (có hiệp ≤ 10 lần) để biểu đồ có ý nghĩa ngay.
+  const defaultId = trainedIds.find((id) => records.get(id)?.bestE1RM) ?? trainedIds[0] ?? '';
+  const selected = exId && records.has(exId) ? exId : defaultId;
   const series = selected ? strengthSeries(completed, selected, settings.oneRmFormula) : [];
   const withE = series.filter((p) => p.e1rm != null);
   const fullWeeks = weeks.filter((w) => w.weekStart <= startOfWeek(today));
@@ -94,7 +99,7 @@ export default function AnalyticsPage() {
             <Explain>
               <p>Nhóm cơ chính của bài: +1 hiệp mỗi hiệp làm việc. Mỗi nhóm cơ phụ: +{fmt1(settings.secondaryMuscleFactor)} (chỉnh trong Cài đặt). Hiệp khởi động và hiệp chưa ✓ không được tính.</p>
               <p>
-                Trung bình/tuần = tổng ÷ {nWeeks} tuần trong kỳ. Nghiên cứu cho thấy khối lượng tập theo tuần có quan hệ liều–đáp ứng với mức tăng cơ (Schoenfeld et al., 2017), nhưng con số phù hợp tùy từng người. Ứng dụng chỉ hiển thị, không chấm đúng/sai.
+                Trung bình/tuần = tổng ÷ {nWeeks} tuần, tính từ tuần có buổi tập đầu tiên trong kỳ (tuần chưa có dữ liệu không bị tính vào). Nghiên cứu cho thấy khối lượng tập theo tuần có quan hệ liều–đáp ứng với mức tăng cơ (Schoenfeld et al., 2017), nhưng con số phù hợp tùy từng người. Ứng dụng chỉ hiển thị, không chấm đúng/sai.
               </p>
             </Explain>
           </Card>
@@ -140,7 +145,9 @@ export default function AnalyticsPage() {
                     </span>
                   ) : (
                     <span className="text-muted">
-                      Cần ít nhất {THRESHOLDS.minSessionsForStrengthTrend} buổi có hiệp ≤ {THRESHOLDS.maxRepsFor1RM} lần để đánh giá xu hướng (hiện {withE.length}).
+                      {withE.length === 0
+                        ? `Bài này chưa có hiệp nào ≤ ${THRESHOLDS.maxRepsFor1RM} lần nên chưa ước tính được e1RM; biểu đồ chỉ hiện mức tạ cao nhất.`
+                        : `Cần ít nhất ${THRESHOLDS.minSessionsForStrengthTrend} buổi có hiệp ≤ ${THRESHOLDS.maxRepsFor1RM} lần để đánh giá xu hướng (hiện ${withE.length}).`}
                     </span>
                   )}
                 </div>

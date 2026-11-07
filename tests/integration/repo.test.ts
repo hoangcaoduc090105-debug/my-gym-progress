@@ -226,3 +226,21 @@ describe('nutrition', () => {
     ).rejects.toBeInstanceOf(AppError);
   });
 });
+
+describe('buổi tập dở — kiểm tra trong giao dịch', () => {
+  it('startSession gọi đồng thời (bấm đúp / hai tab) chỉ tạo đúng 1 buổi dở', async () => {
+    const results = await Promise.allSettled([repo.startSession({}), repo.startSession({})]);
+    expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
+    const rejected = results.find((r) => r.status === 'rejected') as PromiseRejectedResult | undefined;
+    expect(rejected?.reason).toBeInstanceOf(AppError);
+    expect(await db.sessions.where('status').equals('draft').count()).toBe(1);
+  });
+  it('restoreSession không khôi phục khi đã có buổi dở khác', async () => {
+    const a = await repo.startSession({});
+    await repo.softDeleteSession(a.id);
+    const b = await repo.startSession({});
+    await expect(repo.restoreSession(a.id)).rejects.toBeInstanceOf(AppError);
+    expect((await db.sessions.get(a.id))?.deletedAt).not.toBeNull();
+    expect((await db.sessions.get(b.id))?.deletedAt).toBeNull();
+  });
+});

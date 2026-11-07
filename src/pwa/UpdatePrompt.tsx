@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { RefreshCw, WifiOff } from 'lucide-react';
 import { Button } from '../components/ui';
@@ -16,6 +17,13 @@ export function UpdatePrompt() {
       if (reg) setInterval(() => void reg.update().catch(() => undefined), 60 * 60 * 1000);
     },
   });
+
+  // Thông báo "sẵn sàng offline" chỉ để xác nhận: tự ẩn sau vài giây, không che tiêu đề trang.
+  useEffect(() => {
+    if (!offlineReady) return;
+    const t = setTimeout(() => setOfflineReady(false), 5000);
+    return () => clearTimeout(t);
+  }, [offlineReady, setOfflineReady]);
 
   if (!needRefresh && !offlineReady) return null;
   return (

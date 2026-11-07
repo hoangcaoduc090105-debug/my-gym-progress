@@ -19,6 +19,20 @@ describe('date utils', () => {
     expect(isISODate('2028-02-29')).toBe(true);
     expect(isISODate('2026-1-1')).toBe(false);
   });
+  it('parseNumber hiểu dấu chấm phân cách nghìn kiểu Việt', () => {
+    expect(parseNumber('1.200')).toBe(1200);
+    expect(parseNumber('2.500')).toBe(2500);
+    expect(parseNumber('1.200,5')).toBe(1200.5);
+    expect(parseNumber('1 200')).toBe(1200);
+    expect(parseNumber('1,200')).toBe(1.2);
+    expect(parseNumber('1.25')).toBe(1.25);
+    expect(parseNumber('100.')).toBe(100);
+    expect(parseNumber('.5')).toBe(0.5);
+    expect(parseNumber('-2,5')).toBe(-2.5);
+    expect(parseNumber('1.2.3')).toBeNull();
+    expect(parseNumber('1,2,3')).toBeNull();
+    expect(parseNumber('-')).toBeNull();
+  });
   it('parseNumber chấp nhận dấu phẩy', () => {
     expect(parseNumber('62,5')).toBe(62.5);
     expect(parseNumber('')).toBeNull();

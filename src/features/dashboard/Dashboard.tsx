@@ -76,7 +76,7 @@ export function Dashboard() {
               <div className="text-xl font-bold">{draft.dayName}</div>
               <div className="text-sm text-white/80">Dữ liệu đã được lưu tự động.</div>
             </div>
-            <Button className="bg-white font-semibold text-accent hover:bg-white/90" icon={<Play size={18} />} onClick={() => nav(`/tap/${draft.id}`)}>
+            <Button variant="hero" icon={<Play size={18} />} onClick={() => nav(`/tap/${draft.id}`)}>
               Tiếp tục
             </Button>
           </div>
@@ -89,7 +89,7 @@ export function Dashboard() {
                   {next.day.exercises.length} bài · {next.source === 'scheduled' ? `lịch ${formatDate(next.date)}` : 'theo vòng giáo án'}
                 </div>
               </div>
-              <Button className="bg-white font-semibold text-accent hover:bg-white/90" icon={<Play size={18} />} onClick={() => void startNext()}>
+              <Button variant="hero" icon={<Play size={18} />} onClick={() => void startNext()}>
                 Bắt đầu
               </Button>
             </div>

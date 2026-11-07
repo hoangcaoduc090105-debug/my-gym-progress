@@ -211,41 +211,45 @@ export async function startSession(params: {
   scheduleId?: string | null;
   date?: string;
 }): Promise<WorkoutSession> {
-  const existing = await getDraftSession();
-  if (existing) throw new AppError('Bạn đang có một buổi tập chưa hoàn thành. Hãy tiếp tục hoặc hủy buổi đó trước.');
-  const now = nowISO();
-  let dayName = 'Buổi tự do';
-  let exercises: SessionExercise[] = [];
-  if (params.programId && params.programDayId) {
-    const program = await db.programs.get(params.programId);
-    const day = program?.days.find((d) => d.id === params.programDayId);
-    if (!program || !day) throw new AppError('Không tìm thấy buổi tập trong giáo án.');
-    dayName = `${day.name} · ${program.name}`;
-    exercises = day.exercises.map((pe) => ({
-      id: uid('se'),
-      exerciseId: pe.exerciseId,
-      target: { sets: pe.sets, repMin: pe.repMin, repMax: pe.repMax, targetRIR: pe.targetRIR, restSec: pe.restSec },
-      note: '',
-      sets: Array.from({ length: pe.sets }, emptySet),
-    }));
-  }
-  const s: WorkoutSession = {
-    id: uid('ws'),
-    date: params.date ?? todayISO(),
-    programId: params.programId ?? null,
-    programDayId: params.programDayId ?? null,
-    scheduleId: params.scheduleId ?? null,
-    dayName,
-    status: 'draft',
-    startedAt: now,
-    finishedAt: null,
-    notes: '',
-    exercises,
-    deletedAt: null,
-    updatedAt: now,
-  };
-  await db.sessions.add(validate(sessionSchema, s, 'buổi tập') as WorkoutSession);
-  return s;
+  // Kiểm tra "đã có buổi dở" và ghi buổi mới trong CÙNG một giao dịch,
+  // để bấm đúp hoặc mở hai tab không tạo ra hai buổi dở.
+  return db.transaction('rw', db.sessions, db.programs, async () => {
+    const existing = await getDraftSession();
+    if (existing) throw new AppError('Bạn đang có một buổi tập chưa hoàn thành. Hãy tiếp tục hoặc hủy buổi đó trước.');
+    const now = nowISO();
+    let dayName = 'Buổi tự do';
+    let exercises: SessionExercise[] = [];
+    if (params.programId && params.programDayId) {
+      const program = await db.programs.get(params.programId);
+      const day = program?.days.find((d) => d.id === params.programDayId);
+      if (!program || !day) throw new AppError('Không tìm thấy buổi tập trong giáo án.');
+      dayName = `${day.name} · ${program.name}`;
+      exercises = day.exercises.map((pe) => ({
+        id: uid('se'),
+        exerciseId: pe.exerciseId,
+        target: { sets: pe.sets, repMin: pe.repMin, repMax: pe.repMax, targetRIR: pe.targetRIR, restSec: pe.restSec },
+        note: '',
+        sets: Array.from({ length: pe.sets }, emptySet),
+      }));
+    }
+    const s: WorkoutSession = {
+      id: uid('ws'),
+      date: params.date ?? todayISO(),
+      programId: params.programId ?? null,
+      programDayId: params.programDayId ?? null,
+      scheduleId: params.scheduleId ?? null,
+      dayName,
+      status: 'draft',
+      startedAt: now,
+      finishedAt: null,
+      notes: '',
+      exercises,
+      deletedAt: null,
+      updatedAt: now,
+    };
+    await db.sessions.add(validate(sessionSchema, s, 'buổi tập') as WorkoutSession);
+    return s;
+  });
 }
 
 /** Tạo buổi mới lặp lại cấu trúc (bài tập, mục tiêu, số hiệp) của một buổi cũ; số liệu để trống. */
@@ -289,12 +293,14 @@ export async function softDeleteSession(id: string): Promise<void> {
 }
 
 export async function restoreSession(id: string): Promise<void> {
-  const s = await db.sessions.get(id);
-  if (!s) return;
-  if (s.status === 'draft' && (await getDraftSession())) {
-    throw new AppError('Đang có buổi tập dở khác. Hoàn thành hoặc hủy buổi đó trước khi khôi phục.');
-  }
-  await db.sessions.update(id, { deletedAt: null, updatedAt: nowISO() });
+  await db.transaction('rw', db.sessions, async () => {
+    const s = await db.sessions.get(id);
+    if (!s) return;
+    if (s.status === 'draft' && (await getDraftSession())) {
+      throw new AppError('Đang có buổi tập dở khác. Hoàn thành hoặc hủy buổi đó trước khi khôi phục.');
+    }
+    await db.sessions.update(id, { deletedAt: null, updatedAt: nowISO() });
+  });
 }
 
 export async function purgeSession(id: string): Promise<void> {

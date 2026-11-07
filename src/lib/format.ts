@@ -11,10 +11,24 @@ export function signed(n: number, digits = 1): string {
   return n > 0 ? `+${s}` : s;
 }
 
-/** Chuyển chuỗi người dùng nhập ("62,5" hoặc "62.5") thành số; trả về null nếu không hợp lệ. */
+/**
+ * Chuyển chuỗi người dùng nhập thành số theo thói quen gõ của người Việt:
+ * - "62,5" và "62.5" → 62.5
+ * - "1.200", "1 200", "1.200,5" → 1200, 1200, 1200.5 (dấu chấm/khoảng trắng đi với đúng 3 chữ số là phân cách nghìn)
+ * - "1,200" → 1.2 (dấu phẩy luôn là dấu thập phân)
+ * Trả về null nếu không hợp lệ.
+ */
 export function parseNumber(input: string): number | null {
-  const t = input.trim().replace(',', '.');
+  let t = input.replace(/\s+/g, '');
   if (t === '') return null;
+  if (t.includes(',')) {
+    const parts = t.split(',');
+    if (parts.length !== 2) return null;
+    t = `${parts[0]!.replace(/\./g, '')}.${parts[1]!}`;
+  } else if (/^-?\d{1,3}(\.\d{3})+$/.test(t)) {
+    t = t.replace(/\./g, '');
+  }
+  if (!/^-?(\d+\.?\d*|\.\d+)$/.test(t)) return null;
   const n = Number(t);
   return Number.isFinite(n) ? n : null;
 }

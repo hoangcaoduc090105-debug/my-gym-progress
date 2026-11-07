@@ -1,14 +1,17 @@
 import { forwardRef, useEffect, useId, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode } from 'react';
 import { ChevronDown, ChevronLeft, Info, X } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import { parseNumber } from '../lib/format';
 
 export function cx(...c: (string | false | null | undefined)[]): string {
   return c.filter(Boolean).join(' ');
 }
 
-type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'outline';
+type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'outline' | 'hero';
 const VARIANTS: Record<Variant, string> = {
   primary: 'bg-accent text-accent-ink hover:bg-accent-dim font-semibold',
+  /** Nút đặt trên thẻ .hero (nền gradient xanh): nền trắng, chữ xanh đậm cố định để đọc được ở cả giao diện sáng lẫn tối. */
+  hero: 'bg-white text-[#005e68] hover:bg-white/90 font-semibold',
   secondary: 'bg-surface2 text-text hover:bg-line',
   ghost: 'bg-transparent text-text hover:bg-surface2',
   danger: 'bg-danger/15 text-danger hover:bg-danger/25 font-medium',
@@ -142,7 +145,11 @@ export function Field({ label, hint, error, children, className }: { label: stri
   );
 }
 
-/** Ô nhập số: giữ chuỗi người dùng gõ, chấp nhận dấu phẩy, trả về number | null. */
+/**
+ * Ô nhập số: giữ chuỗi người dùng gõ, chấp nhận dấu phẩy thập phân và dấu chấm phân cách nghìn ("1.200").
+ * Giá trị ngoài [min, max] hoặc không đọc được => ô được đánh dấu lỗi (aria-invalid) và cha nhận null,
+ * để màn hình không bao giờ hiển thị một số trong khi dữ liệu lưu là số khác.
+ */
 export function NumberInput({
   value,
   onChange,
@@ -159,9 +166,15 @@ export function NumberInput({
   max?: number;
 }) {
   const [text, setText] = useState(value == null ? '' : String(value));
+  const [invalid, setInvalid] = useState(false);
   useEffect(() => {
-    const parsed = text.trim() === '' ? null : Number(text.replace(',', '.'));
-    if (parsed !== (value ?? null)) setText(value == null ? '' : String(value));
+    // Ô đang báo lỗi và cha giữ null: giữ nguyên chữ đã gõ để người dùng sửa.
+    if (invalid && value == null) return;
+    const parsed = text.trim() === '' ? null : parseNumber(text);
+    if (parsed !== (value ?? null)) {
+      setText(value == null ? '' : String(value));
+      setInvalid(false);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
   return (
@@ -169,18 +182,20 @@ export function NumberInput({
       inputMode="decimal"
       autoComplete="off"
       enterKeyHint="done"
-      className={cx('w-full tabular', className)}
+      aria-invalid={invalid || undefined}
+      className={cx('w-full tabular', invalid && '!border-danger', className)}
       value={text}
       onChange={(e) => {
         const t = e.target.value.replace(/[^\d.,-]/g, '');
         setText(t);
-        if (t.trim() === '') return onChange(null);
-        const n = Number(t.replace(',', '.'));
-        if (Number.isFinite(n)) {
-          if (min != null && n < min) return;
-          if (max != null && n > max) return;
-          onChange(n);
+        if (t.trim() === '') {
+          setInvalid(false);
+          return onChange(null);
         }
+        const n = parseNumber(t);
+        const ok = n != null && (min == null || n >= min) && (max == null || n <= max);
+        setInvalid(!ok);
+        onChange(ok ? n : null);
       }}
       step={step}
       {...rest}
