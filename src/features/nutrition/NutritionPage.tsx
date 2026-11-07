@@ -7,13 +7,14 @@ import { MEAL_LABELS, MEAL_SLOTS, type Food, type FoodLog, type MealPlan, type M
 import { Badge, Button, Card, EmptyState, Explain, Field, IconButton, Modal, NumberInput, PageHeader, Spinner, Tabs, Toggle, cx } from '../../components/ui';
 import { useFeedback } from '../../components/feedback';
 import { useProfile } from '../../app/useAppData';
-import { addFoodLog, addStarterFoods, applyMealPlan, deleteFood, deleteFoodLog, deleteMealPlan, saveFood, saveMealPlan, toggleFavoriteFood, updateFoodLogServings } from '../../db/repo';
+import { addFoodLog, applyMealPlan, installVietnameseMenus, deleteFood, deleteFoodLog, deleteMealPlan, saveFood, saveMealPlan, toggleFavoriteFood, updateFoodLogServings } from '../../db/repo';
 import { kcalFromMacros, proteinProgress, scale, sumLogs } from '../../domain/nutrition';
 import { addDays, formatDate, todayISO } from '../../lib/date';
 import { fmt0, fmt1 } from '../../lib/format';
 import { normalizeVi } from '../workout/ExercisePicker';
 import { checkMeal, proteinPerMeal, suggestProteinFill, type MealVerdict } from '../../domain/mealCheck';
-import { STARTER_FOODS } from '../../data/starterFoods';
+import { VN_FOODS } from '../../data/vnFoods';
+import { VnPlans } from './VnPlans';
 import { CheckCircle2, AlertTriangle, CircleDashed } from 'lucide-react';
 
 type Tab = 'day' | 'foods' | 'plans';
@@ -30,12 +31,12 @@ export function NutritionPage() {
         tabs={[
           { value: 'day', label: 'Hôm nay' },
           { value: 'foods', label: 'Món của tôi' },
-          { value: 'plans', label: 'Thực đơn' },
+          { value: 'plans', label: 'Thực đơn Việt' },
         ]}
       />
       {tab === 'day' && <DayLog />}
       {tab === 'foods' && <FoodsTab />}
-      {tab === 'plans' && <PlansTab />}
+      {tab === 'plans' && <PlansTab onApplied={() => setParams({ tab: 'day' }, { replace: true })} />}
     </div>
   );
 }
@@ -263,12 +264,12 @@ function StarterFoodsButton() {
       block
       variant="outline"
       onClick={() =>
-        void addStarterFoods(STARTER_FOODS)
-          .then((n) => toast(n ? `Đã thêm ${n} món cơ bản (đánh dấu Ước tính)` : 'Các món cơ bản đã có sẵn'))
+        void installVietnameseMenus(VN_FOODS, [])
+          .then((r) => toast(r.foods ? `Đã thêm ${r.foods} thực phẩm Việt Nam` : 'Các thực phẩm Việt Nam đã có sẵn'))
           .catch(toastError)
       }
     >
-      Thêm nhanh {STARTER_FOODS.length} món cơ bản (ức gà, trứng, cơm…)
+      Thêm {VN_FOODS.length} thực phẩm Việt Nam (số liệu Viện Dinh dưỡng)
     </Button>
   );
 }
@@ -471,7 +472,7 @@ function FoodsTab() {
       </Button>
       {foods.length === 0 ? (
         <>
-          <EmptyState title="Chưa có món nào">Thêm món theo nhãn bao bì, hoặc nạp nhanh vài món cơ bản có số liệu tham khảo (đánh dấu Ước tính).</EmptyState>
+          <EmptyState title="Chưa có món nào">Thêm món theo nhãn bao bì, hoặc nạp nhanh thực phẩm Việt Nam quen thuộc với số liệu từ Bảng thành phần thực phẩm Việt Nam.</EmptyState>
           <StarterFoodsButton />
         </>
       ) : (
@@ -483,8 +484,15 @@ function FoodsTab() {
                   <Star size={18} className={f.isFavorite ? 'fill-warn text-warn' : 'text-muted'} />
                 </IconButton>
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5 text-sm font-medium">
-                    {f.name} {f.isVerified ? <Badge tone="ok">Đã xác minh</Badge> : <EstimateBadge />}
+                  <div className="flex min-w-0 items-center gap-1.5 text-sm font-medium">
+                    <span className="truncate">{f.name}</span>
+                    {f.isVerified ? (
+                      <Badge tone="ok" className="shrink-0">
+                        Đã xác minh
+                      </Badge>
+                    ) : (
+                      <EstimateBadge />
+                    )}
                   </div>
                   <div className="text-xs text-muted tabular">
                     {f.servingLabel}: {fmt1(f.proteinG)} P · {fmt1(f.carbG)} C · {fmt1(f.fatG)} F · {fmt0(f.kcal)} kcal
@@ -513,26 +521,29 @@ function FoodsTab() {
           </ul>
         </Card>
       )}
-      {foods.length > 0 && STARTER_FOODS.some((sf) => !foods.some((f) => f.name.trim().toLowerCase() === sf.name.trim().toLowerCase())) && <StarterFoodsButton />}
+      {foods.length > 0 && VN_FOODS.some((vf) => !foods.some((f) => f.id === vf.id)) && <StarterFoodsButton />}
       <FoodFormModal open={open} initial={editing} onClose={() => setOpen(false)} />
     </div>
   );
 }
 
-function PlansTab() {
+function PlansTab({ onApplied }: { onApplied: () => void }) {
   const plans = useLiveQuery(() => db.mealPlans.toArray(), []);
   const foods = useFoods();
   const { confirm, toastError } = useFeedback();
   const [editing, setEditing] = useState<MealPlan | 'new' | null>(null);
   if (!plans || !foods) return <Spinner />;
   const fm = new Map(foods.map((f) => [f.id, f]));
+  const mine = plans.filter((p) => !p.id.startsWith('vn-plan-'));
   return (
     <div className="space-y-3">
+      <VnPlans onApplied={onApplied} />
+      <h2 className="pt-3 text-sm font-semibold uppercase tracking-wide text-muted">Thực đơn của tôi</h2>
       <Button block variant="primary" icon={<Plus size={18} />} onClick={() => setEditing('new')} disabled={foods.length === 0}>
-        Tạo thực đơn
+        Tạo thực đơn riêng
       </Button>
       {foods.length === 0 && <p className="text-center text-xs text-muted">Thêm thực phẩm trước khi tạo thực đơn.</p>}
-      {plans.map((p) => {
+      {mine.map((p) => {
         const totals = p.items.reduce(
           (a, it) => {
             const f = fm.get(it.foodId);

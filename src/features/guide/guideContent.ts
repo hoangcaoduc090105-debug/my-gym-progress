@@ -64,13 +64,13 @@ export const APP_GUIDE: GuideStep[] = [
   {
     title: 'Ghi bữa ăn và kiểm tra bữa đó có phù hợp không',
     body: [
-      'Lần đầu: Ăn uống → tab Món của tôi → bấm "Thêm nhanh 6 món cơ bản" hoặc "Thêm thực phẩm" theo nhãn bao bì.',
+      'Cách nhanh nhất: Ăn uống → tab "Thực đơn Việt" → chọn 1 trong 3 thực đơn mẫu → "Dùng cho hôm nay". Cả ngày được điền sẵn, bạn chỉ sửa gram nếu ăn khác.',
+      'Tự ghi món: tab "Món của tôi" → "Thêm thực phẩm Việt Nam" (36 món, số liệu Viện Dinh dưỡng) hoặc tự thêm theo nhãn bao bì.',
       'Hằng ngày: tab Hôm nay → "Thêm món" ở từng bữa → nhập số khẩu phần → chạm vào món.',
       'Ngay dưới mỗi bữa, app chấm: Phù hợp / Hơi thiếu đạm / Thiếu đạm, và gợi ý món để bù (chạm là thêm luôn).',
       'Muốn app đánh giá cả calories: đặt mục tiêu calories trong Thêm → Cài đặt.',
       'Thanh protein cho biết bạn đã đạt bao nhiêu so với mục tiêu ngày.',
       'Thực phẩm ăn thường xuyên: bấm ngôi sao ⭐ để đưa lên đầu danh sách.',
-      'Thực đơn: tạo sẵn "Ngày tập", rồi thêm cả thực đơn bằng 1 lần bấm.',
     ],
   },
   {
@@ -191,8 +191,10 @@ export const GUIDE_REFERENCES = [
   'American College of Sports Medicine. (2009). American College of Sports Medicine position stand: Progression models in resistance training for healthy adults. Medicine & Science in Sports & Exercise, 41(3), 687–708. https://doi.org/10.1249/MSS.0b013e3181915670',
   'Cheung, K., Hume, P. A., & Maxwell, L. (2003). Delayed onset muscle soreness: Treatment strategies and performance factors. Sports Medicine, 33(2), 145–164. https://doi.org/10.2165/00007256-200333020-00005',
   'Haff, G. G., & Triplett, N. T. (Eds.). (2016). Essentials of strength training and conditioning (4th ed.). Human Kinetics.',
+  'Iraki, J., Fitschen, P., Espinar, S., & Helms, E. (2019). Nutrition recommendations for bodybuilders in the off-season: A narrative review. Sports, 7(7), Article 154. https://doi.org/10.3390/sports7070154',
   'Morton, R. W., Murphy, K. T., McKellar, S. R., Schoenfeld, B. J., Henselmans, M., Helms, E., Aragon, A. A., Devries, M. C., Banfield, L., Krieger, J. W., & Phillips, S. M. (2018). A systematic review, meta-analysis and meta-regression of the effect of protein supplementation on resistance training-induced gains in muscle mass and strength in healthy adults. British Journal of Sports Medicine, 52(6), 376–384. https://doi.org/10.1136/bjsports-2017-097608',
   'Schoenfeld, B. J., & Aragon, A. A. (2018). How much protein can the body use in a single meal for muscle-building? Implications for daily protein distribution. Journal of the International Society of Sports Nutrition, 15, Article 10. https://doi.org/10.1186/s12970-018-0215-1',
   'U.S. Department of Agriculture, Agricultural Research Service. (2019). FoodData Central [Data set]. https://fdc.nal.usda.gov/',
+  'Viện Dinh dưỡng. (2007). Bảng thành phần thực phẩm Việt Nam [Vietnamese food composition table]. Nhà xuất bản Y học.',
   'Zourdos, M. C., Klemp, A., Dolan, C., Quiles, J. M., Schau, K. A., Jo, E., Helms, E., Esgro, B., Duncan, S., Garcia Merino, S., & Blanco, R. (2016). Novel resistance training–specific rating of perceived exertion scale measuring repetitions in reserve. Journal of Strength and Conditioning Research, 30(1), 267–275. https://doi.org/10.1519/JSC.0000000000001049',
 ];

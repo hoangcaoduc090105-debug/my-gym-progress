@@ -150,13 +150,23 @@ try {
     await page.getByTestId('meal-verdict').getByText('Bữa này: Phù hợp').waitFor();
     // Nạp món cơ bản rồi thêm 1 quả trứng vào bữa trưa → bữa thiếu đạm + có gợi ý bù
     await page.getByRole('tab', { name: 'Món của tôi' }).click();
-    await page.getByRole('button', { name: /Thêm nhanh 6 món cơ bản/ }).click();
-    await page.getByText('Trứng gà luộc').waitFor();
+    await page.getByRole('button', { name: /thực phẩm Việt Nam \(số liệu Viện Dinh dưỡng\)/ }).click();
+    await page.getByText(/^Trứng gà/).first().waitFor();
     await page.getByRole('tab', { name: 'Hôm nay' }).click();
     await page.getByRole('button', { name: 'Thêm món' }).nth(1).click();
-    await page.getByRole('button', { name: /Trứng gà luộc/ }).click();
+    await page.getByRole('button', { name: /^Trứng gà/ }).first().click();
     await page.getByText('Bữa này: Thiếu đạm').waitFor();
-    await page.getByRole('button', { name: /Ức gà bỏ da/ }).first().waitFor();
+    await page.getByRole('button', { name: /\+ .*đạm/ }).first().waitFor();
+    // Thực đơn Việt Nam mẫu: áp dụng cho hôm nay
+    await page.getByRole('tab', { name: 'Thực đơn Việt' }).click();
+    await page.getByText('Ngày tập B — Phở bò, cơm thịt rim, tôm rang').waitFor();
+    await page.getByRole('button', { name: 'Xem gram từng món' }).first().click();
+    await page.getByText('Thịt bò loại I (sống)').first().waitFor();
+    await shot('05b-vn-plans');
+    await page.getByRole('button', { name: 'Dùng cho hôm nay' }).nth(1).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Thêm vào hôm nay' }).click();
+    await page.getByText(/Đã thêm 16 món/).waitFor();
+    await page.getByText('Bánh phở').first().waitFor();
     await noOverflow();
     await shot('05-nutrition');
   });
@@ -197,7 +207,7 @@ try {
     assert.equal(b.app, 'my-gym-progress');
     assert.equal(b.data.sessions.length, 1);
     assert.equal(b.data.bodyMetrics.length, 2);
-    assert.equal(b.data.foodLogs.length, 2);
+    assert.equal(b.data.foodLogs.length, 18);
     assert.equal(b.data.profile[0].heightCm, 174);
   });
 

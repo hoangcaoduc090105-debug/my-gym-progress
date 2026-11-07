@@ -119,3 +119,85 @@ ${refs(GUIDE_REFERENCES)}
 `;
 out('HUONG_DAN_TAP_LUYEN.md', t);
 console.log('✓ docs/HUONG_DAN_SU_DUNG.md, docs/HUONG_DAN_TAP_LUYEN.md');
+
+// ---------- Thực đơn Việt Nam ----------
+import { VN_FOODS } from '../src/data/vnFoods';
+import { VN_PLANS, foodName, itemMacro, mealMacro, planMacro } from '../src/data/vnMealPlans';
+import { MEAL_LABELS } from '../src/db/types';
+
+const n1 = (x: number) => (Math.round(x * 10) / 10).toString().replace('.', ',');
+const n0 = (x: number) => Math.round(x).toString();
+let v = `# Thực đơn Việt Nam mẫu cho người tập tăng cơ
+
+> Ba thực đơn 1 ngày, món quen thuộc với người Việt, thiết kế cho người khoảng 65 kg tập tăng cơ, ăn 4 bữa/ngày. Có sẵn trong app: **Ăn uống → tab "Thực đơn Việt" → "Dùng cho hôm nay"**.
+
+## Nguyên tắc thiết kế
+
+- **Đạm (protein):** mỗi bữa ≥ 26 g, cả ngày 105–130 g. Chia đều khoảng 4 bữa, mỗi bữa ~0,4 g/kg giúp tối đa hóa tổng hợp cơ (Schoenfeld & Aragon, 2018); tổng 1,6–2,0 g/kg/ngày (Morton et al., 2018).
+- **Món ăn:** bữa sáng kiểu Việt (bánh mì, phở, bún); trưa và tối là cơm + món mặn + rau + canh; bữa phụ sau tập.
+- **Số liệu:** nguyên liệu lấy từ *Bảng thành phần thực phẩm Việt Nam* (Viện Dinh dưỡng, 2007), giá trị trên 100 g phần ăn được ở dạng sống. Bảng không có cơm chín và ức gà riêng nên hai món này lấy từ USDA FoodData Central (U.S. Department of Agriculture, 2019). Dầu ăn được tính riêng.
+- **Calories:** app không đặt mục tiêu calories. Các thực đơn cung cấp khoảng ${Math.min(...VN_PLANS.map((p) => planMacro(p).kcal)).toLocaleString('vi-VN')}–${Math.max(...VN_PLANS.map((p) => planMacro(p).kcal)).toLocaleString('vi-VN')} kcal; điều chỉnh bằng lượng cơm theo diễn biến cân nặng (xem cuối tài liệu).
+
+## Cách cân đong
+
+- Thịt, cá, tôm: cân **sống, phần ăn được** (bỏ xương, vỏ, đầu).
+- Cơm: cân **sau khi nấu**. Cân 1 lần bát cơm nhà bạn để biết 1 bát khoảng bao nhiêu gram.
+- 1 thìa cà phê dầu ≈ 5 g.
+
+`;
+for (const p of VN_PLANS) {
+  const t = planMacro(p);
+  v += `## ${p.name}\n\n*${p.note}*\n\n**Tổng ngày:** ${n0(t.kcal)} kcal · đạm ${n1(t.proteinG)} g · carb ${n0(t.carbG)} g · fat ${n0(t.fatG)} g\n\n`;
+  for (const m of p.meals) {
+    const mm = mealMacro(m);
+    v += `### ${MEAL_LABELS[m.meal]}: ${m.title}\n\n${m.howTo}\n\n| Thực phẩm | Khối lượng | Đạm (g) | Carb (g) | Fat (g) | kcal |\n|---|---|---|---|---|---|\n`;
+    for (const it of m.items) {
+      const x = itemMacro(it);
+      v += `| ${foodName(it.foodId)} | ${it.grams} g | ${n1(x.proteinG)} | ${n1(x.carbG)} | ${n1(x.fatG)} | ${n0(x.kcal)} |\n`;
+    }
+    v += `| **Cộng bữa** | | **${n1(mm.proteinG)}** | ${n1(mm.carbG)} | ${n1(mm.fatG)} | **${n0(mm.kcal)}** |\n\n`;
+  }
+}
+v += `## Đổi món tương đương lượng đạm (~21 g)
+
+| Món | Khối lượng sống, phần ăn được |
+|---|---|
+| Thịt bò loại I | 100 g |
+| Thịt lợn nạc | 110 g |
+| Cá rô phi | 105 g |
+| Cá ngừ | 100 g |
+| Tôm đồng | 115 g |
+| Giò lụa | 100 g |
+| Trứng gà | ~140 g (khoảng 3 quả) |
+| Đậu phụ | 190 g |
+
+Rau đổi tự do giữa các loại (rau muống, cải, bắp cải, rau ngót, bí…). Tinh bột đổi theo năng lượng: 100 g cơm chín (130 kcal) tương đương khoảng 90 g bánh phở (129 kcal) hoặc 120 g bún (132 kcal).
+
+## Điều chỉnh theo cân nặng
+
+Cân 2–3 lần/tuần vào buổi sáng. Với mục tiêu tăng cơ, mức tăng khoảng 0,25–0,5% cân nặng mỗi tuần là hợp lý (Iraki et al., 2019); với 65 kg là khoảng 0,15–0,3 kg/tuần.
+- Không tăng sau 2–3 tuần: thêm khoảng 50 g cơm ở bữa trưa và tối.
+- Tăng nhanh hơn mức trên: bớt cơm và dầu ăn, giữ nguyên phần đạm.
+
+## Ăn ngoài hàng quán
+
+Phở, bún bò, cơm tấm, bánh mì ngoài hàng khác nhau nhiều về lượng thịt, bánh và dầu mỡ; chưa có bảng chính thức về năng lượng từng món theo khẩu phần hàng quán. Khi ăn ngoài, hãy ghi theo khối lượng ước lượng của từng nguyên liệu và coi là số liệu ước tính.
+
+## Bảng thực phẩm dùng trong app (trên 100 g)
+
+| Thực phẩm | Nguồn | kcal | Đạm | Carb | Fat |
+|---|---|---|---|---|---|
+${VN_FOODS.map((x) => `| ${x.name} | ${x.fctCode ? `Viện Dinh dưỡng (2007), mã ${x.fctCode}` : 'USDA (2019), đã nấu chín'} | ${x.kcal} | ${n1(x.proteinG)} | ${n1(x.carbG)} | ${n1(x.fatG)} |`).join('\n')}
+
+*Ô lipid của bún và rau ngót trong bảng gốc để trống ("-"); app ghi là 0.*
+
+## Tài liệu tham khảo
+
+- Iraki, J., Fitschen, P., Espinar, S., & Helms, E. (2019). Nutrition recommendations for bodybuilders in the off-season: A narrative review. *Sports, 7*(7), Article 154. https://doi.org/10.3390/sports7070154
+- Morton, R. W., Murphy, K. T., McKellar, S. R., Schoenfeld, B. J., Henselmans, M., Helms, E., Aragon, A. A., Devries, M. C., Banfield, L., Krieger, J. W., & Phillips, S. M. (2018). A systematic review, meta-analysis and meta-regression of the effect of protein supplementation on resistance training-induced gains in muscle mass and strength in healthy adults. *British Journal of Sports Medicine, 52*(6), 376–384. https://doi.org/10.1136/bjsports-2017-097608
+- Schoenfeld, B. J., & Aragon, A. A. (2018). How much protein can the body use in a single meal for muscle-building? Implications for daily protein distribution. *Journal of the International Society of Sports Nutrition, 15*, Article 10. https://doi.org/10.1186/s12970-018-0215-1
+- U.S. Department of Agriculture, Agricultural Research Service. (2019). *FoodData Central* [Data set]. https://fdc.nal.usda.gov/
+- Viện Dinh dưỡng. (2007). *Bảng thành phần thực phẩm Việt Nam* [Vietnamese food composition table]. Nhà xuất bản Y học. Bản PDF: https://www.fao.org/fileadmin/templates/food_composition/documents/pdf/VTN_FCT_2007.pdf
+`;
+out('THUC_DON_VIET_NAM.md', v);
+console.log('✓ docs/THUC_DON_VIET_NAM.md');

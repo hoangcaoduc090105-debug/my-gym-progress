@@ -367,16 +367,38 @@ export async function deleteFood(id: string): Promise<void> {
   await db.foods.delete(id);
 }
 
-/** Nạp bộ thực phẩm cơ bản (bỏ qua món trùng tên đã có). */
-export async function addStarterFoods(list: Omit<FoodInput, 'isFavorite'>[]): Promise<number> {
-  const existing = new Set((await db.foods.toArray()).map((f) => f.name.trim().toLowerCase()));
-  let n = 0;
-  for (const f of list) {
-    if (existing.has(f.name.trim().toLowerCase())) continue;
-    await saveFood({ ...f, isFavorite: true });
-    n++;
-  }
-  return n;
+/**
+ * Cài bộ thực phẩm + thực đơn Việt Nam mẫu (id cố định → chạy lại không nhân đôi, không ghi đè bản người dùng đã sửa).
+ */
+export async function installVietnameseMenus(
+  foods: (Omit<FoodInput, 'isFavorite' | 'id'> & { id: string })[],
+  plans: { id: string; name: string; meals: { meal: MealSlot; items: { foodId: string; grams: number }[] }[] }[],
+): Promise<{ foods: number; plans: number }> {
+  const now = nowISO();
+  let nf = 0;
+  let np = 0;
+  await db.transaction('rw', db.foods, db.mealPlans, async () => {
+    for (const f of foods) {
+      if (await db.foods.get(f.id)) continue;
+      const { id, ...rest } = f;
+      const clean = { id, name: rest.name, servingLabel: rest.servingLabel, servingGrams: rest.servingGrams, kcal: rest.kcal, proteinG: rest.proteinG, carbG: rest.carbG, fatG: rest.fatG, isVerified: rest.isVerified, source: rest.source, isFavorite: false, createdAt: now, updatedAt: now };
+      await db.foods.put(validate(foodSchema, clean, 'thực phẩm') as Food);
+      nf++;
+    }
+    for (const p of plans) {
+      if (await db.mealPlans.get(p.id)) continue;
+      const plan = {
+        id: p.id,
+        name: p.name,
+        items: p.meals.flatMap((m) => m.items.map((it) => ({ foodId: it.foodId, meal: m.meal, servings: Math.round((it.grams / 100) * 100) / 100 }))),
+        createdAt: now,
+        updatedAt: now,
+      };
+      await db.mealPlans.put(validate(mealPlanSchema, plan, 'thực đơn') as MealPlan);
+      np++;
+    }
+  });
+  return { foods: nf, plans: np };
 }
 
 export async function toggleFavoriteFood(id: string): Promise<void> {

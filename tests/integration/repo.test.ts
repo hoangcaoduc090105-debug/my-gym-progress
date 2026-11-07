@@ -209,12 +209,16 @@ describe('nutrition', () => {
     await repo.deleteFoodLog(l.id);
     expect(await db.foodLogs.count()).toBe(1);
   });
-  it('nạp bộ thực phẩm cơ bản: đánh dấu ước tính, không nhân đôi', async () => {
-    const { STARTER_FOODS } = await import('../../src/data/starterFoods');
-    expect(await repo.addStarterFoods(STARTER_FOODS)).toBe(STARTER_FOODS.length);
-    expect(await repo.addStarterFoods(STARTER_FOODS)).toBe(0);
-    const all = await db.foods.toArray();
-    expect(all.every((f) => !f.isVerified && !!f.source)).toBe(true);
+  it('cài thực đơn Việt Nam: idempotent, áp dụng cho ra đúng tổng đạm', async () => {
+    const { VN_FOODS } = await import('../../src/data/vnFoods');
+    const { VN_PLANS, planMacro } = await import('../../src/data/vnMealPlans');
+    const { sumLogs } = await import('../../src/domain/nutrition');
+    expect(await repo.installVietnameseMenus(VN_FOODS, VN_PLANS)).toEqual({ foods: VN_FOODS.length, plans: VN_PLANS.length });
+    expect(await repo.installVietnameseMenus(VN_FOODS, VN_PLANS)).toEqual({ foods: 0, plans: 0 });
+    await repo.applyMealPlan('vn-plan-a', '2026-11-10');
+    const logs = await db.foodLogs.where('date').equals('2026-11-10').toArray();
+    expect(sumLogs(logs).proteinG).toBeCloseTo(planMacro(VN_PLANS[0]!).proteinG, 0);
+    expect(logs.every((l) => l.food.isVerified)).toBe(true);
   });
   it('từ chối giá trị dinh dưỡng âm', async () => {
     await expect(

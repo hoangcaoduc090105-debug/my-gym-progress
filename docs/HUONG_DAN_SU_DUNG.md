@@ -47,13 +47,13 @@
 
 ## Bước 7. Ghi bữa ăn và kiểm tra bữa đó có phù hợp không
 
-- Lần đầu: Ăn uống → tab Món của tôi → bấm "Thêm nhanh 6 món cơ bản" hoặc "Thêm thực phẩm" theo nhãn bao bì.
+- Cách nhanh nhất: Ăn uống → tab "Thực đơn Việt" → chọn 1 trong 3 thực đơn mẫu → "Dùng cho hôm nay". Cả ngày được điền sẵn, bạn chỉ sửa gram nếu ăn khác.
+- Tự ghi món: tab "Món của tôi" → "Thêm thực phẩm Việt Nam" (36 món, số liệu Viện Dinh dưỡng) hoặc tự thêm theo nhãn bao bì.
 - Hằng ngày: tab Hôm nay → "Thêm món" ở từng bữa → nhập số khẩu phần → chạm vào món.
 - Ngay dưới mỗi bữa, app chấm: Phù hợp / Hơi thiếu đạm / Thiếu đạm, và gợi ý món để bù (chạm là thêm luôn).
 - Muốn app đánh giá cả calories: đặt mục tiêu calories trong Thêm → Cài đặt.
 - Thanh protein cho biết bạn đã đạt bao nhiêu so với mục tiêu ngày.
 - Thực phẩm ăn thường xuyên: bấm ngôi sao ⭐ để đưa lên đầu danh sách.
-- Thực đơn: tạo sẵn "Ngày tập", rồi thêm cả thực đơn bằng 1 lần bấm.
 
 ## Bước 8. Xem tiến bộ
 

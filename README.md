@@ -39,6 +39,7 @@ Lần đầu chạy E2E trên máy mới, cài trình duyệt Chromium cho Playw
 - **Ứng dụng:** https://hoangcaoduc090105-debug.github.io/my-gym-progress/
 - [Hướng dẫn sử dụng](docs/HUONG_DAN_SU_DUNG.md)
 - [Hướng dẫn tập luyện cho người mới — từng động tác](docs/HUONG_DAN_TAP_LUYEN.md)
+- [Thực đơn Việt Nam mẫu (số liệu Viện Dinh dưỡng)](docs/THUC_DON_VIET_NAM.md)
 - [Triển khai lên GitHub Pages](docs/TRIEN_KHAI_GITHUB_PAGES.md)
 - [Cách tính chỉ số và nguồn tham khảo](docs/CACH_TINH_CHI_SO.md)
 - [Kiến trúc](docs/KIEN_TRUC.md)
