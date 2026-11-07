@@ -377,6 +377,19 @@ try {
     await cancelCurrent();
   });
 
+  await check('Hiệp khởi động tự tính: nhập tạ hiệp 1 → "Thêm khởi động" chèn 3 hiệp K', async () => {
+    await page.goto(BASE + '#/lich-tap');
+    await page.getByRole('button', { name: /^Bắt đầu Buổi/ }).click();
+    await page.getByRole('heading', { name: 'Đang tập' }).waitFor();
+    const first = page.locator('section').filter({ has: page.getByLabel('Mức tạ hiệp 1') }).first();
+    assert.equal(await first.getByRole('button', { name: 'Thêm khởi động' }).count(), 0, 'chưa có tạ => chưa có nút');
+    await first.getByLabel('Mức tạ hiệp 1').fill('40');
+    await first.getByRole('button', { name: 'Thêm khởi động' }).click();
+    await first.getByRole('button', { name: 'Hiệp khởi động — chạm để đổi' }).nth(2).waitFor();
+    await shot('16b-warmup');
+    await cancelCurrent();
+  });
+
   await check('Thêm giáo án từ mẫu, dùng ngay, bắt đầu buổi từ mẫu, rồi quay về giáo án mặc định', async () => {
     await page.goto(BASE + '#/lich-tap?tab=programs');
     await page.getByRole('button', { name: 'Thêm từ mẫu' }).click();

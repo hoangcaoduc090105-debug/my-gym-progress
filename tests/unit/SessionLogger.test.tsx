@@ -1,5 +1,5 @@
 import { db } from '../../src/db/db';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import * as repo from '../../src/db/repo';
 import { FeedbackProvider } from '../../src/components/feedback';
@@ -263,5 +263,31 @@ describe('SessionLogger — thu gọn bài đã xong (v1.9.0)', () => {
     fireEvent.click(summary);
     expect(screen.queryByTestId('collapsed-summary')).toBeNull();
     expect(screen.getAllByLabelText('Mức tạ hiệp 1').every((el) => !el.closest('[hidden]'))).toBe(true);
+  });
+});
+
+describe('SessionLogger — hiệp khởi động tự tính (v1.9.0)', () => {
+  afterEach(() => saveSpy.mockReset());
+
+  it('chưa có tạ => không có nút; nhập 40 kg hiệp 1 => "Thêm khởi động" chèn 3 hiệp K (15/25/32,5) lên đầu, bấm lần 2 không nhân đôi', async () => {
+    const s = await renderLogger();
+    // Bài đầu (goblet squat, tạ đơn) chưa có tạ => chưa có nút; bài trọng lượng cơ thể trong buổi vẫn có nút (1 hiệp không tạ).
+    const card = screen.getByRole('link', { name: 'Squat tạ ấm/tạ đơn trước ngực' }).closest('section')!;
+    expect(within(card).queryByRole('button', { name: 'Thêm khởi động' })).toBeNull();
+    fireEvent.change(screen.getAllByLabelText('Mức tạ hiệp 1')[0]!, { target: { value: '40' } });
+    fireEvent.click(await within(card).findByRole('button', { name: 'Thêm khởi động' }));
+    await waitFor(async () => expect((await db.sessions.get(s.id))!.exercises[0]!.sets.filter((x) => x.isWarmup)).toHaveLength(3));
+    let sets = (await db.sessions.get(s.id))!.exercises[0]!.sets;
+    expect(sets.slice(0, 3).map((x) => [x.weightKg, x.reps, x.isWarmup, x.done])).toEqual([
+      [15, 8, true, false],
+      [25, 5, true, false],
+      [32.5, 3, true, false],
+    ]);
+    expect(sets[3]!.weightKg).toBe(40);
+    fireEvent.click(within(card).getByRole('button', { name: 'Thêm khởi động' }));
+    await sleep(100);
+    sets = (await db.sessions.get(s.id))!.exercises[0]!.sets;
+    expect(sets.filter((x) => x.isWarmup)).toHaveLength(3);
+    expect(screen.getAllByRole('button', { name: 'Hiệp khởi động — chạm để đổi' }).length).toBeGreaterThanOrEqual(3);
   });
 });

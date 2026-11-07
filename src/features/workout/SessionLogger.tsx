@@ -1,7 +1,7 @@
 import { Suspense, lazy, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { ArrowDown, ArrowLeftRight, ArrowUp, BookOpen, ChevronDown, ChevronUp, Disc, Check, ClipboardCopy, Info, Minus, Plus, Timer, Trash2, TrendingUp } from 'lucide-react';
+import { ArrowDown, ArrowLeftRight, ArrowUp, BookOpen, ChevronDown, ChevronUp, Disc, Check, ClipboardCopy, Flame, Info, Minus, Plus, Timer, Trash2, TrendingUp } from 'lucide-react';
 import { db } from '../../db/db';
 import { MUSCLE_LABELS, type Exercise, type SessionExercise, type SetEntry, type Settings } from '../../db/types';
 import { Badge, Button, Card, IconButton, Menu, Modal, NumberInput, PageHeader, Spinner, cx } from '../../components/ui';
@@ -10,6 +10,7 @@ import { useExerciseMap, useSettings } from '../../app/useAppData';
 import { emptySet, finishSession, lastPerformances, replaceExerciseInProgramDay, softDeleteSession } from '../../db/repo';
 import { swapExercise } from '../../domain/swap';
 import { deloadWeight } from '../../domain/deload';
+import { warmupSets } from '../../domain/warmup';
 import { stagnationFor } from '../../db/history';
 import { groupExercises, groupRestSec, isLastInGroup, moveBlock, nextInGroup, normalizeGroups } from '../../domain/superset';
 import { suggestProgression, type Suggestion } from '../../domain/progression';
@@ -445,6 +446,10 @@ function ExerciseBlock(props: {
   const setField = (i: number, patch: Partial<SetEntry>) => onChange((e) => ({ ...e, sets: e.sets.map((x, k) => (k === i ? { ...x, ...patch } : x)) }));
   let workIdx = 0;
   const name = ex?.nameVi ?? 'Bài tập đã bị xóa';
+  // v1.9: mức tạ làm việc để tính khởi động — hiệp làm việc đầu tiên đã nhập, không thì tạ dự kiến từ buổi trước.
+  const firstWork = se.sets.find((x) => !x.isWarmup && x.weightKg != null)?.weightKg ?? null;
+  const hintKg = hintFor(hint, 0)?.weightKg;
+  const warmKg = firstWork ?? (hintKg != null ? planned(hintKg) : null);
   const summary = se.sets
     .filter((x) => x.done)
     .map((x) => `${x.isWarmup ? 'K ' : ''}${units.fmt(x.weightKg ?? 0)}×${x.reps ?? 0}`)
@@ -623,6 +628,23 @@ function ExerciseBlock(props: {
         <Button size="sm" icon={<Plus size={16} />} onClick={() => onChange((e) => ({ ...e, sets: [...e.sets, emptySet()] }))}>
           Thêm hiệp
         </Button>
+        {(warmKg != null || ex?.isBodyweight) && !se.sets.some((x) => x.isWarmup && x.done) && (
+          <Button
+            size="sm"
+            variant="ghost"
+            icon={<Flame size={16} />}
+            title={warmKg != null ? `Từ mức ${units.fmtU(warmKg)}: 40 % × 8, 60 % × 5, 80 % × 3` : undefined}
+            onClick={() =>
+              onChange((e) => ({
+                ...e,
+                // Thay các hiệp khởi động chưa làm (nếu có) bằng bộ mới; hiệp làm việc giữ nguyên.
+                sets: [...warmupSets(warmKg ?? 0, { barbell: isBarbell ? settings.barbell : null, unit: units.unit, isBodyweight: !!ex?.isBodyweight }, () => uid('set')), ...e.sets.filter((x) => !(x.isWarmup && !x.done))],
+              }))
+            }
+          >
+            Thêm khởi động
+          </Button>
+        )}
         <Button
           size="sm"
           variant="ghost"
