@@ -3,20 +3,7 @@ import type { z } from 'zod';
 import { db } from './db';
 import { defaultSettings } from './defaults';
 import { AppError } from './errors';
-import {
-  bodyMetricSchema,
-  exerciseSchema,
-  foodLogSchema,
-  foodSchema,
-  formatZodError,
-  mealPlanSchema,
-  photoMetaSchema,
-  profileSchema,
-  programSchema,
-  scheduleSchema,
-  sessionSchema,
-  settingsSchema,
-} from './schemas';
+import type * as SchemasModule from './schemas';
 import type {
   BodyMetric,
   Exercise,
@@ -39,9 +26,23 @@ import { isWorkingSet } from '../domain/sets';
 import { isArrayBuffer } from '../lib/image';
 import { notifyStorageChanged } from '../lib/storage';
 
-function validate<T>(schema: z.ZodType<T>, value: unknown, what: string): T {
-  const r = schema.safeParse(value);
-  if (!r.success) throw new AppError(`Dữ liệu ${what} không hợp lệ`, formatZodError(r.error));
+/**
+ * Schema Zod (kèm thư viện zod ~12 KB gzip) được tải lười để chunk chính nhỏ.
+ * Mọi hàm ghi gọi `await loadSchemas()` TRƯỚC khi mở giao dịch Dexie (không được await promise ngoài Dexie bên trong giao dịch).
+ */
+type Schemas = typeof SchemasModule;
+let S: Schemas | null = null;
+let loadingSchemas: Promise<Schemas> | null = null;
+export function loadSchemas(): Promise<Schemas> {
+  if (S) return Promise.resolve(S);
+  loadingSchemas ??= import('./schemas').then((m) => (S = m));
+  return loadingSchemas;
+}
+
+function validate<T>(pick: (s: Schemas) => z.ZodType<T>, value: unknown, what: string): T {
+  if (!S) throw new Error('Schema chưa được tải (gọi loadSchemas() trước).');
+  const r = pick(S).safeParse(value);
+  if (!r.success) throw new AppError(`Dữ liệu ${what} không hợp lệ`, S.formatZodError(r.error));
   return r.data;
 }
 
@@ -54,9 +55,10 @@ export async function getProfile(): Promise<Profile | undefined> {
 export type ProfileInput = Omit<Profile, 'id' | 'createdAt' | 'updatedAt'>;
 
 export async function saveProfile(input: ProfileInput): Promise<Profile> {
+  await loadSchemas();
   const prev = await db.profile.get('me');
   const now = nowISO();
-  const p = validate(profileSchema, { ...input, id: 'me', createdAt: prev?.createdAt ?? now, updatedAt: now }, 'hồ sơ') as Profile;
+  const p = validate((x) => x.profileSchema, { ...input, id: 'me', createdAt: prev?.createdAt ?? now, updatedAt: now }, 'hồ sơ') as Profile;
   await db.profile.put(p);
   return p;
 }
@@ -70,7 +72,8 @@ export async function getSettings(): Promise<Settings> {
 }
 
 export async function saveSettings(s: Omit<Settings, 'id' | 'updatedAt'>): Promise<Settings> {
-  const v = validate(settingsSchema, { ...s, id: 'app', updatedAt: nowISO() }, 'cài đặt') as Settings;
+  await loadSchemas();
+  const v = validate((x) => x.settingsSchema, { ...s, id: 'app', updatedAt: nowISO() }, 'cài đặt') as Settings;
   await db.settings.put(v);
   return v;
 }
@@ -80,11 +83,12 @@ export async function saveSettings(s: Omit<Settings, 'id' | 'updatedAt'>): Promi
 export type ExerciseInput = Omit<Exercise, 'id' | 'isCustom' | 'createdAt' | 'updatedAt'> & { id?: string };
 
 export async function saveCustomExercise(input: ExerciseInput): Promise<Exercise> {
+  await loadSchemas();
   const now = nowISO();
   const prev = input.id ? await db.exercises.get(input.id) : undefined;
   if (prev && !prev.isCustom) throw new AppError('Không thể sửa bài tập gốc của thư viện. Hãy tạo bài tập mới.');
   const ex = validate(
-    exerciseSchema,
+    (x) => x.exerciseSchema,
     {
       ...input,
       id: prev?.id ?? uid('ex'),
@@ -120,8 +124,9 @@ export async function deleteCustomExercise(id: string): Promise<void> {
 // ---------------- GIÁO ÁN ----------------
 
 export async function saveProgram(p: Omit<Program, 'createdAt' | 'updatedAt'> & { createdAt?: string }): Promise<Program> {
+  await loadSchemas();
   const now = nowISO();
-  const v = validate(programSchema, { ...p, createdAt: p.createdAt ?? now, updatedAt: now }, 'giáo án') as Program;
+  const v = validate((x) => x.programSchema, { ...p, createdAt: p.createdAt ?? now, updatedAt: now }, 'giáo án') as Program;
   const known = new Set((await db.exercises.toCollection().primaryKeys()) as string[]);
   const missing = v.days.flatMap((d) => d.exercises.map((e) => e.exerciseId)).filter((x) => !known.has(x));
   if (missing.length) throw new AppError('Giáo án chứa bài tập không tồn tại trong thư viện', missing);
@@ -147,6 +152,7 @@ export async function setActiveProgram(id: string): Promise<void> {
 }
 
 export async function duplicateProgram(id: string): Promise<Program> {
+  await loadSchemas();
   const p = await db.programs.get(id);
   if (!p) throw new AppError('Không tìm thấy giáo án.');
   const copy: Program = {
@@ -175,7 +181,8 @@ export async function getActiveProgram(): Promise<Program | null> {
 // ---------------- LỊCH TẬP ----------------
 
 export async function addSchedule(input: Omit<ScheduledWorkout, 'id' | 'createdAt'>): Promise<ScheduledWorkout> {
-  const v = validate(scheduleSchema, { ...input, id: uid('sch'), createdAt: nowISO() }, 'lịch tập') as ScheduledWorkout;
+  await loadSchemas();
+  const v = validate((x) => x.scheduleSchema, { ...input, id: uid('sch'), createdAt: nowISO() }, 'lịch tập') as ScheduledWorkout;
   await db.schedule.add(v);
   return v;
 }
@@ -245,6 +252,7 @@ export async function startSession(params: {
   scheduleId?: string | null;
   date?: string;
 }): Promise<WorkoutSession> {
+  await loadSchemas();
   // Kiểm tra "đã có buổi dở" và ghi buổi mới trong CÙNG một giao dịch,
   // để bấm đúp hoặc mở hai tab không tạo ra hai buổi dở.
   return db.transaction('rw', db.sessions, db.programs, async () => {
@@ -281,13 +289,14 @@ export async function startSession(params: {
       deletedAt: null,
       updatedAt: now,
     };
-    await db.sessions.add(validate(sessionSchema, s, 'buổi tập') as WorkoutSession);
+    await db.sessions.add(validate((x) => x.sessionSchema, s, 'buổi tập') as WorkoutSession);
     return s;
   });
 }
 
 /** Tạo buổi mới lặp lại cấu trúc (bài tập, mục tiêu, số hiệp) của một buổi cũ; số liệu để trống. */
 export async function startRepeatSession(sourceId: string, date?: string): Promise<WorkoutSession> {
+  await loadSchemas();
   const src = await db.sessions.get(sourceId);
   if (!src) throw new AppError('Không tìm thấy buổi tập gốc.');
   const s = await startSession({ programId: src.programId, programDayId: null, date });
@@ -308,12 +317,14 @@ export async function startRepeatSession(sourceId: string, date?: string): Promi
 }
 
 export async function saveSession(s: WorkoutSession): Promise<WorkoutSession> {
-  const v = validate(sessionSchema, { ...s, updatedAt: nowISO() }, 'buổi tập') as WorkoutSession;
+  await loadSchemas();
+  const v = validate((x) => x.sessionSchema, { ...s, updatedAt: nowISO() }, 'buổi tập') as WorkoutSession;
   await db.sessions.put(v);
   return v;
 }
 
 export async function finishSession(id: string): Promise<WorkoutSession> {
+  await loadSchemas();
   const s = await db.sessions.get(id);
   if (!s) throw new AppError('Không tìm thấy buổi tập.');
   const working = s.exercises.reduce((n, e) => n + e.sets.filter(isWorkingSet).length, 0);
@@ -347,12 +358,13 @@ export async function purgeSession(id: string): Promise<void> {
 export type BodyMetricInput = Omit<BodyMetric, 'id' | 'createdAt' | 'updatedAt' | 'deletedAt'> & { id?: string };
 
 export async function saveBodyMetric(input: BodyMetricInput): Promise<BodyMetric> {
+  await loadSchemas();
   const now = nowISO();
   const prev = input.id ? await db.bodyMetrics.get(input.id) : undefined;
   const clean: Record<string, unknown> = { ...input };
   for (const k of Object.keys(clean)) if (clean[k] === undefined) delete clean[k];
   const v = validate(
-    bodyMetricSchema,
+    (x) => x.bodyMetricSchema,
     { ...clean, id: prev?.id ?? uid('bm'), createdAt: prev?.createdAt ?? now, updatedAt: now, deletedAt: null },
     'số đo',
   ) as BodyMetric;
@@ -376,9 +388,10 @@ export async function purgeBodyMetric(id: string): Promise<void> {
 export async function addPhoto(
   input: Omit<ProgressPhoto, 'id' | 'createdAt' | 'deletedAt' | 'bytes' | 'thumb'> & { data: ArrayBuffer; thumb?: ArrayBuffer | null },
 ): Promise<ProgressPhoto> {
+  await loadSchemas();
   const { data, thumb, ...meta } = input;
   const now = nowISO();
-  const m = validate(photoMetaSchema, { ...meta, id: uid('ph'), createdAt: now, deletedAt: null }, 'ảnh');
+  const m = validate((x) => x.photoMetaSchema, { ...meta, id: uid('ph'), createdAt: now, deletedAt: null }, 'ảnh');
   if (!isArrayBuffer(data) || data.byteLength === 0) throw new AppError('Tệp ảnh rỗng hoặc không đọc được.');
   const p = { ...m, thumb: isArrayBuffer(thumb) ? thumb : null, bytes: data.byteLength } as ProgressPhoto;
   // Ghi siêu dữ liệu và bytes trong MỘT giao dịch.
@@ -413,9 +426,10 @@ export async function purgePhoto(id: string): Promise<void> {
 export type FoodInput = Omit<Food, 'id' | 'createdAt' | 'updatedAt'> & { id?: string };
 
 export async function saveFood(input: FoodInput): Promise<Food> {
+  await loadSchemas();
   const now = nowISO();
   const prev = input.id ? await db.foods.get(input.id) : undefined;
-  const v = validate(foodSchema, { ...input, id: prev?.id ?? uid('food'), createdAt: prev?.createdAt ?? now, updatedAt: now }, 'thực phẩm') as Food;
+  const v = validate((x) => x.foodSchema, { ...input, id: prev?.id ?? uid('food'), createdAt: prev?.createdAt ?? now, updatedAt: now }, 'thực phẩm') as Food;
   await db.foods.put(v);
   return v;
 }
@@ -432,6 +446,7 @@ export async function installVietnameseMenus(
   foods: (Omit<FoodInput, 'isFavorite' | 'id'> & { id: string })[],
   plans: { id: string; name: string; meals: { meal: MealSlot; items: { foodId: string; grams?: number; portions?: number }[] }[] }[],
 ): Promise<{ foods: number; plans: number }> {
+  await loadSchemas();
   const now = nowISO();
   let nf = 0;
   let np = 0;
@@ -440,7 +455,7 @@ export async function installVietnameseMenus(
       if (await db.foods.get(f.id)) continue;
       const { id, ...rest } = f;
       const clean = { id, name: rest.name, servingLabel: rest.servingLabel, servingGrams: rest.servingGrams, kcal: rest.kcal, proteinG: rest.proteinG, carbG: rest.carbG, fatG: rest.fatG, isVerified: rest.isVerified, source: rest.source, isFavorite: false, createdAt: now, updatedAt: now };
-      await db.foods.put(validate(foodSchema, clean, 'thực phẩm') as Food);
+      await db.foods.put(validate((x) => x.foodSchema, clean, 'thực phẩm') as Food);
       nf++;
     }
     for (const p of plans) {
@@ -452,7 +467,7 @@ export async function installVietnameseMenus(
         createdAt: now,
         updatedAt: now,
       };
-      await db.mealPlans.put(validate(mealPlanSchema, plan, 'thực đơn') as MealPlan);
+      await db.mealPlans.put(validate((x) => x.mealPlanSchema, plan, 'thực đơn') as MealPlan);
       np++;
     }
   });
@@ -465,10 +480,11 @@ export async function toggleFavoriteFood(id: string): Promise<void> {
 }
 
 export async function addFoodLog(params: { date: string; meal: MealSlot; foodId: string; servings: number }): Promise<FoodLog> {
+  if (!S) await loadSchemas(); // có thể chạy trong giao dịch của applyMealPlan: chỉ await khi chưa tải
   const f = await db.foods.get(params.foodId);
   if (!f) throw new AppError('Không tìm thấy thực phẩm.');
   const log = validate(
-    foodLogSchema,
+    (x) => x.foodLogSchema,
     {
       id: uid('fl'),
       date: params.date,
@@ -485,9 +501,10 @@ export async function addFoodLog(params: { date: string; meal: MealSlot; foodId:
 }
 
 export async function updateFoodLogServings(id: string, servings: number): Promise<void> {
+  await loadSchemas();
   const l = await db.foodLogs.get(id);
   if (!l) return;
-  validate(foodLogSchema, { ...l, servings }, 'nhật ký ăn');
+  validate((x) => x.foodLogSchema, { ...l, servings }, 'nhật ký ăn');
   await db.foodLogs.update(id, { servings });
 }
 
@@ -496,9 +513,10 @@ export async function deleteFoodLog(id: string): Promise<void> {
 }
 
 export async function saveMealPlan(input: Omit<MealPlan, 'id' | 'createdAt' | 'updatedAt'> & { id?: string }): Promise<MealPlan> {
+  await loadSchemas();
   const now = nowISO();
   const prev = input.id ? await db.mealPlans.get(input.id) : undefined;
-  const v = validate(mealPlanSchema, { ...input, id: prev?.id ?? uid('mp'), createdAt: prev?.createdAt ?? now, updatedAt: now }, 'thực đơn') as MealPlan;
+  const v = validate((x) => x.mealPlanSchema, { ...input, id: prev?.id ?? uid('mp'), createdAt: prev?.createdAt ?? now, updatedAt: now }, 'thực đơn') as MealPlan;
   await db.mealPlans.put(v);
   return v;
 }
@@ -509,6 +527,7 @@ export async function deleteMealPlan(id: string): Promise<void> {
 
 /** Thêm toàn bộ món trong thực đơn vào nhật ký ngày. Món đã bị xóa khỏi danh sách thực phẩm sẽ bị bỏ qua. */
 export async function applyMealPlan(planId: string, date: string): Promise<{ added: number; skipped: number }> {
+  await loadSchemas();
   const plan = await db.mealPlans.get(planId);
   if (!plan) throw new AppError('Không tìm thấy thực đơn.');
   let added = 0;

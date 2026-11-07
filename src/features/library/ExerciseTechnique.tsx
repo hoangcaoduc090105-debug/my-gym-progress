@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronDown, ExternalLink, Lightbulb, Target, Wind } from 'lucide-react';
 import { MUSCLE_LABELS, type Exercise } from '../../db/types';
-import { GENERIC_BREATHING } from '../../data/exerciseGuides';
+import { GENERIC_BREATHING } from '../../data/genericBreathing';
 import { MuscleMap } from '../../components/MuscleMap';
 import { cx } from '../../components/ui';
 

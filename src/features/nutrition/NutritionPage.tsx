@@ -14,17 +14,25 @@ import { fmt0, fmt1 } from '../../lib/format';
 import { FoodPicker } from './FoodPicker';
 import { customFoods, groupDishes, groupIngredients, kindOf } from './foodCatalog';
 import { checkMeal, proteinPerMeal, suggestProteinFill, type MealVerdict } from '../../domain/mealCheck';
-import { VN_FOODS } from '../../data/vnFoods';
-import { dishesAsFoods } from '../../data/southernDishes';
+import { NutritionDataContext, useNutritionData, useNutritionDataLoader } from './nutritionData';
 
-const ALL_PRESET = () => [...VN_FOODS, ...dishesAsFoods()];
-const SOUTHERN_COUNT = dishesAsFoods().length;
 import { VnPlans } from './VnPlans';
 import { CheckCircle2, AlertTriangle, CircleDashed } from 'lucide-react';
 
 type Tab = 'day' | 'foods' | 'plans';
 
+/** Trang Ăn uống: tải lười dữ liệu món ăn/thực phẩm Việt Nam rồi mới hiển thị. */
 export function NutritionPage() {
+  const data = useNutritionDataLoader();
+  if (!data) return <Spinner />;
+  return (
+    <NutritionDataContext.Provider value={data}>
+      <NutritionPageInner />
+    </NutritionDataContext.Provider>
+  );
+}
+
+function NutritionPageInner() {
   const [params, setParams] = useSearchParams();
   const tab = (params.get('tab') as Tab) || 'day';
   return (
@@ -264,17 +272,18 @@ function MealVerdictBox({
 
 function StarterFoodsButton() {
   const { toast, toastError } = useFeedback();
+  const { presetFoods, dishFoods, vnFoods } = useNutritionData();
   return (
     <Button
       block
       variant="outline"
       onClick={() =>
-        void installVietnameseMenus(ALL_PRESET(), [])
+        void installVietnameseMenus(presetFoods, [])
           .then((r) => toast(r.foods ? `Đã thêm ${r.foods} món và thực phẩm Việt Nam` : 'Các món và thực phẩm Việt Nam đã có sẵn'))
           .catch(toastError)
       }
     >
-      Thêm {SOUTHERN_COUNT} món ăn sẵn + {VN_FOODS.length} thực phẩm Việt Nam
+      Thêm {dishFoods.length} món ăn sẵn + {vnFoods.length} thực phẩm Việt Nam
     </Button>
   );
 }
@@ -329,7 +338,8 @@ function AddFoodModal({ meal, date, perMeal, onClose }: { meal: MealSlot | null;
     }
   }
   const step = (d: number) => setServings((v) => Math.max(0.5, Math.round(((v ?? 1) + d) * 2) / 2));
-  const missingPreset = ALL_PRESET().some((vf) => !(foods ?? []).some((f) => f.id === vf.id));
+  const { presetFoods } = useNutritionData();
+  const missingPreset = presetFoods.some((vf) => !(foods ?? []).some((f) => f.id === vf.id));
 
   return (
     <>
@@ -497,6 +507,7 @@ function Collapsible({ title, count, defaultOpen, children }: { title: string; c
 
 function FoodsTab() {
   const foods = useFoods();
+  const { presetFoods } = useNutritionData();
   const [editing, setEditing] = useState<Food | null>(null);
   const [open, setOpen] = useState(false);
   if (!foods) return <Spinner />;
@@ -506,7 +517,7 @@ function FoodsTab() {
   };
   const custom = customFoods(foods);
   const fav = foods.filter((f) => f.isFavorite).sort((a, b) => a.name.localeCompare(b.name, 'vi'));
-  const missingPreset = ALL_PRESET().some((vf) => !foods.some((f) => f.id === vf.id));
+  const missingPreset = presetFoods.some((vf) => !foods.some((f) => f.id === vf.id));
   return (
     <div className="space-y-3">
       <Button

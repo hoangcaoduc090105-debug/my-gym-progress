@@ -1,5 +1,4 @@
 import { Component, type ReactNode } from 'react';
-import { exportAll } from '../backup/backup';
 import { downloadText, stampedName } from '../lib/download';
 
 interface State {
@@ -17,6 +16,7 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, State> {
   }
   private async emergencyExport() {
     try {
+      const { exportAll } = await import('../backup/backup');
       const b = await exportAll({ includePhotos: false, appVersion: __APP_VERSION__ });
       downloadText(stampedName('my-gym-progress-khan-cap', 'json'), JSON.stringify(b), 'application/json');
     } catch (e) {

@@ -6,6 +6,7 @@ import { FeedbackProvider } from '../components/feedback';
 import { Spinner } from '../components/ui';
 import { db } from '../db/db';
 import { ensureSeed } from '../db/seed';
+import { loadSchemas } from '../db/repo';
 import { ensureThumbnails } from '../db/migrations';
 import { errorMessage } from '../db/errors';
 import { requestPersistence } from '../lib/storage';
@@ -13,22 +14,23 @@ import { UpdatePrompt } from '../pwa/UpdatePrompt';
 import { Layout } from './Layout';
 import { useSettings } from './useAppData';
 import { RestTimerProvider } from '../features/workout/RestTimer';
-import { Onboarding } from '../features/onboarding/Onboarding';
 import { Dashboard } from '../features/dashboard/Dashboard';
 import { WorkoutHome } from '../features/workout/WorkoutHome';
 import { SessionLogger } from '../features/workout/SessionLogger';
 import { SessionDetail } from '../features/workout/SessionDetail';
-import { ProgramEditor } from '../features/workout/ProgramEditor';
-import { Library } from '../features/library/Library';
-import { ExerciseDetail } from '../features/library/ExerciseDetail';
-import { ExerciseForm } from '../features/library/ExerciseForm';
-import { NutritionPage } from '../features/nutrition/NutritionPage';
-import { SettingsPage } from '../features/settings/SettingsPage';
-import { GuidePage } from '../features/guide/GuidePage';
-import { MorePage } from '../features/more/MorePage';
 
 // Trang có biểu đồ (Recharts) tải lười để mở app nhanh hơn.
 const BodyPage = lazy(() => import('../features/body/BodyPage'));
+// Trang ít dùng khi đang tập + dữ liệu lớn (thực phẩm, món ăn, hướng dẫn) => chunk riêng.
+const NutritionPage = lazy(() => import('../features/nutrition/NutritionPage').then((m) => ({ default: m.NutritionPage })));
+const Library = lazy(() => import('../features/library/Library').then((m) => ({ default: m.Library })));
+const ExerciseDetail = lazy(() => import('../features/library/ExerciseDetail').then((m) => ({ default: m.ExerciseDetail })));
+const ExerciseForm = lazy(() => import('../features/library/ExerciseForm').then((m) => ({ default: m.ExerciseForm })));
+const GuidePage = lazy(() => import('../features/guide/GuidePage').then((m) => ({ default: m.GuidePage })));
+const Onboarding = lazy(() => import('../features/onboarding/Onboarding').then((m) => ({ default: m.Onboarding })));
+const ProgramEditor = lazy(() => import('../features/workout/ProgramEditor').then((m) => ({ default: m.ProgramEditor })));
+const MorePage = lazy(() => import('../features/more/MorePage').then((m) => ({ default: m.MorePage })));
+const SettingsPage = lazy(() => import('../features/settings/SettingsPage').then((m) => ({ default: m.SettingsPage })));
 const AnalyticsPage = lazy(() => import('../features/analytics/AnalyticsPage'));
 
 function Shell() {
@@ -80,6 +82,8 @@ export function App() {
         setReady(true);
         // Bước nền: tạo ảnh thu nhỏ còn thiếu (ảnh cũ/ảnh nhập) — không chặn giao diện.
         setTimeout(() => void ensureThumbnails().catch(() => undefined), 1500);
+        // Tải sẵn schema kiểm tra dữ liệu để lần ghi đầu tiên không phải chờ.
+        void loadSchemas();
       })
       .catch((e: unknown) => setFatal(errorMessage(e)));
     void requestPersistence();

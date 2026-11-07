@@ -1,15 +1,25 @@
 import type { Food, MealSlot } from '../../db/types';
-import { DISH_CATEGORY_LABEL, SOUTHERN_DISHES, type Dish } from '../../data/southernDishes';
-import { VN_FOODS, type VnFood } from '../../data/vnFoods';
+import { DISH_CATEGORY_LABEL, type DishCategory } from '../../data/dishCategories';
+import type { VnFood } from '../../data/vnFoods';
 import { normalizeVi } from '../workout/ExercisePicker';
 
 /** Phân loại & sắp xếp danh sách món để chọn nhanh khi ghi bữa ăn. */
 export type FoodKind = 'dish' | 'ingredient' | 'custom';
-type DishCat = Dish['category'];
+type DishCat = DishCategory;
 type IngGroup = VnFood['group'];
 
-const DISH_CAT = new Map<string, DishCat>(SOUTHERN_DISHES.map((d) => [d.id, d.category]));
-const ING_GROUP = new Map<string, IngGroup>(VN_FOODS.map((f) => [f.id, f.group]));
+/**
+ * Bảng phân loại món (id → nhóm). Dữ liệu món ăn được tải lười (useNutritionData) rồi nạp vào đây bằng setCatalog(),
+ * để module này không kéo cả danh sách món vào chunk chính.
+ */
+const DISH_CAT = new Map<string, DishCat>();
+const ING_GROUP = new Map<string, IngGroup>();
+export function setCatalog(dishes: { id: string; category: DishCat }[], vnFoods: { id: string; group: IngGroup }[]): void {
+  DISH_CAT.clear();
+  ING_GROUP.clear();
+  for (const d of dishes) DISH_CAT.set(d.id, d.category);
+  for (const f of vnFoods) ING_GROUP.set(f.id, f.group);
+}
 
 /** Thứ tự nhóm món ăn sẵn: theo bữa chính → bữa nhẹ → tráng miệng → đồ uống. */
 export const DISH_ORDER: DishCat[] = ['com', 'bun-pho', 'banh-mi', 'an-vat', 'trang-mieng', 'do-uong'];

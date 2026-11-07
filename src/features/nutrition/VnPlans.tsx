@@ -4,14 +4,14 @@ import { MEAL_LABELS } from '../../db/types';
 import { Badge, Button, Card, cx } from '../../components/ui';
 import { useFeedback } from '../../components/feedback';
 import { applyMealPlan, installVietnameseMenus } from '../../db/repo';
-import { VN_FOODS } from '../../data/vnFoods';
-import { dishesAsFoods } from '../../data/southernDishes';
-import { VN_PLANS, foodName, itemMacro, mealMacro, planMacro, type VnPlan } from '../../data/vnMealPlans';
+import type { VnPlan } from '../../data/vnMealPlans';
+import { useNutritionData } from './nutritionData';
 import { fmt0, fmt1 } from '../../lib/format';
 import { todayISO } from '../../lib/date';
 
 /** 3 thực đơn mẫu kiểu Việt Nam, số liệu từ Bảng thành phần thực phẩm Việt Nam (Viện Dinh dưỡng, 2007). */
 export function VnPlans({ onApplied }: { onApplied?: () => void }) {
+  const { plans } = useNutritionData();
   return (
     <div className="space-y-3">
       <Card className="border-accent/30 bg-accent/5">
@@ -24,7 +24,7 @@ export function VnPlans({ onApplied }: { onApplied?: () => void }) {
           </p>
         </div>
       </Card>
-      {VN_PLANS.map((p) => (
+      {plans.map((p) => (
         <PlanCard key={p.id} plan={p} onApplied={onApplied} />
       ))}
       <Card title="Cách dùng thực đơn mẫu">
@@ -62,6 +62,8 @@ export function VnPlans({ onApplied }: { onApplied?: () => void }) {
 function PlanCard({ plan, onApplied }: { plan: VnPlan; onApplied?: () => void }) {
   const [open, setOpen] = useState(false);
   const { toast, toastError, confirm } = useFeedback();
+  const { plan: helpers, plans, presetFoods } = useNutritionData();
+  const { foodName, itemMacro, mealMacro, planMacro } = helpers;
   const t = planMacro(plan);
 
   async function apply() {
@@ -72,7 +74,7 @@ function PlanCard({ plan, onApplied }: { plan: VnPlan; onApplied?: () => void })
     });
     if (!ok) return;
     try {
-      await installVietnameseMenus([...VN_FOODS, ...dishesAsFoods()], VN_PLANS);
+      await installVietnameseMenus(presetFoods, plans);
       const r = await applyMealPlan(plan.id, todayISO());
       toast(`Đã thêm ${r.added} món vào nhật ký hôm nay`);
       onApplied?.();

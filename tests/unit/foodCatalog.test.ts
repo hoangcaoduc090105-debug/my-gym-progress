@@ -1,7 +1,7 @@
 import type { Food } from '../../src/db/types';
-import { dishesAsFoods } from '../../src/data/southernDishes';
+import { SOUTHERN_DISHES, dishesAsFoods } from '../../src/data/southernDishes';
 import { VN_FOODS } from '../../src/data/vnFoods';
-import { DISH_ORDER, MEAL_DISH_CATS, customFoods, groupDishes, groupIngredients, kindOf, recentFoods, searchFoods } from '../../src/features/nutrition/foodCatalog';
+import { DISH_ORDER, MEAL_DISH_CATS, setCatalog, customFoods, groupDishes, groupIngredients, kindOf, recentFoods, searchFoods } from '../../src/features/nutrition/foodCatalog';
 
 const asFood = (x: { id: string; name: string; servingLabel: string; kcal: number; proteinG: number; carbG: number; fatG: number; isVerified: boolean }): Food => ({
   ...x,
@@ -13,6 +13,20 @@ const asFood = (x: { id: string; name: string; servingLabel: string; kcal: numbe
 const all: Food[] = [...VN_FOODS.map(asFood), ...dishesAsFoods().map(asFood), asFood({ id: 'food_x', name: 'Whey protein', servingLabel: '1 muỗng', kcal: 120, proteinG: 24, carbG: 3, fatG: 1, isVerified: false })];
 
 describe('foodCatalog', () => {
+  // Bảng phân loại được nạp khi dữ liệu ăn uống tải lười xong (loadNutritionData); trong test nạp trực tiếp.
+  beforeAll(() => setCatalog(SOUTHERN_DISHES, VN_FOODS));
+
+  it('loadNutritionData() tải lười dữ liệu và tự nạp bảng phân loại', async () => {
+    setCatalog([], []);
+    expect(kindOf({ id: 'dish-com-tam-suon' })).toBe('custom');
+    const { loadNutritionData } = await import('../../src/features/nutrition/nutritionData');
+    const d = await loadNutritionData();
+    expect(d.dishFoods.length).toBe(SOUTHERN_DISHES.length);
+    expect(d.presetFoods.length).toBe(SOUTHERN_DISHES.length + VN_FOODS.length);
+    expect(kindOf({ id: 'dish-com-tam-suon' })).toBe('dish');
+    expect(kindOf({ id: 'vn-9001' })).toBe('ingredient');
+  });
+
   it('phân loại món ăn sẵn / nguyên liệu / tự tạo', () => {
     expect(kindOf({ id: 'dish-com-tam-suon' })).toBe('dish');
     expect(kindOf({ id: 'vn-9001' })).toBe('ingredient');

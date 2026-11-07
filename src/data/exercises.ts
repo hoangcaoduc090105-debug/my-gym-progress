@@ -7,8 +7,7 @@ import type { BodyRegion, Equipment, Exercise, MuscleGroup } from '../db/types';
  * Đây là hướng dẫn tham khảo, không thay thế huấn luyện viên trực tiếp.
  */
 export const LIBRARY_SOURCE = 'Haff & Triplett (2016), Essentials of Strength Training and Conditioning (4th ed.)';
-/** Tăng khi cập nhật nội dung bài tập gốc — bản cài cũ sẽ nhận nội dung mới, không đụng dữ liệu người dùng. */
-export const SEED_VERSION = 2;
+export { SEED_VERSION } from './seedVersion';
 const SEED_DATE = '2026-01-01T00:00:00.000Z';
 
 type Def = [

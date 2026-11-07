@@ -3,7 +3,23 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
 import { db } from '../../db/db';
 import { Card, PageHeader, Tabs } from '../../components/ui';
-import { APP_GUIDE, GUIDE_REFERENCES, TRAINING_RULES } from './guideContent';
+import { useEffect, useState } from 'react';
+import { Spinner } from '../../components/ui';
+
+type GuideContent = typeof import('./guideContent');
+let guideCache: GuideContent | null = null;
+/** Nội dung hướng dẫn (~vài chục KB) chỉ tải khi mở trang Hướng dẫn. */
+function useGuideContent(): GuideContent | null {
+  const [c, setC] = useState<GuideContent | null>(guideCache);
+  useEffect(() => {
+    if (!c)
+      void import('./guideContent').then((m) => {
+        guideCache = m;
+        setC(m);
+      });
+  }, [c]);
+  return c;
+}
 
 type Tab = 'app' | 'train' | 'moves';
 
@@ -44,6 +60,9 @@ function Numbered({ n, title, children }: { n: number; title: string; children: 
 }
 
 function AppGuide() {
+  const g = useGuideContent();
+  if (!g) return <Spinner />;
+  const { APP_GUIDE } = g;
   return (
     <div className="space-y-3">
       {APP_GUIDE.map((s, i) => (
@@ -60,6 +79,9 @@ function AppGuide() {
 }
 
 function TrainGuide() {
+  const g = useGuideContent();
+  if (!g) return <Spinner />;
+  const { TRAINING_RULES, GUIDE_REFERENCES } = g;
   return (
     <div className="space-y-3">
       {TRAINING_RULES.map((r, i) => (

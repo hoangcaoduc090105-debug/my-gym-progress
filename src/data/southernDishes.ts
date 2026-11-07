@@ -1,4 +1,5 @@
 import { VN_FOODS, type VnFood } from './vnFoods';
+import { DISH_CATEGORY_LABEL, type DishCategory } from './dishCategories';
 import { VN_INGREDIENTS } from './vnIngredients';
 
 /**
@@ -16,7 +17,7 @@ export interface Dish {
   id: string;
   name: string;
   portion: string;
-  category: 'com' | 'bun-pho' | 'banh-mi' | 'an-vat' | 'trang-mieng' | 'do-uong';
+  category: DishCategory;
   note?: string;
   recipe: RecipeItem[];
 }
@@ -297,14 +298,7 @@ export function dishMacro(d: Dish): DishMacro {
   return { grams: Math.round(grams), kcal: Math.round(kcal), proteinG: r1(p), carbG: r1(c), fatG: r1(f) };
 }
 
-export const DISH_CATEGORY_LABEL: Record<Dish['category'], string> = {
-  com: 'Cơm',
-  'bun-pho': 'Bún · phở · hủ tiếu · mì · cháo',
-  'banh-mi': 'Bánh mì · xôi · bánh',
-  'an-vat': 'Ăn vặt · cuốn · gỏi',
-  'trang-mieng': 'Chè · trái cây',
-  'do-uong': 'Đồ uống',
-};
+export { DISH_CATEGORY_LABEL };
 
 /** Món ăn dạng "thực phẩm" để thêm vào app: 1 khẩu phần = 1 phần ăn, đánh dấu Ước tính. */
 export function dishesAsFoods(): (Omit<VnFood, 'group' | 'fctCode'> & { id: string })[] {

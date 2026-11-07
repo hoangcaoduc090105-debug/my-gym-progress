@@ -1,8 +1,7 @@
-import { useEffect, useState } from 'react';
+import { Suspense, lazy, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { ArrowDown, ArrowUp, BookOpen, Check, ClipboardCopy, Info, Minus, Plus, Timer, Trash2, TrendingUp } from 'lucide-react';
-import { ExerciseTechnique } from '../library/ExerciseTechnique';
 import { db } from '../../db/db';
 import { MUSCLE_LABELS, type Exercise, type SessionExercise, type SetEntry, type Settings } from '../../db/types';
 import { Badge, Button, Card, IconButton, Modal, NumberInput, PageHeader, Spinner, cx } from '../../components/ui';
@@ -17,6 +16,7 @@ import { uid } from '../../lib/id';
 import { useRestTimerActions } from './RestTimer';
 import { ExercisePicker } from './ExercisePicker';
 import { useSessionWriter, type SaveState } from './useSessionWriter';
+const ExerciseTechnique = lazy(() => import('../library/ExerciseTechnique').then((m) => ({ default: m.ExerciseTechnique })));
 
 type Hint = { date: string; sets: SetEntry[] };
 
@@ -481,7 +481,9 @@ function ExerciseBlock(props: {
       />
       {ex && (
         <Modal open={howOpen} onClose={() => setHowOpen(false)} title={`Kỹ thuật: ${ex.nameVi}`} wide>
-          <ExerciseTechnique ex={ex} compact />
+          <Suspense fallback={<Spinner />}>
+            <ExerciseTechnique ex={ex} compact />
+          </Suspense>
         </Modal>
       )}
     </Card>
