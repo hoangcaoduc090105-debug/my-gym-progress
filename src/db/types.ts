@@ -86,6 +86,8 @@ export interface Settings {
   weightUnit: 'kg' | 'lb';
   /** v1.8: thông báo khi mở app nếu có buổi đến hạn. */
   dueNotifications: boolean;
+  /** v1.9: mục tiêu buổi/tuần cho chuỗi tuần tập đều; null = theo số buổi của giáo án đang dùng. */
+  weeklyTarget: number | null;
   updatedAt: string;
 }
 

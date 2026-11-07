@@ -516,3 +516,20 @@ describe('nhập CSV Strong/Hevy (v1.8.0)', () => {
     expect(await db.sessions.count()).toBe(0);
   });
 });
+
+describe('settings.weeklyTarget (v1.9)', () => {
+  it('bản ghi cũ thiếu trường => null; lưu 4 => đọc lại 4; 0 hoặc 15 bị từ chối', async () => {
+    const { db } = await import('../../src/db/db');
+    const cur = await db.settings.get('app');
+    const { weeklyTarget: _w, ...legacy } = cur as unknown as Record<string, unknown> & { weeklyTarget?: unknown };
+    void _w;
+    await db.settings.put(legacy as never);
+    expect((await repo.getSettings()).weeklyTarget).toBeNull();
+    const { id: _i, updatedAt: _u, ...rest } = await repo.getSettings();
+    void _i, _u;
+    await repo.saveSettings({ ...rest, weeklyTarget: 4 });
+    expect((await repo.getSettings()).weeklyTarget).toBe(4);
+    await expect(repo.saveSettings({ ...rest, weeklyTarget: 0 })).rejects.toBeInstanceOf(AppError);
+    await expect(repo.saveSettings({ ...rest, weeklyTarget: 15 })).rejects.toBeInstanceOf(AppError);
+  });
+});

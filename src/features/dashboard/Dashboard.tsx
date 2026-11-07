@@ -11,6 +11,7 @@ import { activeCompleted } from '../../domain/sets';
 import { countWorkingSets } from '../../domain/volume';
 import { latest, weeklyWeightChange, daysSinceLastCircumference } from '../../domain/bodyTrends';
 import { dueSchedules, nextWorkout } from '../../domain/schedule';
+import { streakShown, weeklyStreak } from '../../domain/streak';
 import { proteinProgress, sumLogs } from '../../domain/nutrition';
 import { endOfWeek, formatDate, formatShort, startOfWeek, todayISO } from '../../lib/date';
 import { fmt1, signed } from '../../lib/format';
@@ -51,6 +52,10 @@ export function Dashboard() {
   const draft = data.sessions.find((s) => s.status === 'draft' && !s.deletedAt);
   const pct = Math.min(100, protein.pctOfMin);
   const remind = backupReminder(readLastBackup(), completed.length);
+  // v1.9: chuỗi tuần tập đều — mục tiêu = Cài đặt, không thì số buổi của giáo án đang dùng (tối thiểu 1).
+  const weeklyTarget = settings.weeklyTarget ?? active?.days.length ?? 3;
+  const streak = weeklyStreak(completed, weeklyTarget, today);
+  const shown = streakShown(streak);
 
   async function startNext() {
     if (!next) return;
@@ -133,13 +138,15 @@ export function Dashboard() {
             {change.status === 'ok' ? `${signed(u.show(change.delta))} ${u.unit} so với tuần trước` : weight ? `đo ${formatShort(weight.date)}` : 'Chạm để ghi'}
           </div>
         </Link>
-        <Link to="/lich-tap?tab=history" className="rounded-2xl border border-line/70 bg-surface p-4 shadow-card">
+        <Link to="/lich-tap?tab=history" className="rounded-2xl border border-line/70 bg-surface p-4 shadow-card" data-testid="week-card">
           <div className="text-xs font-medium text-muted">Buổi tập tuần này</div>
           <div className="mt-1 text-2xl font-bold tabular text-brand2-text">
             {thisWeek.length}
-            <span className="ml-1 text-sm font-medium text-muted">/ 3</span>
+            <span className="ml-1 text-sm font-medium text-muted">/ {weeklyTarget}</span>
           </div>
-          <div className="mt-0.5 text-xs text-muted">{countWorkingSets(thisWeek)} hiệp đã tập</div>
+          <div className="mt-0.5 text-xs text-muted">
+            {shown > 0 ? `🔥 ${shown} tuần liên tiếp đủ mục tiêu` : `${countWorkingSets(thisWeek)} hiệp đã tập`}
+          </div>
         </Link>
       </div>
 

@@ -201,6 +201,9 @@ function TrainingForm({ settings }: { settings: Settings }) {
         </div>
         <div className="grid grid-cols-2 gap-3">
           <Field name="restTimerDefaultSec" label="Nghỉ mặc định (giây)">{(id) => <NumberInput id={id} value={s.restTimerDefaultSec} onChange={(v) => setS((x) => ({ ...x, restTimerDefaultSec: v == null ? (null as unknown as number) : Math.round(v) }))} />}</Field>
+          <Field name="weeklyTarget" label="Mục tiêu buổi/tuần" hint="Để trống = theo số buổi của giáo án đang dùng. Dùng cho chuỗi tuần tập đều ở trang Hôm nay.">
+            {(id) => <NumberInput id={id} value={s.weeklyTarget ?? null} onChange={(v) => setS((x) => ({ ...x, weeklyTarget: v == null ? null : Math.round(v) }))} placeholder="theo giáo án" />}
+          </Field>
           <Field name="measurementReminderDays" label="Nhắc đo vòng (ngày)">{(id) => <NumberInput id={id} value={s.measurementReminderDays} onChange={(v) => setS((x) => ({ ...x, measurementReminderDays: v == null ? (null as unknown as number) : Math.round(v) }))} />}</Field>
           <Field name="secondaryMuscleFactor" label="Hệ số nhóm cơ phụ" hint="0 = chỉ tính nhóm chính">
             {(id) => <NumberInput id={id} value={s.secondaryMuscleFactor} onChange={(v) => setS((x) => ({ ...x, secondaryMuscleFactor: v ?? (null as unknown as number) }))} />}

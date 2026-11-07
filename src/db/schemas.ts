@@ -88,6 +88,7 @@ export const settingsSchema = z.object({
     .optional(),
   weightUnit: z.enum(['kg', 'lb']).optional(),
   dueNotifications: z.boolean().optional(),
+  weeklyTarget: z.number().int().min(1).max(14).nullable().optional(),
   updatedAt: timestamp,
 });
 

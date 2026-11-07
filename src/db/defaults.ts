@@ -15,6 +15,7 @@ export function defaultSettings(now: string): Settings {
     barbell: { barWeightKg: DEFAULT_BAR_KG, platesKg: [...DEFAULT_PLATES_KG] },
     weightUnit: 'kg',
     dueNotifications: false,
+    weeklyTarget: null,
     updatedAt: now,
   };
 }
