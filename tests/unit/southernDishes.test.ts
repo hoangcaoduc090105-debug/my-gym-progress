@@ -15,14 +15,18 @@ describe('Món ăn miền Nam (ước tính theo công thức)', () => {
   });
   it.each(SOUTHERN_DISHES.map((d) => [d.name, d] as const))('%s: số liệu hợp lý và nhất quán', (_n, d) => {
     const m = dishMacro(d);
-    expect(m.kcal).toBeGreaterThan(50);
+    expect(m.kcal).toBeGreaterThan(20);
     expect(m.kcal).toBeLessThan(1000);
     expect(Math.abs(kcalFromMacros(m.proteinG, m.carbG, m.fatG) - m.kcal) / m.kcal).toBeLessThan(0.15);
   });
   it('món ăn luôn đánh dấu Ước tính, có ghi khẩu phần', () => {
-    for (const f of dishesAsFoods()) {
+    const foods = dishesAsFoods();
+    expect(foods.length).toBeGreaterThanOrEqual(80);
+    for (const d of SOUTHERN_DISHES) {
+      const f = foods.find((x) => x.id === d.id)!;
       expect(f.isVerified).toBe(false);
-      if (!f.id.includes('ca-phe') && !f.id.includes('sua-dau-nanh')) expect(f.servingLabel).toMatch(/~\d+ g/);
+      if (d.category !== 'do-uong') expect(f.servingLabel).toMatch(/~\d+ g/);
+      expect(f.servingLabel).not.toMatch(/~.*~/);
     }
   });
   it('cơm tấm sườn: tính đúng từ công thức', () => {

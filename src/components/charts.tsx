@@ -6,12 +6,13 @@ import { useResolvedTheme, type ResolvedTheme } from '../lib/theme';
 
 /**
  * Bảng màu biểu đồ đã kiểm định bằng validate_palette (dataviz) cho từng nền:
- * - Sáng (nền #ffffff): #059669, #2563eb — PASS dải sáng, chroma, CVD ΔE 24,9, tương phản ≥ 3:1.
- * - Tối (nền #121821): #7a9a10, #2b88c4 — PASS dải sáng, chroma, CVD ΔE 23,2, tương phản ≥ 3:1.
+ * Tông thương hiệu xanh ngọc + cam, chỉnh độ bão hòa để đạt kiểm định:
+ * - Sáng (nền #ffffff): #008c9e, #e0621e — PASS dải sáng, chroma, CVD ΔE 16,2, tương phản ≥ 3:1.
+ * - Tối (nền #0f1c1e): #16a3b0, #d9692e — PASS dải sáng, chroma, CVD ΔE 17,5, tương phản ≥ 3:1.
  */
 const PALETTE: Record<ResolvedTheme, { series: [string, string]; grid: string; axis: string; surface: string; muted: string }> = {
-  light: { series: ['#059669', '#2563eb'], grid: '#e8eeed', axis: '#6b7280', surface: '#ffffff', muted: '#cbd5d3' },
-  dark: { series: ['#7a9a10', '#2b88c4'], grid: '#1f2836', axis: '#8a97a8', surface: '#121821', muted: '#3b4656' },
+  light: { series: ['#008c9e', '#e0621e'], grid: '#e6eff0', axis: '#607074', surface: '#ffffff', muted: '#c9d9db' },
+  dark: { series: ['#16a3b0', '#d9692e'], grid: '#22393c', axis: '#8ca0a3', surface: '#142427', muted: '#35504f' },
 };
 function usePalette() {
   return PALETTE[useResolvedTheme()];

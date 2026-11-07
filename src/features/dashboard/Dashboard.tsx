@@ -69,14 +69,14 @@ export function Dashboard() {
       />
 
       <section className="hero rounded-2xl p-5 shadow-card">
-        <div className="text-xs font-semibold uppercase tracking-wide text-white/80">{draft ? 'Đang tập dở' : 'Buổi tập kế tiếp'}</div>
+        <div className="inline-flex rounded-full bg-brand2 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-white">{draft ? 'Đang tập dở' : 'Buổi tập kế tiếp'}</div>
         {draft ? (
           <div className="mt-1 flex items-center gap-3">
             <div className="flex-1">
               <div className="text-xl font-bold">{draft.dayName}</div>
               <div className="text-sm text-white/80">Dữ liệu đã được lưu tự động.</div>
             </div>
-            <Button className="bg-white font-semibold text-[#065f46] hover:bg-white/90" icon={<Play size={18} />} onClick={() => nav(`/tap/${draft.id}`)}>
+            <Button className="bg-white font-semibold text-accent hover:bg-white/90" icon={<Play size={18} />} onClick={() => nav(`/tap/${draft.id}`)}>
               Tiếp tục
             </Button>
           </div>
@@ -89,7 +89,7 @@ export function Dashboard() {
                   {next.day.exercises.length} bài · {next.source === 'scheduled' ? `lịch ${formatDate(next.date)}` : 'theo vòng giáo án'}
                 </div>
               </div>
-              <Button className="bg-white font-semibold text-[#065f46] hover:bg-white/90" icon={<Play size={18} />} onClick={() => void startNext()}>
+              <Button className="bg-white font-semibold text-accent hover:bg-white/90" icon={<Play size={18} />} onClick={() => void startNext()}>
                 Bắt đầu
               </Button>
             </div>
@@ -124,7 +124,7 @@ export function Dashboard() {
         </Link>
         <Link to="/lich-tap?tab=history" className="rounded-2xl border border-line/70 bg-surface p-4 shadow-card">
           <div className="text-xs font-medium text-muted">Buổi tập tuần này</div>
-          <div className="mt-1 text-2xl font-bold tabular text-accent">
+          <div className="mt-1 text-2xl font-bold tabular text-brand2-text">
             {thisWeek.length}
             <span className="ml-1 text-sm font-medium text-muted">/ 3</span>
           </div>
@@ -141,7 +141,7 @@ export function Dashboard() {
           </span>
         </div>
         <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-surface2">
-          <div className="h-full rounded-full bg-accent" style={{ width: `${pct}%` }} />
+          <div className="h-full rounded-full bg-brand2" style={{ width: `${pct}%` }} />
         </div>
         <div className="mt-1.5 flex items-center justify-between text-xs text-muted">
           <span>{protein.status === 'below' ? `Còn thiếu ${fmt1(protein.remainingToMin)} g` : 'Đã đạt mục tiêu 🎉'}</span>

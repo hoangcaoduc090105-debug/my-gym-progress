@@ -66,7 +66,7 @@ export function ExerciseDetail() {
               <div className="rounded-xl bg-surface2 p-3">
                 <div className="text-xs text-muted">Mức tạ cao nhất</div>
                 <div className="flex items-center gap-1 text-lg font-bold tabular">
-                  <Trophy size={16} className="text-warn" />
+                  <Trophy size={16} className="text-brand2-text" />
                   {rec.heaviest ? `${fmt1(rec.heaviest.weightKg)} kg × ${rec.heaviest.reps}` : '—'}
                 </div>
                 {rec.heaviest && <div className="text-xs text-muted">{formatDate(rec.heaviest.date)}</div>}

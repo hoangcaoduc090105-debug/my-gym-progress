@@ -46,7 +46,7 @@ export function Layout() {
     <div className="min-h-dvh md:flex">
       <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col border-r border-line bg-surface/60 p-4 md:flex">
         <div className="mb-6 flex items-center gap-2 px-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent text-accent-ink">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent text-white">
             <Dumbbell size={20} />
           </div>
           <div>

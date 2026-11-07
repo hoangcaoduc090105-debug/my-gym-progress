@@ -2,47 +2,51 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Giao diện SÁNG (mặc định): nền xanh-xám rất nhạt, thẻ trắng, màu chủ đạo xanh ngọc. */
+/* Giao diện SÁNG (mặc định): nền trắng chủ đạo, màu thương hiệu xanh ngọc #005e68 + cam #f16f33. */
 :root {
-  --c-bg: 243 247 246;
+  --c-bg: 255 255 255;
   --c-surface: 255 255 255;
-  --c-surface2: 236 242 241;
-  --c-line: 220 229 228;
-  --c-muted: 94 108 120;
-  --c-text: 17 24 39;
-  --c-accent: 3 134 92;
-  --c-accent-dim: 4 110 77;
+  --c-surface2: 241 247 247;
+  --c-line: 222 233 234;
+  --c-muted: 88 108 112;
+  --c-text: 16 42 46;
+  --c-accent: 0 94 104;
+  --c-accent-dim: 0 72 80;
   --c-accent-ink: 255 255 255;
-  --c-info: 3 105 161;
+  --c-brand2: 241 111 51;
+  --c-brand2-text: 190 77 24;
+  --c-info: 0 110 140;
   --c-warn: 180 83 9;
   --c-danger: 200 30 30;
   --c-ok: 21 128 61;
-  --hero-from: 5 150 105;
-  --hero-to: 2 132 199;
-  --shadow-card: 0 1px 2px rgba(16, 24, 40, 0.04), 0 4px 16px rgba(16, 24, 40, 0.04);
-  --chart-axis: 107 114 128;
+  --hero-from: 0 94 104;
+  --hero-to: 0 126 138;
+  --shadow-card: 0 1px 2px rgba(0, 60, 66, 0.05), 0 6px 18px rgba(0, 60, 66, 0.06);
+  --chart-axis: 96 112 116;
   color-scheme: light;
 }
 
 /* Giao diện TỐI */
 :root[data-theme='dark'] {
-  --c-bg: 10 13 18;
-  --c-surface: 18 24 33;
-  --c-surface2: 26 34 46;
-  --c-line: 38 49 66;
-  --c-muted: 138 151 168;
-  --c-text: 232 237 243;
-  --c-accent: 198 244 50;
-  --c-accent-dim: 159 196 37;
-  --c-accent-ink: 17 22 10;
-  --c-info: 92 200 255;
+  --c-bg: 13 26 28;
+  --c-surface: 20 36 39;
+  --c-surface2: 29 48 52;
+  --c-line: 44 66 70;
+  --c-muted: 140 160 163;
+  --c-text: 232 240 241;
+  --c-accent: 26 166 180;
+  --c-accent-dim: 20 140 152;
+  --c-accent-ink: 4 25 28;
+  --c-brand2: 240 128 74;
+  --c-brand2-text: 247 150 104;
+  --c-info: 92 200 230;
   --c-warn: 255 181 71;
   --c-danger: 255 93 108;
   --c-ok: 61 220 151;
-  --hero-from: 22 101 52;
-  --hero-to: 7 89 133;
+  --hero-from: 0 80 89;
+  --hero-to: 0 106 116;
   --shadow-card: none;
-  --chart-axis: 138 151 168;
+  --chart-axis: 140 160 163;
   color-scheme: dark;
 }
 

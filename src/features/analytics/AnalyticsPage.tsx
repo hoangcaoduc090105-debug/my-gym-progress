@@ -179,7 +179,7 @@ export default function AnalyticsPage() {
                         <td className="px-1 text-right">
                           {r.heaviest ? (
                             <span title={formatDate(r.heaviest.date)}>
-                              <Trophy size={12} className="mr-1 inline text-warn" />
+                              <Trophy size={12} className="mr-1 inline text-brand2-text" />
                               {fmt1(r.heaviest.weightKg)}×{r.heaviest.reps}
                             </span>
                           ) : (

@@ -33,7 +33,7 @@ function Numbered({ n, title, children }: { n: number; title: string; children: 
   return (
     <Card>
       <div className="flex gap-3">
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent text-sm font-bold text-accent-ink">{n}</div>
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand2 text-sm font-bold text-white">{n}</div>
         <div className="min-w-0 flex-1">
           <h2 className="mb-1.5 font-semibold">{title}</h2>
           {children}

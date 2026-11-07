@@ -46,7 +46,7 @@ export function SessionDetail() {
           <ul className="space-y-1.5 text-sm">
             {prs.map((p) => (
               <li key={p.type + p.exerciseId} className="flex items-center gap-2">
-                <Trophy size={16} className="text-warn" />
+                <Trophy size={16} className="text-brand2-text" />
                 <span className="flex-1">{exMap.get(p.exerciseId)?.nameVi}</span>
                 <span className="tabular">
                   {p.type === 'weight' ? 'Mức tạ' : 'e1RM'}: {fmt1(p.previous)} → <strong>{fmt1(p.value)} kg</strong>

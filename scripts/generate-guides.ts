@@ -205,7 +205,7 @@ console.log('✓ docs/THUC_DON_VIET_NAM.md');
 // ---------- Món ăn miền Nam ----------
 import { SOUTHERN_DISHES, DISH_CATEGORY_LABEL, dishMacro, ingredientById } from '../src/data/southernDishes';
 
-let s2 = `# Món ăn quen thuộc miền Nam — năng lượng và đạm ước tính
+let s2 = `# Món ăn quen thuộc (miền Nam) — ${SOUTHERN_DISHES.length} món, năng lượng và đạm ước tính
 
 > Có sẵn trong app: **Ăn uống → Thêm món → tab "Món ăn sẵn"**. Mỗi món là 1 phần ăn (dĩa/tô/ổ); nếu ăn nhiều hơn hoặc ít hơn, sửa số phần (ví dụ 1,5).
 

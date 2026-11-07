@@ -16,6 +16,7 @@ export default {
         muted: v('muted'),
         text: v('text'),
         accent: { DEFAULT: v('accent'), dim: v('accent-dim'), ink: v('accent-ink') },
+        brand2: { DEFAULT: v('brand2'), text: v('brand2-text') },
         info: v('info'),
         warn: v('warn'),
         danger: v('danger'),

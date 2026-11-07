@@ -5,7 +5,7 @@ export type ThemePref = 'light' | 'dark' | 'system';
 export type ResolvedTheme = 'light' | 'dark';
 const KEY = 'mgp.theme';
 const EVT = 'mgp-theme';
-const META: Record<ResolvedTheme, string> = { light: '#f3f7f6', dark: '#0a0d12' };
+const META: Record<ResolvedTheme, string> = { light: '#ffffff', dark: '#0d1a1c' };
 
 export function getThemePref(): ThemePref {
   try {

@@ -55,7 +55,7 @@ function ProgressBar({ value, max, tone = 'accent' }: { value: number; max: numb
   const pct = max > 0 ? Math.min(100, (value / max) * 100) : 0;
   return (
     <div className="h-2.5 overflow-hidden rounded-full bg-surface2" role="progressbar" aria-valuenow={Math.round(pct)} aria-valuemin={0} aria-valuemax={100}>
-      <div className={cx('h-full rounded-full', tone === 'accent' ? 'bg-accent' : 'bg-info')} style={{ width: `${pct}%` }} />
+      <div className={cx('h-full rounded-full', tone === 'accent' ? 'bg-brand2' : 'bg-info')} style={{ width: `${pct}%` }} />
     </div>
   );
 }
@@ -273,7 +273,7 @@ function StarterFoodsButton() {
           .catch(toastError)
       }
     >
-      Thêm {SOUTHERN_COUNT} món miền Nam + {VN_FOODS.length} thực phẩm Việt Nam
+      Thêm {SOUTHERN_COUNT} món ăn sẵn + {VN_FOODS.length} thực phẩm Việt Nam
     </Button>
   );
 }
