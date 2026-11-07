@@ -1,14 +1,14 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { ArrowDown, ArrowUp, BookOpen, Check, ClipboardCopy, Info, Minus, Plus, Timer, Trash2, TrendingUp } from 'lucide-react';
 import { ExerciseTechnique } from '../library/ExerciseTechnique';
 import { db } from '../../db/db';
-import { MUSCLE_LABELS, type Exercise, type SessionExercise, type SetEntry, type Settings, type WorkoutSession } from '../../db/types';
+import { MUSCLE_LABELS, type Exercise, type SessionExercise, type SetEntry, type Settings } from '../../db/types';
 import { Badge, Button, Card, IconButton, Modal, NumberInput, PageHeader, Spinner, cx } from '../../components/ui';
 import { useFeedback } from '../../components/feedback';
 import { useExerciseMap, useSettings } from '../../app/useAppData';
-import { emptySet, finishSession, lastPerformances, saveSession, softDeleteSession } from '../../db/repo';
+import { emptySet, finishSession, lastPerformances, softDeleteSession } from '../../db/repo';
 import { suggestProgression, type Suggestion } from '../../domain/progression';
 import { isWorkingSet } from '../../domain/sets';
 import { formatClock, formatShort, todayISO } from '../../lib/date';
@@ -16,6 +16,7 @@ import { fmt1 } from '../../lib/format';
 import { uid } from '../../lib/id';
 import { useRestTimer } from './RestTimer';
 import { ExercisePicker } from './ExercisePicker';
+import { useSessionWriter, type SaveState } from './useSessionWriter';
 
 type Hint = { date: string; sets: SetEntry[] };
 
@@ -31,11 +32,9 @@ export function SessionLogger() {
   const exMap = useExerciseMap();
   const timer = useRestTimer();
   const { toast, toastError, confirm } = useFeedback();
-  const [s, setS] = useState<WorkoutSession | null>(null);
+  const { s, latest, load, commit, commitText, flush, retry, saveState } = useSessionWriter(null);
   const [pickOpen, setPickOpen] = useState(false);
   const [, setTick] = useState(0);
-  const latest = useRef<WorkoutSession | null>(null);
-  const queue = useRef<Promise<void>>(Promise.resolve());
 
   useEffect(() => {
     void db.sessions.get(id).then((found) => {
@@ -44,31 +43,14 @@ export function SessionLogger() {
         nav('/lich-tap', { replace: true });
         return;
       }
-      latest.current = found;
-      setS(found);
+      load(found);
     });
-  }, [id, nav, toast]);
+  }, [id, nav, toast, load]);
 
   useEffect(() => {
     const t = setInterval(() => setTick((x) => x + 1), 30000);
     return () => clearInterval(t);
   }, []);
-
-  /** Mọi thay đổi được ghi ngay vào IndexedDB theo hàng đợi tuần tự => tải lại trang không mất dữ liệu. */
-  const commit = useCallback(
-    (fn: (cur: WorkoutSession) => WorkoutSession) => {
-      const cur = latest.current;
-      if (!cur) return;
-      const next = fn(cur);
-      latest.current = next;
-      setS(next);
-      queue.current = queue.current.then(
-        () => saveSession(next).then(() => undefined),
-        () => undefined,
-      ).catch(toastError);
-    },
-    [toastError],
-  );
 
   const exKey = s?.exercises.map((e) => e.exerciseId).join('|') ?? '';
   const hints = useLiveQuery(async () => {
@@ -83,6 +65,9 @@ export function SessionLogger() {
 
   const updEx = (seId: string, fn: (e: SessionExercise) => SessionExercise) =>
     commit((c) => ({ ...c, exercises: c.exercises.map((e) => (e.id === seId ? fn(e) : e)) }));
+  /** Sửa chữ (cảm nhận bài) — đi đường debounce. */
+  const updExText = (seId: string, fn: (e: SessionExercise) => SessionExercise) =>
+    commitText((c) => ({ ...c, exercises: c.exercises.map((e) => (e.id === seId ? fn(e) : e)) }));
 
   function toggleSet(se: SessionExercise, idx: number) {
     const set = se.sets[idx];
@@ -139,7 +124,8 @@ export function SessionLogger() {
     });
     if (!ok) return;
     try {
-      await queue.current;
+      // Ghi nốt thay đổi đang chờ; nếu ghi thất bại thì KHÔNG kết thúc buổi (tránh mất dữ liệu).
+      if (!(await flush())) return toast('Chưa lưu được thay đổi gần nhất — bấm "Thử lại" rồi hoàn thành.', 'error');
       await finishSession(cur.id);
       timer.stop();
       nav(`/lich-tap/buoi/${cur.id}?xong=1`, { replace: true });
@@ -156,7 +142,7 @@ export function SessionLogger() {
       danger: true,
     });
     if (!ok) return;
-    await queue.current;
+    await flush();
     await softDeleteSession(s!.id).catch(toastError);
     timer.stop();
     nav('/lich-tap', { replace: true });
@@ -182,6 +168,7 @@ export function SessionLogger() {
               onChange={(e) => e.target.value && commit((c) => ({ ...c, date: e.target.value }))}
             />
             {isDraft && <span>{elapsedMin} phút</span>}
+            <SaveStatus state={saveState} onRetry={() => void retry()} />
           </span>
         }
         action={
@@ -194,7 +181,8 @@ export function SessionLogger() {
         aria-label="Tên buổi"
         className="w-full font-semibold"
         value={s.dayName}
-        onChange={(e) => commit((c) => ({ ...c, dayName: e.target.value }))}
+        onChange={(e) => commitText((c) => ({ ...c, dayName: e.target.value }))}
+        onBlur={() => void flush()}
       />
       {anyHints && isDraft && (
         <Button size="sm" variant="ghost" icon={<ClipboardCopy size={16} />} onClick={copyAll}>
@@ -214,6 +202,8 @@ export function SessionLogger() {
           first={i === 0}
           last={i === s.exercises.length - 1}
           onChange={(fn) => updEx(se.id, fn)}
+          onChangeText={(fn) => updExText(se.id, fn)}
+          onBlurText={() => void flush()}
           onToggle={(idx) => toggleSet(se, idx)}
           onCopyLast={() => copyLast(se)}
           onMove={(d) =>
@@ -247,7 +237,8 @@ export function SessionLogger() {
           rows={2}
           placeholder="Năng lượng, giấc ngủ, cảm nhận chung…"
           value={s.notes}
-          onChange={(e) => commit((c) => ({ ...c, notes: e.target.value }))}
+          onChange={(e) => commitText((c) => ({ ...c, notes: e.target.value }))}
+          onBlur={() => void flush()}
         />
       </Card>
 
@@ -261,7 +252,7 @@ export function SessionLogger() {
           </Button>
         </div>
       ) : (
-        <Button variant="primary" block size="lg" onClick={async () => { await queue.current; nav(`/lich-tap/buoi/${s.id}`); }}>
+        <Button variant="primary" block size="lg" onClick={async () => { await flush(); nav(`/lich-tap/buoi/${s.id}`); }}>
           Xong
         </Button>
       )}
@@ -290,6 +281,23 @@ export function SessionLogger() {
   );
 }
 
+function SaveStatus({ state, onRetry }: { state: SaveState; onRetry: () => void }) {
+  if (state === 'error')
+    return (
+      <span role="alert" className="inline-flex items-center gap-1.5 text-xs font-medium text-danger">
+        Lưu thất bại —
+        <button type="button" className="underline" onClick={onRetry}>
+          Thử lại
+        </button>
+      </span>
+    );
+  return (
+    <span className="text-xs text-muted" aria-live="polite" data-testid="save-status">
+      {state === 'saving' ? 'Đang lưu…' : 'Đã lưu'}
+    </span>
+  );
+}
+
 function SuggestionBanner({ sg }: { sg: Suggestion }) {
   if (sg.kind === 'insufficient') return null;
   const up = sg.kind === 'increase' || sg.kind === 'increase-difficulty';
@@ -312,6 +320,8 @@ function ExerciseBlock(props: {
   first: boolean;
   last: boolean;
   onChange: (fn: (e: SessionExercise) => SessionExercise) => void;
+  onChangeText: (fn: (e: SessionExercise) => SessionExercise) => void;
+  onBlurText: () => void;
   onToggle: (idx: number) => void;
   onCopyLast: () => void;
   onMove: (d: number) => void;
@@ -466,7 +476,8 @@ function ExerciseBlock(props: {
         rows={1}
         placeholder="Cảm nhận: kỹ thuật, đau mỏi, độ khó…"
         value={se.note}
-        onChange={(e) => onChange((x) => ({ ...x, note: e.target.value }))}
+        onChange={(e) => props.onChangeText((x) => ({ ...x, note: e.target.value }))}
+        onBlur={props.onBlurText}
       />
       {ex && (
         <Modal open={howOpen} onClose={() => setHowOpen(false)} title={`Kỹ thuật: ${ex.nameVi}`} wide>

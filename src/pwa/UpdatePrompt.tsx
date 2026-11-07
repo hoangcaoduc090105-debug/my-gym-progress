@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { RefreshCw, WifiOff } from 'lucide-react';
 import { Button } from '../components/ui';
+import { flushPending } from '../lib/saveQueue';
 
 /**
  * Cập nhật kiểu "prompt": có bản mới thì HỎI người dùng, không tự tải lại
@@ -38,7 +39,15 @@ export function UpdatePrompt() {
             <Button size="sm" variant="ghost" onClick={() => setNeedRefresh(false)}>
               Để sau
             </Button>
-            <Button size="sm" variant="primary" onClick={() => void updateServiceWorker(true)}>
+            <Button
+              size="sm"
+              variant="primary"
+              onClick={async () => {
+                // Chờ hàng đợi ghi (buổi đang tập) trống rồi mới tải lại bản mới.
+                await flushPending();
+                await updateServiceWorker(true);
+              }}
+            >
               Cập nhật
             </Button>
           </>
