@@ -82,6 +82,8 @@ export interface Settings {
   timerVibrate: boolean;
   /** v1.8: máy tính đĩa tạ — đòn và các loại đĩa đang có (kg). Bản ghi cũ được điền mặc định khi đọc. */
   barbell: { barWeightKg: number; platesKg: number[] };
+  /** v1.8: đơn vị hiển thị/nhập khối lượng. Lưu trữ luôn là kg. */
+  weightUnit: 'kg' | 'lb';
   updatedAt: string;
 }
 

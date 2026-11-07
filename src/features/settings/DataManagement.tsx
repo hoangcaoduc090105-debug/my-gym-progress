@@ -115,9 +115,9 @@ export function DataManagement() {
     try {
       if (kind === 'workouts') {
         const [sessions, exercises] = await Promise.all([db.sessions.toArray(), db.exercises.toArray()]);
-        downloadText(stampedName('my-gym-progress-lich-su-tap', 'csv'), workoutsToCsv(sessions, new Map(exercises.map((e) => [e.id, e])), settings.oneRmFormula), 'text/csv;charset=utf-8');
+        downloadText(stampedName('my-gym-progress-lich-su-tap', 'csv'), workoutsToCsv(sessions, new Map(exercises.map((e) => [e.id, e])), settings.oneRmFormula, settings.weightUnit), 'text/csv;charset=utf-8');
       } else {
-        downloadText(stampedName('my-gym-progress-so-do', 'csv'), bodyMetricsToCsv(await db.bodyMetrics.toArray()), 'text/csv;charset=utf-8');
+        downloadText(stampedName('my-gym-progress-so-do', 'csv'), bodyMetricsToCsv(await db.bodyMetrics.toArray(), settings.weightUnit), 'text/csv;charset=utf-8');
       }
       toast('Đã xuất CSV');
     } catch (e) {

@@ -13,6 +13,7 @@ export function defaultSettings(now: string): Settings {
     timerSound: true,
     timerVibrate: true,
     barbell: { barWeightKg: DEFAULT_BAR_KG, platesKg: [...DEFAULT_PLATES_KG] },
+    weightUnit: 'kg',
     updatedAt: now,
   };
 }

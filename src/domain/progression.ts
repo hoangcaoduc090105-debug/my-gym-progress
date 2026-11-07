@@ -34,8 +34,11 @@ export function suggestProgression(params: {
   settings: ProgressionSettings;
   /** v1.8: bài tạ đòn => làm tròn mức gợi ý về mức gắn được với đòn + đĩa đang có. */
   barbell?: { barWeightKg: number; platesKg: number[] } | null;
+  /** v1.8: định dạng khối lượng trong câu gợi ý (đơn vị kg/lb). Mặc định "60 kg". */
+  fmtWeightU?: (kg: number) => string;
 }): Suggestion {
   const { target, region, isBodyweight, settings } = params;
+  const W = params.fmtWeightU ?? ((k: number) => `${k} kg`);
   if (!target) return { kind: 'insufficient', reason: 'Bài tập chưa có mục tiêu số hiệp/số lần trong giáo án.' };
   const working = params.lastSets
     .filter(isWorkingSet)
@@ -91,6 +94,6 @@ export function suggestProgression(params: {
     fromKg: topKg,
     toKg,
     rirMissing,
-    reason: `Mọi hiệp đạt ${target.repMax} lần ở ${topKg} kg${rirMissing ? ' (một số hiệp chưa ghi RIR)' : ''}. Có thể thử ${toKg} kg và quay về ${target.repMin} lần.`,
+    reason: `Mọi hiệp đạt ${target.repMax} lần ở ${W(topKg)}${rirMissing ? ' (một số hiệp chưa ghi RIR)' : ''}. Có thể thử ${W(toKg)} và quay về ${target.repMin} lần.`,
   };
 }

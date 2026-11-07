@@ -4,8 +4,8 @@ import { Link, useLocation } from 'react-router-dom';
 import { getThemePref, setThemePref, type ThemePref } from '../../lib/theme';
 import type { Profile, Settings } from '../../db/types';
 import { Button, Card, Field, NumberInput, PageHeader, Segmented, Spinner, Toggle, cx } from '../../components/ui';
-import { STANDARD_PLATES_KG } from '../../domain/plates';
-import { fmt1 } from '../../lib/format';
+import { DEFAULT_BAR_KG, DEFAULT_PLATES_KG, STANDARD_PLATES_KG } from '../../domain/plates';
+import { LB_BAR, LB_PLATES, STANDARD_LB_PLATES, fromDisplay, lbToKg, toDisplay, fmtWeight, fmtWeightU, type WeightUnit } from '../../lib/units';
 import { useFeedback } from '../../components/feedback';
 import { useProfile, useSettings } from '../../app/useAppData';
 import { loadSchemas, saveProfile, saveSettings } from '../../db/repo';
@@ -77,6 +77,7 @@ export function SettingsPage() {
 
 function ProfileForm({ profile }: { profile: Profile }) {
   const { toast, toastError } = useFeedback();
+  const settingsUnit = useSettings().weightUnit;
   const [p, setP] = useState(profile);
   const weight = useLiveQuery(async () => latest(await db.bodyMetrics.toArray(), 'weightKg'), []);
   useEffect(() => setP(profile), [profile]);
@@ -130,7 +131,7 @@ function ProfileForm({ profile }: { profile: Profile }) {
         {sug && (
           <div className="col-span-2 -mt-1 flex items-center justify-between gap-2 text-xs text-muted">
             <span>
-              Gợi ý theo cân nặng gần nhất {weight?.value} kg (1,6–2,0 g/kg): {sug.min}–{sug.max} g
+              Gợi ý theo cân nặng gần nhất {weight ? fmtWeightU(weight.value, settingsUnit) : '—'} (1,6–2,0 g/kg): {sug.min}–{sug.max} g
             </span>
             <Button size="sm" variant="ghost" onClick={() => setP((x) => ({ ...x, proteinTargetMinG: sug.min, proteinTargetMaxG: sug.max }))}>
               Áp dụng
@@ -163,6 +164,9 @@ function TrainingForm({ settings }: { settings: Settings }) {
   const pr = s.progression;
   const setPr = <K extends keyof Settings['progression']>(k: K, v: Settings['progression'][K]) => setS((x) => ({ ...x, progression: { ...x.progression, [k]: v } }));
   const fe = useFieldErrors();
+  const unit = s.weightUnit;
+  const plateChoices = unit === 'lb' ? STANDARD_LB_PLATES.map(lbToKg) : STANDARD_PLATES_KG;
+  const hasPlate = (p: number) => s.barbell.platesKg.some((x) => Math.abs(x - p) < 1e-6);
 
   async function save() {
     const S = await loadSchemas();
@@ -181,6 +185,19 @@ function TrainingForm({ settings }: { settings: Settings }) {
     <FieldErrorsContext.Provider value={fe}>
     <Card title="Tập luyện">
       <div className="space-y-4" ref={fe.containerRef as React.RefObject<HTMLDivElement>}>
+        <div>
+          <div className="mb-1 text-sm font-medium text-muted">Đơn vị khối lượng</div>
+          <Segmented
+            className="w-full"
+            value={unit}
+            onChange={(v) => setS((x) => ({ ...x, weightUnit: v, barbell: barbellForUnit(x.barbell, v) }))}
+            options={[
+              { value: 'kg', label: 'kg' },
+              { value: 'lb', label: 'lb (pound)' },
+            ]}
+          />
+          <p className="mt-1 text-xs text-muted">Dữ liệu luôn lưu bằng kg; chỉ đổi cách hiển thị và nhập (tạ, cân nặng). Số đo vòng vẫn là cm.</p>
+        </div>
         <div className="grid grid-cols-2 gap-3">
           <Field name="restTimerDefaultSec" label="Nghỉ mặc định (giây)">{(id) => <NumberInput id={id} value={s.restTimerDefaultSec} onChange={(v) => setS((x) => ({ ...x, restTimerDefaultSec: v == null ? (null as unknown as number) : Math.round(v) }))} />}</Field>
           <Field name="measurementReminderDays" label="Nhắc đo vòng (ngày)">{(id) => <NumberInput id={id} value={s.measurementReminderDays} onChange={(v) => setS((x) => ({ ...x, measurementReminderDays: v == null ? (null as unknown as number) : Math.round(v) }))} />}</Field>
@@ -221,19 +238,25 @@ function TrainingForm({ settings }: { settings: Settings }) {
               value={pr.mode}
               onChange={(v) => setPr('mode', v)}
               options={[
-                { value: 'fixed', label: 'Bước cố định (kg)' },
+                { value: 'fixed', label: `Bước cố định (${unit})` },
                 { value: 'percent', label: 'Theo %' },
               ]}
             />
             {pr.mode === 'fixed' ? (
               <div className="grid grid-cols-2 gap-3">
-                <Field name="progression.upperIncrementKg" label="Thân trên (kg)">{(id) => <NumberInput id={id} value={pr.upperIncrementKg} onChange={(v) => setPr('upperIncrementKg', v ?? (null as unknown as number))} />}</Field>
-                <Field name="progression.lowerIncrementKg" label="Thân dưới (kg)">{(id) => <NumberInput id={id} value={pr.lowerIncrementKg} onChange={(v) => setPr('lowerIncrementKg', v ?? (null as unknown as number))} />}</Field>
+                <Field name="progression.upperIncrementKg" label={`Thân trên (${unit})`}>
+                  {(id) => <NumberInput id={id} value={pr.upperIncrementKg == null ? null : toDisplay(pr.upperIncrementKg, unit)} onChange={(v) => setPr('upperIncrementKg', v == null ? (null as unknown as number) : fromDisplay(v, unit, pr.upperIncrementKg))} />}
+                </Field>
+                <Field name="progression.lowerIncrementKg" label={`Thân dưới (${unit})`}>
+                  {(id) => <NumberInput id={id} value={pr.lowerIncrementKg == null ? null : toDisplay(pr.lowerIncrementKg, unit)} onChange={(v) => setPr('lowerIncrementKg', v == null ? (null as unknown as number) : fromDisplay(v, unit, pr.lowerIncrementKg))} />}
+                </Field>
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-3">
                 <Field name="progression.percent" label="Tăng (%)">{(id) => <NumberInput id={id} value={pr.percent} onChange={(v) => setPr('percent', v ?? (null as unknown as number))} />}</Field>
-                <Field name="progression.roundToKg" label="Làm tròn tới (kg)">{(id) => <NumberInput id={id} value={pr.roundToKg} onChange={(v) => setPr('roundToKg', v ?? (null as unknown as number))} />}</Field>
+                <Field name="progression.roundToKg" label={`Làm tròn tới (${unit})`}>
+                  {(id) => <NumberInput id={id} value={pr.roundToKg == null ? null : toDisplay(pr.roundToKg, unit)} onChange={(v) => setPr('roundToKg', v == null ? (null as unknown as number) : fromDisplay(v, unit, pr.roundToKg))} />}
+                </Field>
               </div>
             )}
           </div>
@@ -241,38 +264,38 @@ function TrainingForm({ settings }: { settings: Settings }) {
         <div className="rounded-xl bg-surface2 p-3">
           <div className="mb-1 text-sm font-semibold">Tạ đòn &amp; đĩa (máy tính đĩa tạ)</div>
           <p className="mb-3 text-xs text-muted">Dùng để tính mỗi bên gắn đĩa gì và làm tròn gợi ý tăng tạ về mức gắn được.</p>
-          <Field name="barbell.barWeightKg" label="Đòn (kg)" className="mb-3 max-w-[10rem]">
+          <Field name="barbell.barWeightKg" label={`Đòn (${unit})`} className="mb-3 max-w-[10rem]">
             {(id) => (
               <NumberInput
                 id={id}
-                value={s.barbell.barWeightKg}
-                onChange={(v) => setS((x) => ({ ...x, barbell: { ...x.barbell, barWeightKg: v ?? (null as unknown as number) } }))}
+                value={s.barbell.barWeightKg == null ? null : toDisplay(s.barbell.barWeightKg, unit)}
+                onChange={(v) => setS((x) => ({ ...x, barbell: { ...x.barbell, barWeightKg: v == null ? (null as unknown as number) : fromDisplay(v, unit, x.barbell.barWeightKg) } }))}
               />
             )}
           </Field>
           <div className="mb-1 text-sm font-medium text-muted" id="plates-label">
-            Đĩa đang có (kg)
+            Đĩa đang có ({unit})
           </div>
           <div className="flex flex-wrap gap-2" role="group" aria-labelledby="plates-label">
-            {STANDARD_PLATES_KG.map((p) => {
-              const on = s.barbell.platesKg.includes(p);
+            {plateChoices.map((p) => {
+              const on = hasPlate(p);
               return (
                 <button
                   key={p}
                   type="button"
                   aria-pressed={on}
-                  aria-label={`Đĩa ${fmt1(p)} kg`}
+                  aria-label={`Đĩa ${fmtWeight(p, unit)} ${unit}`}
                   onClick={() => {
                     fe.clear('barbell.platesKg');
                     setS((x) => {
                       const cur = x.barbell.platesKg;
-                      const next = on ? cur.filter((y) => y !== p) : [...cur, p].sort((a, b) => b - a);
+                      const next = on ? cur.filter((y) => Math.abs(y - p) >= 1e-6) : [...cur, p].sort((a, b) => b - a);
                       return { ...x, barbell: { ...x.barbell, platesKg: next } };
                     });
                   }}
                   className={cx('h-11 min-w-[44px] rounded-full px-3 text-sm font-semibold tabular', on ? 'bg-accent text-accent-ink' : 'bg-surface text-muted ring-1 ring-line')}
                 >
-                  {fmt1(p)}
+                  {fmtWeight(p, unit)}
                 </button>
               );
             })}
@@ -290,6 +313,18 @@ function TrainingForm({ settings }: { settings: Settings }) {
     </Card>
     </FieldErrorsContext.Provider>
   );
+}
+
+const sameSet = (a: number[], b: number[]) => a.length === b.length && a.every((x) => b.some((y) => Math.abs(x - y) < 1e-6));
+const KG_DEFAULT = { barWeightKg: DEFAULT_BAR_KG, platesKg: [...DEFAULT_PLATES_KG] };
+const LB_DEFAULT = { barWeightKg: lbToKg(LB_BAR), platesKg: LB_PLATES.map(lbToKg) };
+/** Đổi đơn vị: nếu đòn + đĩa đang là bộ mặc định của đơn vị cũ thì chuyển sang bộ mặc định của đơn vị mới. */
+function barbellForUnit(b: Settings['barbell'], unit: WeightUnit): Settings['barbell'] {
+  const isKgDef = Math.abs(b.barWeightKg - KG_DEFAULT.barWeightKg) < 1e-6 && sameSet(b.platesKg, KG_DEFAULT.platesKg);
+  const isLbDef = Math.abs(b.barWeightKg - LB_DEFAULT.barWeightKg) < 1e-6 && sameSet(b.platesKg, LB_DEFAULT.platesKg);
+  if (unit === 'lb' && isKgDef) return { ...LB_DEFAULT, platesKg: [...LB_DEFAULT.platesKg] };
+  if (unit === 'kg' && isLbDef) return { ...KG_DEFAULT, platesKg: [...KG_DEFAULT.platesKg] };
+  return b;
 }
 
 function ThemePicker() {

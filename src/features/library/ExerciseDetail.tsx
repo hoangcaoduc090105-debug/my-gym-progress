@@ -9,16 +9,17 @@ import { Badge, Button, Card, PageHeader, Spinner, Tabs } from '../../components
 const ExerciseHistoryList = lazy(() => import('./ExerciseHistory'));
 import { useFeedback } from '../../components/feedback';
 import { useSettings } from '../../app/useAppData';
+import { useUnits } from '../../app/useUnits';
 import { deleteCustomExercise } from '../../db/repo';
 import { activeCompleted } from '../../domain/sets';
 import { recordsByExercise, strengthSeries } from '../../domain/records';
 import { formatDate, formatShort } from '../../lib/date';
-import { fmt1 } from '../../lib/format';
 
 export function ExerciseDetail() {
   const { id = '' } = useParams();
   const nav = useNavigate();
   const settings = useSettings();
+  const u = useUnits();
   const { confirm, toast, toastError } = useFeedback();
   const [tab, setTab] = useState<'overview' | 'history'>('overview');
   const data = useLiveQuery(async () => {
@@ -87,21 +88,21 @@ export function ExerciseDetail() {
                 <div className="text-xs text-muted">Mức tạ cao nhất</div>
                 <div className="flex items-center gap-1 text-lg font-bold tabular">
                   <Trophy size={16} className="text-brand2-text" />
-                  {rec.heaviest ? `${fmt1(rec.heaviest.weightKg)} kg × ${rec.heaviest.reps}` : '—'}
+                  {rec.heaviest ? `${u.fmtU(rec.heaviest.weightKg)} × ${rec.heaviest.reps}` : '—'}
                 </div>
                 {rec.heaviest && <div className="text-xs text-muted">{formatDate(rec.heaviest.date)}</div>}
               </div>
               <div className="rounded-xl bg-surface2 p-3">
                 <div className="text-xs text-muted">e1RM ước tính tốt nhất</div>
-                <div className="text-lg font-bold tabular">{rec.bestE1RM ? `${fmt1(rec.bestE1RM.value)} kg` : '—'}</div>
-                <div className="text-xs text-muted">{rec.bestE1RM ? `từ ${fmt1(rec.bestE1RM.weightKg)}×${rec.bestE1RM.reps}` : 'cần hiệp ≤ 10 lần'}</div>
+                <div className="text-lg font-bold tabular">{rec.bestE1RM ? u.fmtU(rec.bestE1RM.value) : '—'}</div>
+                <div className="text-xs text-muted">{rec.bestE1RM ? `từ ${u.fmt(rec.bestE1RM.weightKg)}×${rec.bestE1RM.reps}` : 'cần hiệp ≤ 10 lần'}</div>
               </div>
             </div>
             <table className="w-full tabular">
               <thead className="text-xs text-muted">
                 <tr>
                   <th className="text-left font-normal">Ngày</th>
-                  <th className="text-right font-normal">Tạ max</th>
+                  <th className="text-right font-normal">Tạ max ({u.unit})</th>
                   <th className="text-right font-normal">e1RM</th>
                   <th className="text-right font-normal">Khối lượng</th>
                 </tr>
@@ -110,9 +111,9 @@ export function ExerciseDetail() {
                 {series.map((p) => (
                   <tr key={p.date}>
                     <td className="py-1">{formatShort(p.date)}</td>
-                    <td className="text-right">{fmt1(p.maxWeight)}</td>
-                    <td className="text-right">{fmt1(p.e1rm)}</td>
-                    <td className="text-right">{fmt1(p.volume)}</td>
+                    <td className="text-right">{u.fmt(p.maxWeight)}</td>
+                    <td className="text-right">{p.e1rm == null ? '—' : u.fmt(p.e1rm)}</td>
+                    <td className="text-right">{u.fmt(p.volume)}</td>
                   </tr>
                 ))}
               </tbody>

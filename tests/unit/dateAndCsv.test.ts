@@ -77,3 +77,20 @@ describe('base64', () => {
     expect(back[12345]).toBe(12345 % 256);
   });
 });
+
+describe('CSV theo đơn vị (v1.8.0)', () => {
+  it('lb: cột tạ & e1RM đổi sang lb, tiêu đề ghi lb; kg: giữ nguyên số gốc', async () => {
+    const { workoutsToCsv, bodyMetricsToCsv } = await import('../../src/backup/csv');
+    const { session, set, exMap } = await import('./fixtures');
+    const s = session('2026-01-01', [{ exerciseId: 'goblet-squat', sets: [set(100, 5)] }]);
+    const lb = workoutsToCsv([s], exMap, 'epley', 'lb');
+    expect(lb).toContain('Mức tạ (lb)');
+    expect(lb).toContain(',220.5,');
+    const kg = workoutsToCsv([{ ...s, exercises: [{ ...s.exercises[0]!, sets: [set(102.06, 5)] }] }], exMap, 'epley');
+    expect(kg).toContain('Mức tạ (kg)');
+    expect(kg).toContain(',102.06,');
+    const body = bodyMetricsToCsv([{ id: 'b', date: '2026-01-01', weightKg: 100, waistCm: 80, createdAt: 'x', updatedAt: 'x' } as never], 'lb');
+    expect(body).toContain('Cân nặng (lb)');
+    expect(body).toContain('2026-01-01,220.5');
+  });
+});

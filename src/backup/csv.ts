@@ -3,6 +3,7 @@ import { BODY_FIELDS, BODY_FIELD_LABELS } from '../db/types';
 import { estimate1RM, type OneRmFormula } from '../domain/oneRepMax';
 import { isWorkingSet, splitByExercise } from '../domain/sets';
 import { groupExercises } from '../domain/superset';
+import { toDisplay, type WeightUnit } from '../lib/units';
 
 /** Escape theo RFC 4180: bọc ngoặc kép khi có dấu phẩy, ngoặc kép, xuống dòng. Chặn CSV injection. */
 export function csvCell(v: unknown): string {
@@ -17,7 +18,10 @@ export function toCsv(rows: unknown[][]): string {
   return '﻿' + rows.map((r) => r.map(csvCell).join(',')).join('\r\n') + '\r\n';
 }
 
-export function workoutsToCsv(sessions: WorkoutSession[], exercises: Map<string, Exercise>, formula: OneRmFormula): string {
+/** `unit`: đơn vị hiển thị (v1.8) — cột tạ và e1RM xuất theo đơn vị đang chọn, tiêu đề ghi rõ đơn vị. */
+export function workoutsToCsv(sessions: WorkoutSession[], exercises: Map<string, Exercise>, formula: OneRmFormula, unit: WeightUnit = 'kg'): string {
+  // kg: giữ nguyên số đã lưu (như trước v1.8); lb: đổi và làm tròn 1 chữ số.
+  const W = (kg: number) => (unit === 'kg' ? kg : toDisplay(kg, unit));
   const header = [
     'Ngày',
     'Buổi',
@@ -26,11 +30,11 @@ export function workoutsToCsv(sessions: WorkoutSession[], exercises: Map<string,
     'Nhóm cơ chính',
     'Hiệp',
     'Khởi động',
-    'Mức tạ (kg)',
+    `Mức tạ (${unit})`,
     'Số lần',
     'RIR',
     'Hoàn thành',
-    'e1RM ước tính (kg)',
+    `e1RM ước tính (${unit})`,
     'Ghi chú bài tập',
     'Ghi chú buổi',
     'Nhóm',
@@ -54,11 +58,11 @@ export function workoutsToCsv(sessions: WorkoutSession[], exercises: Map<string,
           ex?.primaryMuscle ?? '',
           i + 1,
           set.isWarmup ? 'có' : '',
-          set.weightKg ?? '',
+          set.weightKg == null ? '' : W(set.weightKg),
           set.reps ?? '',
           set.rir ?? '',
           set.done ? 'có' : 'không',
-          isWorkingSet(set) ? (estimate1RM(set.weightKg ?? 0, set.reps ?? 0, formula) ?? '') : '',
+          isWorkingSet(set) ? ((e) => (e == null ? '' : W(e)))(estimate1RM(set.weightKg ?? 0, set.reps ?? 0, formula)) : '',
           i === 0 ? se.note : '',
           i === 0 ? s.notes : '',
           labels.get(se.id) ?? '',
@@ -69,11 +73,11 @@ export function workoutsToCsv(sessions: WorkoutSession[], exercises: Map<string,
   return toCsv(rows);
 }
 
-export function bodyMetricsToCsv(metrics: BodyMetric[]): string {
-  const header = ['Ngày', ...BODY_FIELDS.map((f) => BODY_FIELD_LABELS[f] + (f === 'weightKg' ? ' (kg)' : ' (cm)')), 'Ghi chú'];
+export function bodyMetricsToCsv(metrics: BodyMetric[], unit: WeightUnit = 'kg'): string {
+  const header = ['Ngày', ...BODY_FIELDS.map((f) => BODY_FIELD_LABELS[f] + (f === 'weightKg' ? ` (${unit})` : ' (cm)')), 'Ghi chú'];
   const rows: unknown[][] = [header];
   for (const m of [...metrics].filter((x) => !x.deletedAt).sort((a, b) => a.date.localeCompare(b.date))) {
-    rows.push([m.date, ...BODY_FIELDS.map((f) => m[f] ?? ''), m.note ?? '']);
+    rows.push([m.date, ...BODY_FIELDS.map((f) => (m[f] == null ? '' : f === 'weightKg' && unit === 'lb' ? toDisplay(m[f]!, unit) : m[f])), m.note ?? '']);
   }
   return toCsv(rows);
 }

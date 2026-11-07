@@ -48,6 +48,16 @@ async function check(name, fn) {
   }
 }
 const shot = async (n) => SHOTS && page.screenshot({ path: join(SHOTS, `${n}.png`), fullPage: true });
+/** Chờ ô nhập có đúng giá trị (NumberInput đồng bộ chữ trong useEffect — đọc ngay sau thao tác có thể còn chữ cũ). */
+const waitValue = async (locator, expected, timeout = 5000) => {
+  const end = Date.now() + timeout;
+  let v = await locator.inputValue();
+  while (v !== expected && Date.now() < end) {
+    await page.waitForTimeout(50);
+    v = await locator.inputValue();
+  }
+  assert.equal(v, expected);
+};
 const noOverflow = async () => {
   const [sw, iw] = await page.evaluate(() => [document.documentElement.scrollWidth, window.innerWidth]);
   assert.ok(sw <= iw + 1, `tràn ngang: scrollWidth ${sw} > ${iw}`);
@@ -319,7 +329,7 @@ try {
     await dlg.getByRole('button', { name: 'Gần nhất: 60 kg' }).waitFor();
     await shot('15-plates');
     await dlg.getByRole('button', { name: 'Gần nhất: 60 kg' }).click();
-    assert.equal(await bbCard.getByLabel('Mức tạ hiệp 1').inputValue(), '60');
+    await waitValue(bbCard.getByLabel('Mức tạ hiệp 1'), '60');
     await cancelCurrent();
   });
 
@@ -433,10 +443,33 @@ try {
     assert.equal(await page.getByLabel('Mục tiêu calories (kcal)').inputValue(), '1200');
   });
 
+  await check('Đổi đơn vị sang lb trong Cài đặt: trang tập hiện "lb"', async () => {
+    await page.goto(BASE + '#/cai-dat');
+    await page.getByRole('tab', { name: 'lb (pound)' }).click();
+    await page.getByLabel('Đòn (lb)').waitFor();
+    await waitValue(page.getByLabel('Đòn (lb)'), '45');
+    await page.getByRole('button', { name: 'Lưu cài đặt tập luyện' }).click();
+    await page.getByText('Đã lưu cài đặt tập luyện').waitFor();
+    await page.goto(BASE + '#/lich-tap');
+    await page.getByRole('button', { name: /^Bắt đầu Buổi/ }).click();
+    await page.getByRole('heading', { name: 'Đang tập' }).waitFor();
+    await page.getByText('lb', { exact: true }).first().waitFor();
+    await page.getByLabel('Mức tạ hiệp 1').first().fill('225');
+    await shot('16-lb');
+    await cancelCurrent();
+    await page.goto(BASE + '#/cai-dat');
+    await page.getByRole('tab', { name: 'kg', exact: true }).click();
+    await page.getByRole('button', { name: 'Lưu cài đặt tập luyện' }).click();
+    await page.getByText('Đã lưu cài đặt tập luyện').waitFor();
+  });
+
   await check('Offline: tắt mạng, tải lại — app và dữ liệu vẫn hoạt động', async () => {
     await page.goto(BASE);
     await page.evaluate(() => navigator.serviceWorker.ready.then(() => true));
-    await page.waitForTimeout(1500);
+    // Trang phải do service worker điều khiển (đã precache xong) trước khi tắt mạng.
+    await page.reload();
+    await page.waitForFunction(() => !!navigator.serviceWorker.controller, null, { timeout: 15000 });
+    await page.waitForTimeout(500);
     await context.setOffline(true);
     await page.reload();
     await page.getByRole('heading', { name: 'Hôm nay' }).waitFor({ timeout: 10000 });

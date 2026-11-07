@@ -6,6 +6,7 @@ import { db } from '../../db/db';
 import { Button, Card, PageHeader, Spinner } from '../../components/ui';
 import { useFeedback } from '../../components/feedback';
 import { useExerciseMap, useProfile, useSettings } from '../../app/useAppData';
+import { useUnits } from '../../app/useUnits';
 import { activeCompleted } from '../../domain/sets';
 import { countWorkingSets } from '../../domain/volume';
 import { latest, weeklyWeightChange, daysSinceLastCircumference } from '../../domain/bodyTrends';
@@ -21,6 +22,7 @@ export function Dashboard() {
   const { toastError } = useFeedback();
   const profile = useProfile();
   const settings = useSettings();
+  const u = useUnits();
   const exMap = useExerciseMap();
   const today = todayISO();
   const data = useLiveQuery(async () => {
@@ -117,11 +119,11 @@ export function Dashboard() {
         <Link to="/co-the" className="rounded-2xl border border-line/70 bg-surface p-4 shadow-card">
           <div className="text-xs font-medium text-muted">Cân nặng</div>
           <div className="mt-1 text-2xl font-bold tabular">
-            {weight ? fmt1(weight.value) : '—'}
-            <span className="ml-1 text-sm font-medium text-muted">kg</span>
+            {weight ? u.fmt(weight.value) : '—'}
+            <span className="ml-1 text-sm font-medium text-muted">{u.unit}</span>
           </div>
           <div className="mt-0.5 text-xs text-muted">
-            {change.status === 'ok' ? `${signed(change.delta)} kg so với tuần trước` : weight ? `đo ${formatShort(weight.date)}` : 'Chạm để ghi'}
+            {change.status === 'ok' ? `${signed(u.show(change.delta))} ${u.unit} so với tuần trước` : weight ? `đo ${formatShort(weight.date)}` : 'Chạm để ghi'}
           </div>
         </Link>
         <Link to="/lich-tap?tab=history" className="rounded-2xl border border-line/70 bg-surface p-4 shadow-card">

@@ -6,8 +6,8 @@ import { formatSets, historyRows, rangeStart, type HistoryRange, type HistoryRow
 import type { OneRmFormula } from '../../domain/oneRepMax';
 import { Badge, Button, Spinner, cx } from '../../components/ui';
 import { formatDate } from '../../lib/date';
-import { fmt1 } from '../../lib/format';
 import { todayISO } from '../../lib/date';
+import { useUnits } from '../../app/useUnits';
 
 const RANGES: { value: HistoryRange; label: string }[] = [
   { value: '3m', label: '3 tháng' },
@@ -42,6 +42,7 @@ export default function ExerciseHistoryList({
   const [next, setNext] = useState<string | null>(null);
   const [prIds, setPrIds] = useState<Set<string> | null>(null);
   const [busy, setBusy] = useState(false);
+  const u = useUnits();
 
   useEffect(() => {
     let off = false;
@@ -108,11 +109,11 @@ export default function ExerciseHistoryList({
                     )}
                   </div>
                   <div className="truncate text-xs text-muted">{r.dayName}</div>
-                  <div className="mt-0.5 text-sm tabular">{formatSets(r.sets)}</div>
+                  <div className="mt-0.5 text-sm tabular">{formatSets(r.sets, u.fmt)}</div>
                 </div>
                 <div className="shrink-0 text-right">
-                  <div className="text-[11px] text-muted">e1RM</div>
-                  <div className="text-sm font-semibold tabular">{r.bestE1RM != null ? fmt1(r.bestE1RM) : '—'}</div>
+                  <div className="text-[11px] text-muted">e1RM ({u.unit})</div>
+                  <div className="text-sm font-semibold tabular">{r.bestE1RM != null ? u.fmt(r.bestE1RM) : '—'}</div>
                 </div>
                 <ChevronRight size={18} className="shrink-0 text-muted" />
               </Link>

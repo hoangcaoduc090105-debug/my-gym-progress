@@ -431,3 +431,15 @@ describe('cài đặt đĩa tạ (v1.8.0)', () => {
     await expect(repo.saveSettings({ ...rest, barbell: { barWeightKg: 20, platesKg: [] } })).rejects.toBeInstanceOf(AppError);
   });
 });
+
+describe('đơn vị khối lượng (v1.8.0)', () => {
+  it('bản ghi cũ không có weightUnit => mặc định kg; lưu lb hợp lệ, dữ liệu vẫn kg', async () => {
+    const cur = (await db.settings.get('app'))!;
+    const { weightUnit: _w, ...old } = cur as typeof cur & { weightUnit?: unknown };
+    await db.settings.put(old as typeof cur);
+    expect((await repo.getSettings()).weightUnit).toBe('kg');
+    const { id: _i, updatedAt: _u, ...rest } = await repo.getSettings();
+    await repo.saveSettings({ ...rest, weightUnit: 'lb' });
+    expect((await repo.getSettings()).weightUnit).toBe('lb');
+  });
+});

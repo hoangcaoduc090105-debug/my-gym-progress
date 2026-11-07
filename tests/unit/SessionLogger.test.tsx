@@ -184,3 +184,38 @@ describe('SessionLogger — superset (v1.8.0)', () => {
     expect(timerStart.mock.calls[1]![0]).toBe(s.exercises[2]!.target!.restSec);
   });
 });
+
+describe('SessionLogger — đơn vị lb (v1.8.0)', () => {
+  afterEach(() => saveSpy.mockReset());
+  it('hiển thị "lb"; nhập 225 lb lưu 102,06 kg; ô không sửa thì kg gốc không trôi', async () => {
+    await resetDb();
+    const st = await repo.getSettings();
+    const { id: _i, updatedAt: _u, ...rest } = st;
+    await repo.saveSettings({ ...rest, weightUnit: 'lb' });
+    const p = (await repo.getActiveProgram())!;
+    const s = await repo.startSession({ programId: p.id, programDayId: 'day-a' });
+    s.exercises[1]!.sets[0] = { ...s.exercises[1]!.sets[0]!, weightKg: 60 };
+    await repo.saveSession(s);
+    render(
+      <FeedbackProvider>
+        <RestTimerProvider sound={false} vibrate={false}>
+          <MemoryRouter initialEntries={[`/tap/${s.id}`]}>
+            <Routes>
+              <Route path="/tap/:id" element={<SessionLogger />} />
+            </Routes>
+          </MemoryRouter>
+        </RestTimerProvider>
+      </FeedbackProvider>,
+    );
+    await screen.findByRole('heading', { name: 'Đang tập' });
+    await waitFor(() => expect(screen.getAllByText('lb').length).toBeGreaterThan(0));
+    const kg = screen.getAllByLabelText('Mức tạ hiệp 1') as HTMLInputElement[];
+    await waitFor(() => expect(kg[1]!.value).toBe('132.3'));
+    fireEvent.change(kg[0]!, { target: { value: '225' } });
+    // ô thứ 2: gõ lại đúng số đang hiển thị => giữ nguyên 60 kg
+    fireEvent.change(kg[1]!, { target: { value: '132,3' } });
+    await sleep(50);
+    await waitFor(async () => expect((await db.sessions.get(s.id))!.exercises[0]!.sets[0]!.weightKg).toBe(102.06));
+    expect((await db.sessions.get(s.id))!.exercises[1]!.sets[0]!.weightKg).toBe(60);
+  });
+});

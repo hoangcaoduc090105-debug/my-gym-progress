@@ -7,6 +7,7 @@ import { BODY_FIELD_LABELS, MUSCLE_GROUPS, MUSCLE_LABELS, type BodyField, type B
 import { Card, Explain, Insufficient, PageHeader, Segmented, Spinner, Stat } from '../../components/ui';
 import { SimpleBarChart, TrendLineChart } from '../../components/charts';
 import { useExerciseMap, useSettings } from '../../app/useAppData';
+import { useUnits } from '../../app/useUnits';
 import { activeCompleted } from '../../domain/sets';
 import { countWorkingSets, setsByMuscle, totalVolume, weeklyBuckets } from '../../domain/volume';
 import { recordsByExercise, strengthSeries } from '../../domain/records';
@@ -21,6 +22,7 @@ const PERIOD_DAYS: Record<Exclude<Period, 'all'>, number> = { '4w': 28, '12w': 8
 
 export default function AnalyticsPage() {
   const settings = useSettings();
+  const u = useUnits();
   const exMap = useExerciseMap();
   const [period, setPeriod] = useState<Period>('12w');
   const data = useLiveQuery(async () => ({ sessions: await db.sessions.toArray(), metrics: await db.bodyMetrics.toArray() }), []);
@@ -68,7 +70,7 @@ export default function AnalyticsPage() {
           <div className="grid grid-cols-3 gap-3">
             <Stat label="Buổi tập" value={inPeriod.length} hint={`TB ${fmt1(inPeriod.length / nWeeks)}/tuần`} />
             <Stat label="Hiệp làm việc" value={countWorkingSets(inPeriod)} />
-            <Stat label="Tổng khối lượng" value={fmt0(totalVolume(inPeriod))} unit="kg" />
+            <Stat label="Tổng khối lượng" value={fmt0(u.show(totalVolume(inPeriod)))} unit={u.unit} />
           </div>
 
           <Card title="Số buổi tập mỗi tuần">
@@ -104,14 +106,14 @@ export default function AnalyticsPage() {
             </Explain>
           </Card>
 
-          <Card title="Tổng khối lượng tập mỗi tuần (kg)">
+          <Card title={`Tổng khối lượng tập mỗi tuần (${u.unit})`}>
             <SimpleBarChart
-              data={fullWeeks.map((w) => ({ label: formatShort(w.weekStart), value: w.volumeKg }))}
-              series={{ key: 'value', name: 'Khối lượng', unit: 'kg' }}
+              data={fullWeeks.map((w) => ({ label: formatShort(w.weekStart), value: u.show(w.volumeKg) }))}
+              series={{ key: 'value', name: 'Khối lượng', unit: u.unit }}
               height={180}
             />
             <Explain>
-              <p>Khối lượng = Σ (mức tạ × số lần) của mọi hiệp làm việc. Bài trọng lượng cơ thể ghi 0 kg không được cộng; nếu đeo thêm tạ thì chỉ cộng phần tạ thêm.</p>
+              <p>Khối lượng = Σ (mức tạ × số lần) của mọi hiệp làm việc. Bài trọng lượng cơ thể ghi mức tạ 0 không được cộng; nếu đeo thêm tạ thì chỉ cộng phần tạ thêm.</p>
               <p>Khối lượng phụ thuộc lựa chọn bài tập, nên so sánh giữa các tuần chỉ có ý nghĩa khi giáo án tương tự.</p>
             </Explain>
           </Card>
@@ -129,18 +131,18 @@ export default function AnalyticsPage() {
             ) : (
               <>
                 <TrendLineChart
-                  data={series.map((p) => ({ label: formatShort(p.date), e1rm: p.e1rm, max: p.maxWeight }))}
+                  data={series.map((p) => ({ label: formatShort(p.date), e1rm: p.e1rm == null ? null : u.show(p.e1rm), max: u.show(p.maxWeight) }))}
                   series={[
-                    { key: 'e1rm', name: 'e1RM ước tính', unit: 'kg' },
-                    { key: 'max', name: 'Mức tạ cao nhất', unit: 'kg' },
+                    { key: 'e1rm', name: 'e1RM ước tính', unit: u.unit },
+                    { key: 'max', name: 'Mức tạ cao nhất', unit: u.unit },
                   ]}
                 />
                 <div className="mt-2 text-sm">
                   {withE.length >= THRESHOLDS.minSessionsForStrengthTrend ? (
                     <span>
-                      e1RM: {fmt1(withE[0]!.e1rm)} → <strong>{fmt1(withE[withE.length - 1]!.e1rm)} kg</strong>{' '}
+                      e1RM: {u.fmt(withE[0]!.e1rm ?? 0)} → <strong>{u.fmtU(withE[withE.length - 1]!.e1rm ?? 0)}</strong>{' '}
                       <span className="text-muted">
-                        ({signed((withE[withE.length - 1]!.e1rm ?? 0) - (withE[0]!.e1rm ?? 0))} kg qua {withE.length} buổi)
+                        ({signed(u.show((withE[withE.length - 1]!.e1rm ?? 0) - (withE[0]!.e1rm ?? 0)))} {u.unit} qua {withE.length} buổi)
                       </span>
                     </span>
                   ) : (
@@ -187,13 +189,13 @@ export default function AnalyticsPage() {
                           {r.heaviest ? (
                             <span title={formatDate(r.heaviest.date)}>
                               <Trophy size={12} className="mr-1 inline text-brand2-text" />
-                              {fmt1(r.heaviest.weightKg)}×{r.heaviest.reps}
+                              {u.fmt(r.heaviest.weightKg)}×{r.heaviest.reps}
                             </span>
                           ) : (
                             '—'
                           )}
                         </td>
-                        <td className="px-1 text-right">{r.bestE1RM ? fmt1(r.bestE1RM.value) : '—'}</td>
+                        <td className="px-1 text-right">{r.bestE1RM ? u.fmt(r.bestE1RM.value) : '—'}</td>
                         <td className="px-1 text-right text-muted">{r.totalSets}</td>
                       </tr>
                     );
@@ -219,8 +221,13 @@ export default function AnalyticsPage() {
 }
 
 function BodyTrendCard({ metrics, field, from }: { metrics: BodyMetric[]; field: BodyField; from: string | null }) {
-  const unit = field === 'weightKg' ? 'kg' : 'cm';
-  const pts = seriesOf(metrics, field).filter((p) => !from || p.date >= from);
+  const u = useUnits();
+  const isW = field === 'weightKg';
+  const unit = isW ? u.unit : 'cm';
+  // Cân nặng hiển thị theo đơn vị đã chọn (kg/lb); số đo vòng luôn cm.
+  const pts = seriesOf(metrics, field)
+    .filter((p) => !from || p.date >= from)
+    .map((p) => (isW ? { ...p, value: u.show(p.value) } : p));
   const weekly = aggregate(pts, 'week');
   const tr = linearTrend(pts);
   return (

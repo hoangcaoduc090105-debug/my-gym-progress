@@ -13,10 +13,10 @@ import { groupExercises, groupRestSec, isLastInGroup, moveBlock, nextInGroup, no
 import { suggestProgression, type Suggestion } from '../../domain/progression';
 import { isWorkingSet } from '../../domain/sets';
 import { formatClock, formatShort, todayISO } from '../../lib/date';
-import { fmt1 } from '../../lib/format';
 import { uid } from '../../lib/id';
 import { persistAfterFirstWorkout } from '../../db/persistence';
 import { useRestTimerActions } from './RestTimer';
+import { useUnits } from '../../app/useUnits';
 import { ExercisePicker } from './ExercisePicker';
 import { useSessionWriter, type SaveState } from './useSessionWriter';
 const ExerciseHistoryList = lazy(() => import('../library/ExerciseHistory'));
@@ -37,6 +37,7 @@ export function SessionLogger() {
   const settings = useSettings();
   const exMap = useExerciseMap();
   const timer = useRestTimerActions();
+  const units = useUnits();
   const { toast, toastError, confirm } = useFeedback();
   const { s, latest, load, commit, commitText, flush, retry, saveState } = useSessionWriter(null);
   const [pickOpen, setPickOpen] = useState(false);
@@ -89,7 +90,7 @@ export function SessionLogger() {
     let weight = set.weightKg ?? h?.weightKg ?? null;
     if (weight == null && ex?.isBodyweight) weight = 0;
     if (reps == null || reps <= 0) return toast('Nhập số lần trước khi đánh dấu ✓', 'error');
-    if (weight == null) return toast('Nhập mức tạ (kg). Bài không dùng tạ thì nhập 0.', 'error');
+    if (weight == null) return toast(`Nhập mức tạ (${units.unit}). Bài không dùng tạ thì nhập 0.`, 'error');
     updEx(se.id, (e) => ({ ...e, sets: e.sets.map((x, i) => (i === idx ? { ...x, reps, weightKg: weight, done: true } : x)) }));
     if (set.isWarmup) return;
     // Superset: bài chưa phải cuối nhóm => không nghỉ, chuyển ngay sang bài kế trong nhóm.
@@ -365,14 +366,14 @@ function SaveStatus({ state, onRetry }: { state: SaveState; onRetry: () => void 
   );
 }
 
-function SuggestionBanner({ sg }: { sg: Suggestion }) {
+function SuggestionBanner({ sg, fmtU }: { sg: Suggestion; fmtU: (kg: number) => string }) {
   if (sg.kind === 'insufficient') return null;
   const up = sg.kind === 'increase' || sg.kind === 'increase-difficulty';
   return (
     <div className={cx('mb-3 flex gap-2 rounded-xl p-2.5 text-xs', up ? 'bg-accent/10 text-accent' : 'bg-surface2 text-muted')}>
       {up ? <TrendingUp size={16} className="shrink-0" /> : <Info size={16} className="shrink-0" />}
       <span>
-        {sg.kind === 'increase' && <strong className="mr-1">Gợi ý: {fmt1(sg.toKg)} kg.</strong>}
+        {sg.kind === 'increase' && <strong className="mr-1">Gợi ý: {fmtU(sg.toKg)}.</strong>}
         {sg.reason}
       </span>
     </div>
@@ -398,6 +399,7 @@ function ExerciseBlock(props: {
   onRemove: () => void;
 }) {
   const { se, ex, hint, settings, onChange } = props;
+  const units = useUnits();
   const t = se.target;
   const sg = ex
     ? suggestProgression({
@@ -407,6 +409,7 @@ function ExerciseBlock(props: {
         isBodyweight: ex.isBodyweight,
         settings: settings.progression,
         barbell: ex.equipment === 'barbell' ? settings.barbell : null,
+        fmtWeightU: units.fmtU,
       })
     : null;
   const isBarbell = ex?.equipment === 'barbell';
@@ -470,18 +473,18 @@ function ExerciseBlock(props: {
             <span className="tabular text-text">
               {hint.sets
                 .filter(isWorkingSet)
-                .map((x) => `${fmt1(x.weightKg ?? 0)}×${x.reps}`)
+                .map((x) => `${units.fmt(x.weightKg ?? 0)}×${x.reps}`)
                 .join(', ')}
             </span>
           </span>
           <span className="shrink-0 text-info underline">3 buổi</span>
         </button>
       )}
-      {sg && <SuggestionBanner sg={sg} />}
+      {sg && <SuggestionBanner sg={sg} fmtU={units.fmtU} />}
 
       <div className={cx('grid items-center gap-1.5 text-center text-xs text-muted', cols)}>
         <div>Hiệp</div>
-        <div className={isBarbell ? 'col-span-2' : undefined}>kg</div>
+        <div className={isBarbell ? 'col-span-2' : undefined}>{units.unit}</div>
         <div>Lần</div>
         <div>RIR</div>
         <div>✓</div>
@@ -507,11 +510,11 @@ function ExerciseBlock(props: {
               </button>
               <NumberInput
                 aria-label={`Mức tạ hiệp ${i + 1}`}
-                value={set.weightKg}
+                value={units.showN(set.weightKg)}
                 min={0}
-                max={1000}
-                placeholder={h?.weightKg != null ? fmt1(h.weightKg) : ex?.isBodyweight ? '0' : 'kg'}
-                onChange={(v) => setField(i, { weightKg: v })}
+                max={units.unit === 'lb' ? 2205 : 1000}
+                placeholder={h?.weightKg != null ? units.fmt(h.weightKg) : ex?.isBodyweight ? '0' : units.unit}
+                onChange={(v) => setField(i, { weightKg: units.toKg(v, set.weightKg) })}
                 className="px-1 text-center"
               />
               {isBarbell && (
@@ -597,6 +600,7 @@ function ExerciseBlock(props: {
             barWeightKg={settings.barbell.barWeightKg}
             platesKg={settings.barbell.platesKg}
             onFill={(kg) => setField(plateFor, { weightKg: kg })}
+            unit={units.unit}
           />
         </Suspense>
       )}

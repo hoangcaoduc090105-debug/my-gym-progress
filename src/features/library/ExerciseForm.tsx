@@ -153,7 +153,7 @@ export function ExerciseForm() {
               </select>
             )}
           </Field>
-          <Toggle label="Bài trọng lượng cơ thể" hint="Cho phép ghi 0 kg" checked={isBodyweight || equipment === 'bodyweight'} onChange={setIsBodyweight} />
+          <Toggle label="Bài trọng lượng cơ thể" hint="Cho phép ghi mức tạ 0" checked={isBodyweight || equipment === 'bodyweight'} onChange={setIsBodyweight} />
         </div>
       </Card>
       <Card>

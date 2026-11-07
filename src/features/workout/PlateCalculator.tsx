@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Button, Field, Modal, NumberInput, cx } from '../../components/ui';
 import { nearestLoadable, platesPerSide } from '../../domain/plates';
-import { fmt1 } from '../../lib/format';
+import { fmtWeight, fromDisplay, toDisplay, type WeightUnit } from '../../lib/units';
 
 /** Màu & chiều cao khối đĩa theo kích thước (gợi nhớ màu đĩa thi đấu: 25 đỏ, 20 xanh, 15 vàng, 10 lục). */
 function plateStyle(kg: number): { cls: string; h: number } {
@@ -25,7 +25,9 @@ export default function PlateCalculator({
   barWeightKg,
   platesKg,
   onFill,
+  unit = 'kg',
 }: {
+  unit?: WeightUnit;
   open: boolean;
   onClose: () => void;
   initialKg: number | null;
@@ -39,6 +41,7 @@ export default function PlateCalculator({
   }, [open, initialKg]);
   const r = total != null && total > 0 ? platesPerSide(total, barWeightKg, platesKg) : null;
   const near = total != null && r && !r.exact ? nearestLoadable(total, barWeightKg, platesKg) : null;
+  const f = (kg: number) => fmtWeight(kg, unit);
   const fill = (kg: number) => {
     onFill(kg);
     onClose();
@@ -46,9 +49,19 @@ export default function PlateCalculator({
   return (
     <Modal open={open} onClose={onClose} title="Đĩa tạ">
       <div className="space-y-4">
-        <Field label="Tổng tạ (kg, gồm đòn)">{(id) => <NumberInput id={id} value={total} min={0} max={1000} onChange={setTotal} />}</Field>
+        <Field label={`Tổng tạ (${unit}, gồm đòn)`}>
+          {(id) => (
+            <NumberInput
+              id={id}
+              value={total == null ? null : toDisplay(total, unit)}
+              min={0}
+              max={unit === 'lb' ? 2205 : 1000}
+              onChange={(v) => setTotal(v == null ? null : fromDisplay(v, unit, total))}
+            />
+          )}
+        </Field>
         <p className="text-xs text-muted">
-          Đòn {fmt1(barWeightKg)} kg · đĩa có: {platesKg.map(fmt1).join(', ')} kg (đổi trong Cài đặt → Tập luyện).
+          Đòn {f(barWeightKg)} {unit} · đĩa có: {platesKg.map(f).join(', ')} {unit} (đổi trong Cài đặt → Tập luyện).
         </p>
         {r && (
           <div data-testid="plate-result">
@@ -63,33 +76,35 @@ export default function PlateCalculator({
                     const st = plateStyle(p);
                     return (
                       <div key={i} className={cx('flex w-7 shrink-0 items-center justify-center rounded-md text-[10px] font-bold text-white', st.cls)} style={{ height: st.h }}>
-                        <span className="-rotate-90 whitespace-nowrap mix-blend-difference">{fmt1(p)}</span>
+                        <span className="-rotate-90 whitespace-nowrap mix-blend-difference">{f(p)}</span>
                       </div>
                     );
                   })}
                   <div className="h-3 w-6 shrink-0 rounded-r bg-line" />
                 </div>
                 <p className="text-sm tabular">
-                  Mỗi bên: <strong>{r.perSide.map(fmt1).join(' + ')}</strong> kg
+                  Mỗi bên: <strong>{r.perSide.map(f).join(' + ')}</strong> {unit}
                 </p>
               </>
             )}
             {r.exact ? (
               <Button className="mt-3" block variant="primary" onClick={() => fill(r.achievedKg)}>
-                Điền {fmt1(r.achievedKg)} kg
+                Điền {f(r.achievedKg)} {unit}
               </Button>
             ) : (
               <div className="mt-3 space-y-2">
-                <p className="text-sm text-warn">Không gắn chính xác {fmt1(total ?? 0)} kg với đĩa đang có.</p>
+                <p className="text-sm text-warn">
+                  Không gắn chính xác {f(total ?? 0)} {unit} với đĩa đang có.
+                </p>
                 <div className="grid grid-cols-2 gap-2">
                   {near?.down != null && near.down > 0 && (
                     <Button onClick={() => fill(near.down!)} variant={near.nearest === near.down ? 'primary' : 'outline'}>
-                      Gần nhất: {fmt1(near.down)} kg
+                      Gần nhất: {f(near.down)} {unit}
                     </Button>
                   )}
                   {near?.up != null && (
                     <Button onClick={() => fill(near.up!)} variant={near.nearest === near.up ? 'primary' : 'outline'}>
-                      Gần nhất: {fmt1(near.up)} kg
+                      Gần nhất: {f(near.up)} {unit}
                     </Button>
                   )}
                 </div>

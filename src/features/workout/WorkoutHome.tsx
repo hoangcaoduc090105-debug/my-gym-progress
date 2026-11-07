@@ -12,6 +12,7 @@ import { countWorkingSets, totalVolume } from '../../domain/volume';
 import { activeCompleted } from '../../domain/sets';
 import { addDays, formatDate, formatDuration, parseISODate, startOfWeek, toISODate, todayISO } from '../../lib/date';
 import { fmt0 } from '../../lib/format';
+import { useUnits } from '../../app/useUnits';
 
 type Tab = 'start' | 'calendar' | 'programs' | 'history';
 
@@ -351,6 +352,7 @@ function ProgramsTab({ programs }: { programs: Program[] }) {
 }
 
 function HistoryTab({ sessions }: { sessions: WorkoutSession[] }) {
+  const u = useUnits();
   const list = activeCompleted(sessions).reverse();
   if (list.length === 0) return <EmptyState icon={<History size={28} />} title="Chưa có buổi tập nào" />;
   return (
@@ -362,7 +364,7 @@ function HistoryTab({ sessions }: { sessions: WorkoutSession[] }) {
               <div className="min-w-0 flex-1">
                 <div className="font-medium">{s.dayName}</div>
                 <div className="text-xs text-muted">
-                  {formatDate(s.date)} · {countWorkingSets([s])} hiệp · {fmt0(totalVolume([s]))} kg
+                  {formatDate(s.date)} · {countWorkingSets([s])} hiệp · {fmt0(u.show(totalVolume([s])))} {u.unit}
                   {s.finishedAt && ` · ${formatDuration(new Date(s.finishedAt).getTime() - new Date(s.startedAt).getTime())}`}
                 </div>
               </div>

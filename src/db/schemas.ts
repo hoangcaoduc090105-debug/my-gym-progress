@@ -86,6 +86,7 @@ export const settingsSchema = z.object({
       platesKg: z.array(z.number().finite().positive().max(100)).min(1, 'Chọn ít nhất 1 loại đĩa').max(20),
     })
     .optional(),
+  weightUnit: z.enum(['kg', 'lb']).optional(),
   updatedAt: timestamp,
 });
 

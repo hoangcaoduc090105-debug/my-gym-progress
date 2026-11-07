@@ -14,8 +14,22 @@ import { formatDate, formatMonth, formatShort, todayISO } from '../../lib/date';
 import { fmt1, signed } from '../../lib/format';
 import { compressImage, photoUrl } from '../../lib/image';
 import { FieldErrorsContext, useFieldErrors } from '../../lib/formErrors';
+import { useUnits } from '../../app/useUnits';
 
 type Tab = 'log' | 'chart' | 'photos';
+
+/** Cân nặng theo đơn vị đã chọn (kg/lb); số đo vòng luôn cm. */
+function useBodyUnits() {
+  const u = useUnits();
+  return useMemo(
+    () => ({
+      u,
+      unitOf: (f: BodyField) => (f === 'weightKg' ? u.unit : BODY_FIELD_UNITS[f]),
+      show: (f: BodyField, v: number) => (f === 'weightKg' ? u.show(v) : v),
+    }),
+    [u],
+  );
+}
 
 export default function BodyPage() {
   const [params, setParams] = useSearchParams();
@@ -71,6 +85,7 @@ export default function BodyPage() {
 }
 
 function MetricForm({ open, onClose, initial, last }: { open: boolean; onClose: () => void; initial: BodyMetric | null; last?: BodyMetric }) {
+  const bu = useBodyUnits();
   const { toast, toastError } = useFeedback();
   const [date, setDate] = useState(todayISO());
   const [vals, setVals] = useState<Partial<Record<BodyField, number | null>>>({});
@@ -115,15 +130,15 @@ function MetricForm({ open, onClose, initial, last }: { open: boolean; onClose: 
         <Field name="date" label="Ngày">{(id) => <input id={id} type="date" max={todayISO()} value={date} onChange={(e) => setDate(e.target.value)} className="w-full" />}</Field>
         <div className="grid grid-cols-2 gap-3">
           {BODY_FIELDS.map((f) => (
-            <Field key={f} name={f} label={`${BODY_FIELD_LABELS[f]} (${BODY_FIELD_UNITS[f]})`}>
+            <Field key={f} name={f} label={`${BODY_FIELD_LABELS[f]} (${bu.unitOf(f)})`}>
               {(id) => (
                 <NumberInput
                   id={id}
-                  value={vals[f] ?? null}
+                  value={vals[f] == null ? null : bu.show(f, vals[f]!)}
                   min={0}
-                  max={400}
-                  placeholder={last?.[f] != null ? fmt1(last[f]) : '—'}
-                  onChange={(v) => setVals((x) => ({ ...x, [f]: v }))}
+                  max={f === 'weightKg' && bu.u.unit === 'lb' ? 882 : 400}
+                  placeholder={last?.[f] != null ? fmt1(bu.show(f, last[f]!)) : '—'}
+                  onChange={(v) => setVals((x) => ({ ...x, [f]: f === 'weightKg' ? bu.u.toKg(v, x[f] ?? null) : v }))}
                 />
               )}
             </Field>
@@ -140,6 +155,7 @@ function MetricForm({ open, onClose, initial, last }: { open: boolean; onClose: 
 }
 
 function MetricLog({ metrics, onEdit }: { metrics: BodyMetric[]; onEdit: (m: BodyMetric) => void }) {
+  const bu = useBodyUnits();
   const { confirm, toast } = useFeedback();
   if (metrics.length === 0) return <EmptyState title="Chưa có số đo nào" >Bấm "Ghi số đo" để thêm lần đo đầu tiên.</EmptyState>;
   return (
@@ -154,7 +170,7 @@ function MetricLog({ metrics, onEdit }: { metrics: BodyMetric[]; onEdit: (m: Bod
                   <span key={f}>
                     <span className="text-muted">{BODY_FIELD_LABELS[f]}:</span>{' '}
                     <span className="font-medium tabular">
-                      {fmt1(m[f])} {BODY_FIELD_UNITS[f]}
+                      {fmt1(bu.show(f, m[f]!))} {bu.unitOf(f)}
                     </span>
                   </span>
                 ))}
@@ -185,10 +201,12 @@ function MetricLog({ metrics, onEdit }: { metrics: BodyMetric[]; onEdit: (m: Bod
 function MetricCharts({ metrics }: { metrics: BodyMetric[] }) {
   const [field, setField] = useState<BodyField>('weightKg');
   const [g, setG] = useState<Granularity>('day');
-  const points = useMemo(() => seriesOf(metrics, field), [metrics, field]);
+  const bu = useBodyUnits();
+  const { show } = bu;
+  const points = useMemo(() => seriesOf(metrics, field).map((p) => ({ ...p, value: show(field, p.value) })), [metrics, field, show]);
   const agg = aggregate(points, g);
   const trend = linearTrend(points);
-  const unit = BODY_FIELD_UNITS[field];
+  const unit = bu.unitOf(field);
   const data = agg.map((a) => ({ label: g === 'month' ? formatMonth(a.key) : formatShort(a.key), value: a.value }));
 
   return (
