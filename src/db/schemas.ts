@@ -193,6 +193,7 @@ export const sessionSchema = z.object({
     .max(40),
   scheduleId: id.nullable().optional(),
   deletedAt: timestamp.nullable().optional(),
+  isDeload: z.boolean().optional(),
   updatedAt: timestamp,
 });
 

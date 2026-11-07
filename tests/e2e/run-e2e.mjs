@@ -333,6 +333,17 @@ try {
     await cancelCurrent();
   });
 
+  await check('Bắt đầu buổi với hộp kiểm deload: thấy nhãn DELOAD', async () => {
+    await page.goto(BASE + '#/lich-tap');
+    await page.getByLabel('Buổi nhẹ (deload)').check();
+    await page.getByRole('button', { name: /^Bắt đầu Buổi/ }).click();
+    await page.getByRole('heading', { name: 'Đang tập' }).waitFor();
+    await page.getByTestId('deload-label').getByText('DELOAD').waitFor();
+    await page.getByText(/Buổi nhẹ: dùng khoảng 60%/).first().waitFor();
+    await shot('17-deload');
+    await cancelCurrent();
+  });
+
   await check('Tạo giáo án mới, đổi tên; rời trang khi chưa lưu thì hỏi', async () => {
     await page.goto(BASE + '#/lich-tap?tab=programs');
     await page.getByRole('button', { name: 'Tạo giáo án mới' }).click();

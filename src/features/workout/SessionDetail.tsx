@@ -32,7 +32,16 @@ export function SessionDetail() {
 
   return (
     <div className="space-y-4">
-      <PageHeader title={s.dayName} subtitle={formatDate(s.date)} back="/lich-tap?tab=history" />
+      <PageHeader
+        title={s.dayName}
+        subtitle={
+          <span className="flex items-center gap-2">
+            {formatDate(s.date)}
+            {s.isDeload && <Badge tone="warn">DELOAD</Badge>}
+          </span>
+        }
+        back="/lich-tap?tab=history"
+      />
       {params.get('xong') && (
         <Card className="border-accent/50 bg-accent/10">
           <div className="font-semibold text-accent">Đã lưu buổi tập! 💪</div>

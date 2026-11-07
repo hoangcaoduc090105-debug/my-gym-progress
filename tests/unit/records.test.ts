@@ -30,3 +30,17 @@ describe('records', () => {
     expect(s[0]).toMatchObject({ date: '2026-10-01', maxWeight: 20, volume: 360 });
   });
 });
+
+describe('buổi deload (v1.8.0)', () => {
+  it('không tạo PR, không vào recordsByExercise', async () => {
+    const { prTimeline, recordsByExercise } = await import('../../src/domain/records');
+    const { session, set } = await import('./fixtures');
+    const a = session('2026-01-01', [{ exerciseId: 'bench', sets: [set(60, 8)] }]);
+    const d = session('2026-01-08', [{ exerciseId: 'bench', sets: [set(80, 8)] }], { isDeload: true });
+    const b = session('2026-01-15', [{ exerciseId: 'bench', sets: [set(62.5, 8)] }]);
+    const prs = prTimeline([a, d, b], 'epley');
+    expect(prs.map((e) => e.sessionId)).not.toContain(d.id);
+    expect(prs.some((e) => e.sessionId === b.id && e.type === 'weight' && e.previous === 60)).toBe(true);
+    expect(recordsByExercise([a, d, b], 'epley').get('bench')!.heaviest!.weightKg).toBe(62.5);
+  });
+});

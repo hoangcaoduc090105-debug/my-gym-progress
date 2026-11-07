@@ -23,6 +23,7 @@ import type {
 import { nowISO, todayISO } from '../lib/date';
 import { uid } from '../lib/id';
 import { isWorkingSet, splitByExercise } from '../domain/sets';
+import { deloadTarget } from '../domain/deload';
 import { isArrayBuffer } from '../lib/image';
 import { checkFreeSpace, notifyStorageChanged, SPACE_FACTOR } from '../lib/storage';
 
@@ -222,7 +223,11 @@ export interface LastPerformance {
  * Lần tập gần nhất (đã hoàn thành, có hiệp làm việc) cho NHIỀU bài, quét chỉ mục [status+date] từ mới đến cũ MỘT lần.
  * Dừng khi mọi bài đã tìm thấy và đã đi qua ngày của chúng (cùng ngày thì so startedAt).
  */
-export async function lastPerformances(exerciseIds: string[], excludeSessionId?: string): Promise<Map<string, LastPerformance>> {
+export async function lastPerformances(
+  exerciseIds: string[],
+  excludeSessionId?: string,
+  opts: { excludeDeload?: boolean } = {},
+): Promise<Map<string, LastPerformance>> {
   const want = new Set(exerciseIds);
   const best = new Map<string, LastPerformance>();
   if (want.size === 0) return best;
@@ -239,7 +244,7 @@ export async function lastPerformances(exerciseIds: string[], excludeSessionId?:
     .reverse()
     .until((s) => done(s.date))
     .each((s) => {
-      if (s.deletedAt || s.id === excludeSessionId) return;
+      if (s.deletedAt || s.id === excludeSessionId || (opts.excludeDeload && s.isDeload)) return;
       for (const e of s.exercises.flatMap(splitByExercise)) {
         if (!want.has(e.exerciseId) || !e.sets.some(isWorkingSet)) continue;
         const cur = best.get(e.exerciseId);
@@ -266,6 +271,8 @@ export async function startSession(params: {
   programDayId?: string | null;
   scheduleId?: string | null;
   date?: string;
+  /** v1.8: buổi nhẹ — bớt 1 hiệp mỗi bài (tối thiểu 1). */
+  isDeload?: boolean;
 }): Promise<WorkoutSession> {
   await loadSchemas();
   // Kiểm tra "đã có buổi dở" và ghi buổi mới trong CÙNG một giao dịch,
@@ -281,14 +288,18 @@ export async function startSession(params: {
       const day = program?.days.find((d) => d.id === params.programDayId);
       if (!program || !day) throw new AppError('Không tìm thấy buổi tập trong giáo án.');
       dayName = `${day.name} · ${program.name}`;
-      exercises = day.exercises.map((pe) => ({
+      exercises = day.exercises.map((pe) => {
+        const target = { sets: pe.sets, repMin: pe.repMin, repMax: pe.repMax, targetRIR: pe.targetRIR, restSec: pe.restSec };
+        const t = params.isDeload ? deloadTarget(target) : target;
+        return {
         id: uid('se'),
         exerciseId: pe.exerciseId,
-        target: { sets: pe.sets, repMin: pe.repMin, repMax: pe.repMax, targetRIR: pe.targetRIR, restSec: pe.restSec },
+        target: t,
         note: '',
-        sets: Array.from({ length: pe.sets }, emptySet),
+        sets: Array.from({ length: t.sets }, emptySet),
         ...(pe.groupId ? { groupId: pe.groupId } : {}),
-      }));
+        };
+      });
     }
     const s: WorkoutSession = {
       id: uid('ws'),
@@ -303,6 +314,7 @@ export async function startSession(params: {
       notes: '',
       exercises,
       deletedAt: null,
+      ...(params.isDeload ? { isDeload: true } : {}),
       updatedAt: now,
     };
     await db.sessions.add(validate((x) => x.sessionSchema, s, 'buổi tập') as WorkoutSession);

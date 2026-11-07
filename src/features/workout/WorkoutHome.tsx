@@ -4,7 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { CalendarPlus, ChevronLeft, ChevronRight, Copy, History, Pencil, Play, Plus, Trash2, Zap } from 'lucide-react';
 import { db } from '../../db/db';
 import type { Program, ScheduledWorkout, WorkoutSession } from '../../db/types';
-import { Badge, Button, Card, EmptyState, IconButton, Modal, PageHeader, Spinner, Tabs, cx } from '../../components/ui';
+import { Badge, Button, Card, EmptyState, IconButton, Modal, PageHeader, Spinner, Tabs, Toggle, cx } from '../../components/ui';
 import { useFeedback } from '../../components/feedback';
 import { addSchedule, deleteProgram, duplicateProgram, removeSchedule, setActiveProgram, startSession } from '../../db/repo';
 import { nextWorkout } from '../../domain/schedule';
@@ -58,9 +58,22 @@ function useStarter() {
   };
 }
 
+/** Hộp kiểm "Buổi nhẹ (deload)" dùng chung cho tab Bắt đầu và Lịch. */
+function DeloadToggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <Toggle
+      label="Buổi nhẹ (deload)"
+      hint="Tạ ≈ 60% buổi trước, bớt 1 hiệp; không tính kỷ lục và gợi ý tăng tạ."
+      checked={checked}
+      onChange={onChange}
+    />
+  );
+}
+
 function StartTab({ programs, sessions, schedule }: { programs: Program[]; sessions: WorkoutSession[]; schedule: ScheduledWorkout[] }) {
   const nav = useNavigate();
   const start = useStarter();
+  const [deload, setDeload] = useState(false);
   const active = programs.find((p) => p.isActive) ?? null;
   const draft = sessions.find((s) => s.status === 'draft' && !s.deletedAt);
   const next = nextWorkout({ program: active, programs, sessions, schedule, today: todayISO() });
@@ -90,12 +103,15 @@ function StartTab({ programs, sessions, schedule }: { programs: Program[]; sessi
             size="lg"
             block
             icon={<Play size={20} />}
-            onClick={() => void start({ programId: next.program.id, programDayId: next.day.id, scheduleId: next.source === 'scheduled' ? next.scheduleId : null })}
+            onClick={() => void start({ programId: next.program.id, programDayId: next.day.id, scheduleId: next.source === 'scheduled' ? next.scheduleId : null, isDeload: deload })}
           >
             Bắt đầu {next.day.name}
           </Button>
         </Card>
       )}
+      <Card>
+        <DeloadToggle checked={deload} onChange={setDeload} />
+      </Card>
       {active ? (
         <Card title={`Giáo án: ${active.name}`}>
           <ul className="space-y-2">
@@ -107,7 +123,7 @@ function StartTab({ programs, sessions, schedule }: { programs: Program[]; sessi
                     {d.exercises.length} bài · {d.exercises.reduce((n, e) => n + e.sets, 0)} hiệp
                   </div>
                 </div>
-                <Button size="sm" icon={<Play size={16} />} onClick={() => void start({ programId: active.id, programDayId: d.id })}>
+                <Button size="sm" icon={<Play size={16} />} onClick={() => void start({ programId: active.id, programDayId: d.id, isDeload: deload })}>
                   Tập
                 </Button>
               </li>
@@ -117,7 +133,7 @@ function StartTab({ programs, sessions, schedule }: { programs: Program[]; sessi
       ) : (
         <EmptyState title="Chưa chọn giáo án" action={<Link className="text-accent" to="/lich-tap?tab=programs">Mở danh sách giáo án</Link>} />
       )}
-      <Button block icon={<Zap size={18} />} onClick={() => void start({})}>
+      <Button block icon={<Zap size={18} />} onClick={() => void start({ isDeload: deload })}>
         Buổi tự do (tự chọn bài)
       </Button>
     </div>
@@ -131,6 +147,7 @@ function CalendarTab({ programs, sessions, schedule }: { programs: Program[]; se
   const nav = useNavigate();
   const start = useStarter();
   const { toastError, confirm } = useFeedback();
+  const [deload, setDeload] = useState(false);
   const [month, setMonth] = useState(today.slice(0, 7));
   const [selected, setSelected] = useState(today);
   const [planOpen, setPlanOpen] = useState(false);
@@ -229,7 +246,7 @@ function CalendarTab({ programs, sessions, schedule }: { programs: Program[]; se
                   <div className="text-xs text-muted">{used ? 'Đã hoàn thành' : `Lịch đã đặt · ${p?.name ?? ''}`}</div>
                 </div>
                 {!used && p && d && (
-                  <Button size="sm" variant="primary" icon={<Play size={16} />} onClick={() => void start({ programId: p.id, programDayId: d.id, scheduleId: x.id, date: selected })}>
+                  <Button size="sm" variant="primary" icon={<Play size={16} />} onClick={() => void start({ programId: p.id, programDayId: d.id, scheduleId: x.id, date: selected, isDeload: deload })}>
                     Tập
                   </Button>
                 )}
@@ -251,9 +268,12 @@ function CalendarTab({ programs, sessions, schedule }: { programs: Program[]; se
           <Button icon={<CalendarPlus size={18} />} onClick={() => setPlanOpen(true)} disabled={programs.length === 0}>
             Đặt lịch
           </Button>
-          <Button icon={<Plus size={18} />} onClick={() => void start({ date: selected })} disabled={selected > today}>
+          <Button icon={<Plus size={18} />} onClick={() => void start({ date: selected, isDeload: deload })} disabled={selected > today}>
             Ghi buổi tự do
           </Button>
+        </div>
+        <div className="mt-3">
+          <DeloadToggle checked={deload} onChange={setDeload} />
         </div>
         {selected > today && <p className="mt-2 text-xs text-muted">Chỉ ghi buổi tập cho hôm nay hoặc ngày đã qua. Ngày tương lai hãy dùng "Đặt lịch".</p>}
       </Card>
@@ -362,7 +382,10 @@ function HistoryTab({ sessions }: { sessions: WorkoutSession[] }) {
           <li key={s.id}>
             <Link to={`/lich-tap/buoi/${s.id}`} className="flex items-center gap-3 py-3">
               <div className="min-w-0 flex-1">
-                <div className="font-medium">{s.dayName}</div>
+                <div className="flex items-center gap-1.5 font-medium">
+                  {s.dayName}
+                  {s.isDeload && <Badge tone="warn">DELOAD</Badge>}
+                </div>
                 <div className="text-xs text-muted">
                   {formatDate(s.date)} · {countWorkingSets([s])} hiệp · {fmt0(u.show(totalVolume([s])))} {u.unit}
                   {s.finishedAt && ` · ${formatDuration(new Date(s.finishedAt).getTime() - new Date(s.startedAt).getTime())}`}

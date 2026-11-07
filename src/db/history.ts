@@ -4,6 +4,7 @@ import type { WorkoutSession } from './types';
 import { isWorkingSet, splitByExercise } from '../domain/sets';
 import { prTimeline } from '../domain/records';
 import type { OneRmFormula } from '../domain/oneRepMax';
+import { stagnation, type Stagnation } from '../domain/stagnation';
 
 /**
  * Các buổi ĐÃ HOÀN THÀNH có bài `exerciseId` (có ít nhất 1 hiệp làm việc), mới nhất trước — quét ngược chỉ mục
@@ -51,4 +52,28 @@ export async function prSessionIdsFor(exerciseId: string, formula: OneRmFormula)
     });
   mine.sort((a, b) => a.date.localeCompare(b.date) || a.startedAt.localeCompare(b.startedAt));
   return new Set(prTimeline(mine, formula).map((e) => e.sessionId));
+}
+
+/**
+ * Trạng thái chững cho NHIỀU bài, đọc tuần tự (each) chỉ mục [status+date] MỘT lần; chỉ giữ phần bài cần xét.
+ * Buổi `excludeSessionId` (buổi đang tập) bị bỏ qua.
+ */
+export async function stagnationFor(exerciseIds: string[], formula: OneRmFormula, excludeSessionId?: string): Promise<Map<string, Stagnation>> {
+  const want = new Set(exerciseIds);
+  const per = new Map<string, WorkoutSession[]>();
+  await db.sessions
+    .where('[status+date]')
+    .between(['completed', Dexie.minKey], ['completed', Dexie.maxKey])
+    .each((s) => {
+      if (s.deletedAt || s.id === excludeSessionId) return;
+      const parts = s.exercises.flatMap(splitByExercise).filter((e) => want.has(e.exerciseId) && e.sets.some(isWorkingSet));
+      for (const id of new Set(parts.map((p) => p.exerciseId))) {
+        const list = per.get(id) ?? [];
+        list.push({ ...s, exercises: parts.filter((p) => p.exerciseId === id) });
+        per.set(id, list);
+      }
+    });
+  const out = new Map<string, Stagnation>();
+  for (const id of want) out.set(id, stagnation(per.get(id) ?? [], id, formula));
+  return out;
 }

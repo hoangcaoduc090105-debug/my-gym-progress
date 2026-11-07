@@ -101,6 +101,7 @@ export default function ExerciseHistoryList({
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-1.5 text-sm font-medium">
                     {formatDate(r.date)}
+                    {r.isDeload && <Badge tone="warn">DELOAD</Badge>}
                     {r.isPR && (
                       <Badge tone="accent">
                         <Trophy size={12} className="mr-0.5 inline" />

@@ -9,6 +9,8 @@ import { useFeedback } from '../../components/feedback';
 import { useExerciseMap, useSettings } from '../../app/useAppData';
 import { emptySet, finishSession, lastPerformances, replaceExerciseInProgramDay, softDeleteSession } from '../../db/repo';
 import { swapExercise } from '../../domain/swap';
+import { deloadWeight } from '../../domain/deload';
+import { stagnationFor } from '../../db/history';
 import { groupExercises, groupRestSec, isLastInGroup, moveBlock, nextInGroup, normalizeGroups } from '../../domain/superset';
 import { suggestProgression, type Suggestion } from '../../domain/progression';
 import { isWorkingSet } from '../../domain/sets';
@@ -63,11 +65,16 @@ export function SessionLogger() {
   const exKey = s?.exercises.map((e) => e.exerciseId).join('|') ?? '';
   const hints = useLiveQuery(async () => {
     // Quét MỘT lần cho mọi bài trong buổi (chỉ mục [status+date]).
-    const map = await lastPerformances([...new Set(exKey.split('|').filter(Boolean))], id);
+    // Buổi deload không làm mốc cho buổi sau (gợi ý tăng tạ lấy buổi gần nhất KHÔNG deload).
+    const map = await lastPerformances([...new Set(exKey.split('|').filter(Boolean))], id, { excludeDeload: true });
     const out: Record<string, Hint> = {};
     for (const [exId, lp] of map) out[exId] = { date: lp.date, sets: lp.exercise.sets };
     return out;
   }, [exKey, id]);
+  const stag = useLiveQuery(
+    () => stagnationFor([...new Set(exKey.split('|').filter(Boolean))], settings.oneRmFormula, id),
+    [exKey, id, settings.oneRmFormula],
+  );
 
   if (!s || !exMap) return <Spinner />;
 
@@ -87,7 +94,8 @@ export function SessionLogger() {
     }
     const h = hintFor(hints?.[se.exerciseId], idx);
     const reps = set.reps ?? h?.reps ?? null;
-    let weight = set.weightKg ?? h?.weightKg ?? null;
+    const hw = h?.weightKg ?? null;
+    let weight = set.weightKg ?? (hw != null && s?.isDeload ? deloadWeight(hw, ex?.equipment === 'barbell' ? settings.barbell : null) : hw);
     if (weight == null && ex?.isBodyweight) weight = 0;
     if (reps == null || reps <= 0) return toast('Nhập số lần trước khi đánh dấu ✓', 'error');
     if (weight == null) return toast(`Nhập mức tạ (${units.unit}). Bài không dùng tạ thì nhập 0.`, 'error');
@@ -206,6 +214,12 @@ export function SessionLogger() {
 
   return (
     <div className="space-y-4 pb-24">
+      {s.isDeload && (
+        <div className="-mb-2 flex items-center gap-2" data-testid="deload-label">
+          <Badge tone="warn">DELOAD</Badge>
+          <span className="text-xs text-muted">Buổi nhẹ: tạ ≈ 60% buổi trước, bớt 1 hiệp — không tính kỷ lục / gợi ý tăng tạ.</span>
+        </div>
+      )}
       <PageHeader
         title={isDraft ? 'Đang tập' : 'Sửa buổi tập'}
         back={isDraft ? '/lich-tap' : `/lich-tap/buoi/${s.id}`}
@@ -250,6 +264,8 @@ export function SessionLogger() {
           groupLabel={label}
           key={se.id}
           sessionId={s.id}
+          isDeload={!!s.isDeload}
+          stagnant={!s.isDeload && stag?.get(se.exerciseId)?.stagnant === true}
           se={se}
           ex={exMap.get(se.exerciseId)}
           hint={hints?.[se.exerciseId]}
@@ -382,6 +398,8 @@ function SuggestionBanner({ sg, fmtU }: { sg: Suggestion; fmtU: (kg: number) => 
 
 function ExerciseBlock(props: {
   sessionId: string;
+  isDeload: boolean;
+  stagnant: boolean;
   groupLabel: string | null;
   se: SessionExercise;
   ex: Exercise | undefined;
@@ -413,6 +431,8 @@ function ExerciseBlock(props: {
       })
     : null;
   const isBarbell = ex?.equipment === 'barbell';
+  /** Tạ dự kiến từ buổi trước (buổi deload: ≈ 60%). */
+  const planned = (kg: number) => (props.isDeload ? deloadWeight(kg, isBarbell ? settings.barbell : null) : kg);
   const cols = isBarbell ? 'grid-cols-[32px_1fr_44px_1fr_60px_48px]' : 'grid-cols-[36px_1fr_1fr_64px_48px]';
   const [plateFor, setPlateFor] = useState<number | null>(null);
   const [howOpen, setHowOpen] = useState(false);
@@ -480,7 +500,17 @@ function ExerciseBlock(props: {
           <span className="shrink-0 text-info underline">3 buổi</span>
         </button>
       )}
-      {sg && <SuggestionBanner sg={sg} fmtU={units.fmtU} />}
+      {props.isDeload ? (
+        <div className="mb-3 rounded-xl bg-warn/10 p-2.5 text-xs text-warn">Buổi nhẹ: dùng khoảng 60% mức tạ buổi trước (đã điền sẵn gợi ý), bớt 1 hiệp.</div>
+      ) : (
+        sg && <SuggestionBanner sg={sg} fmtU={units.fmtU} />
+      )}
+      {props.stagnant && (
+        <div className="-mt-1 mb-3 flex gap-2 rounded-xl bg-warn/10 p-2.5 text-xs text-warn" data-testid="stagnation">
+          <Info size={16} className="shrink-0" />
+          <span>4 buổi chưa tiến bộ — cân nhắc giảm tạ 10% hoặc nghỉ thêm.</span>
+        </div>
+      )}
 
       <div className={cx('grid items-center gap-1.5 text-center text-xs text-muted', cols)}>
         <div>Hiệp</div>
@@ -513,7 +543,7 @@ function ExerciseBlock(props: {
                 value={units.showN(set.weightKg)}
                 min={0}
                 max={units.unit === 'lb' ? 2205 : 1000}
-                placeholder={h?.weightKg != null ? units.fmt(h.weightKg) : ex?.isBodyweight ? '0' : units.unit}
+                placeholder={h?.weightKg != null ? units.fmt(planned(h.weightKg)) : ex?.isBodyweight ? '0' : units.unit}
                 onChange={(v) => setField(i, { weightKg: units.toKg(v, set.weightKg) })}
                 className="px-1 text-center"
               />
@@ -596,7 +626,11 @@ function ExerciseBlock(props: {
           <PlateCalculator
             open
             onClose={() => setPlateFor(null)}
-            initialKg={se.sets[plateFor]?.weightKg ?? hintFor(hint, plateFor)?.weightKg ?? (sg?.kind === 'increase' ? sg.toKg : null)}
+            initialKg={
+              se.sets[plateFor]?.weightKg ??
+              ((w) => (w == null ? null : planned(w)))(hintFor(hint, plateFor)?.weightKg ?? null) ??
+              (sg?.kind === 'increase' ? sg.toKg : null)
+            }
             barWeightKg={settings.barbell.barWeightKg}
             platesKg={settings.barbell.platesKg}
             onFill={(kg) => setField(plateFor, { weightKg: kg })}

@@ -11,9 +11,12 @@ export interface ExerciseRecord {
   totalSets: number;
 }
 
+/** Buổi deload (v1.8) không tạo kỷ lục. */
+const notDeload = (sessions: WorkoutSession[]) => sessions.filter((s) => !s.isDeload);
+
 export function recordsByExercise(sessions: WorkoutSession[], formula: OneRmFormula): Map<string, ExerciseRecord> {
   const map = new Map<string, ExerciseRecord>();
-  for (const s of flattenWorkingSets(sessions)) {
+  for (const s of flattenWorkingSets(notDeload(sessions))) {
     let r = map.get(s.exerciseId);
     if (!r) {
       r = { exerciseId: s.exerciseId, heaviest: null, bestE1RM: null, bestSetVolume: null, mostReps: null, totalSets: 0 };
@@ -53,7 +56,7 @@ export interface PREvent {
 export function prTimeline(sessions: WorkoutSession[], formula: OneRmFormula): PREvent[] {
   const best = new Map<string, { w: number; e: number }>();
   const events: PREvent[] = [];
-  for (const sess of sessions) {
+  for (const sess of notDeload(sessions)) {
     const sets = flattenWorkingSets([sess]);
     const perEx = new Map<string, FlatSet[]>();
     for (const s of sets) perEx.set(s.exerciseId, [...(perEx.get(s.exerciseId) ?? []), s]);

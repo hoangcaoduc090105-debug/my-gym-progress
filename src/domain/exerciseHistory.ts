@@ -15,6 +15,7 @@ export interface HistoryRow {
   sets: HistorySet[];
   bestE1RM: number | null;
   isPR: boolean;
+  isDeload?: boolean;
 }
 
 /** Hiệp làm việc của một bài trong một buổi (kể cả bài xuất hiện 2 lần, bỏ hiệp thuộc bài cũ trước khi thay). */
@@ -47,7 +48,7 @@ export function historyRows(sessions: WorkoutSession[], exerciseId: string, form
       const e = estimate1RM(x.weightKg, x.reps, formula);
       if (e != null && (best == null || e > best)) best = e;
     }
-    rows.push({ sessionId: s.id, date: s.date, startedAt: s.startedAt, dayName: s.dayName, sets, bestE1RM: best, isPR: prSessionIds.has(s.id) });
+    rows.push({ sessionId: s.id, date: s.date, startedAt: s.startedAt, dayName: s.dayName, sets, bestE1RM: best, isPR: prSessionIds.has(s.id), ...(s.isDeload ? { isDeload: true } : {}) });
   }
   rows.sort((a, b) => b.date.localeCompare(a.date) || b.startedAt.localeCompare(a.startedAt));
   return rows.map(({ startedAt: _s, ...r }) => r);

@@ -443,3 +443,32 @@ describe('đơn vị khối lượng (v1.8.0)', () => {
     expect((await repo.getSettings()).weightUnit).toBe('lb');
   });
 });
+
+describe('deload (v1.8.0)', () => {
+  it('startSession isDeload: bớt 1 hiệp mỗi bài, đánh dấu buổi', async () => {
+    const p = (await repo.getActiveProgram())!;
+    const s = await repo.startSession({ programId: p.id, programDayId: 'day-a', isDeload: true });
+    expect(s.isDeload).toBe(true);
+    s.exercises.forEach((e, i) => {
+      const pe = p.days[0]!.exercises[i]!;
+      expect(e.target!.sets).toBe(Math.max(1, pe.sets - 1));
+      expect(e.sets).toHaveLength(Math.max(1, pe.sets - 1));
+    });
+  });
+  it('lastPerformances bỏ qua buổi deload khi có excludeDeload', async () => {
+    const mk = async (date: string, kg: number, isDeload?: boolean) => {
+      const s = await repo.startSession({ date, isDeload });
+      await repo.saveSession({
+        ...s,
+        status: 'completed',
+        exercises: [{ id: `se-${date}`, exerciseId: 'goblet-squat', target: null, note: '', sets: [{ id: `st-${date}`, weightKg: kg, reps: 10, rir: 2, isWarmup: false, done: true }] }],
+      });
+    };
+    await mk('2026-01-01', 20);
+    await mk('2026-01-08', 12, true);
+    expect((await repo.lastPerformances(['goblet-squat'])).get('goblet-squat')!.date).toBe('2026-01-08');
+    const r = (await repo.lastPerformances(['goblet-squat'], undefined, { excludeDeload: true })).get('goblet-squat')!;
+    expect(r.date).toBe('2026-01-01');
+    expect(r.exercise.sets[0]!.weightKg).toBe(20);
+  });
+});

@@ -188,6 +188,8 @@ export interface WorkoutSession {
   exercises: SessionExercise[];
   scheduleId?: string | null;
   deletedAt?: string | null;
+  /** v1.8: buổi nhẹ — không tính vào gợi ý tăng tạ, kỷ lục, phát hiện chững. */
+  isDeload?: boolean;
   updatedAt: string;
 }
 

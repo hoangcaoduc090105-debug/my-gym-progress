@@ -3,7 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { Link } from 'react-router-dom';
 import { Trophy } from 'lucide-react';
 import { db } from '../../db/db';
-import { BODY_FIELD_LABELS, MUSCLE_GROUPS, MUSCLE_LABELS, type BodyField, type BodyMetric } from '../../db/types';
+import { BODY_FIELD_LABELS, MUSCLE_GROUPS, MUSCLE_LABELS, type BodyField, type BodyMetric, type WorkoutSession } from '../../db/types';
 import { Card, Explain, Insufficient, PageHeader, Segmented, Spinner, Stat } from '../../components/ui';
 import { SimpleBarChart, TrendLineChart } from '../../components/charts';
 import { useExerciseMap, useSettings } from '../../app/useAppData';
@@ -13,7 +13,8 @@ import { countWorkingSets, setsByMuscle, totalVolume, weeklyBuckets } from '../.
 import { recordsByExercise, strengthSeries } from '../../domain/records';
 import { aggregate, linearTrend, seriesOf } from '../../domain/bodyTrends';
 import { THRESHOLDS } from '../../domain/thresholds';
-import { FORMULA_LABEL } from '../../domain/oneRepMax';
+import { FORMULA_LABEL, type OneRmFormula } from '../../domain/oneRepMax';
+import { stagnation } from '../../domain/stagnation';
 import { addDays, formatDate, formatShort, startOfWeek, todayISO } from '../../lib/date';
 import { fmt0, fmt1, signed } from '../../lib/format';
 
@@ -75,10 +76,12 @@ export default function AnalyticsPage() {
 
           <Card title="Số buổi tập mỗi tuần">
             <SimpleBarChart
-              data={fullWeeks.map((w) => ({ label: formatShort(w.weekStart), value: w.sessions }))}
+              data={fullWeeks.map((w) => ({ label: formatShort(w.weekStart), value: w.sessions, deload: w.deloadSessions }))}
               series={{ key: 'value', name: 'Buổi tập', unit: 'buổi' }}
               height={180}
+              highlight={(d) => !d.deload}
             />
+            {fullWeeks.some((w) => w.deloadSessions > 0) && <p className="mt-1 text-xs text-muted">Cột màu nhạt: tuần có buổi nhẹ (deload).</p>}
             <Explain>
               <p>Đếm số buổi đã hoàn thành theo tuần (Thứ Hai–Chủ Nhật, nhãn là ngày Thứ Hai). Buổi đã xóa không được tính. Tuần hiện tại có thể chưa kết thúc.</p>
             </Explain>
@@ -108,7 +111,8 @@ export default function AnalyticsPage() {
 
           <Card title={`Tổng khối lượng tập mỗi tuần (${u.unit})`}>
             <SimpleBarChart
-              data={fullWeeks.map((w) => ({ label: formatShort(w.weekStart), value: u.show(w.volumeKg) }))}
+              data={fullWeeks.map((w) => ({ label: formatShort(w.weekStart), value: u.show(w.volumeKg), deload: w.deloadSessions }))}
+              highlight={(d) => !d.deload}
               series={{ key: 'value', name: 'Khối lượng', unit: u.unit }}
               height={180}
             />
@@ -117,6 +121,8 @@ export default function AnalyticsPage() {
               <p>Khối lượng phụ thuộc lựa chọn bài tập, nên so sánh giữa các tuần chỉ có ý nghĩa khi giáo án tương tự.</p>
             </Explain>
           </Card>
+
+          <StagnantCard ids={trainedIds} sessions={completed} formula={settings.oneRmFormula} names={(id) => exMap.get(id)?.nameVi ?? id} />
 
           <Card title="Tiến bộ sức mạnh theo bài tập">
             <select aria-label="Chọn bài tập" className="mb-3 w-full" value={selected} onChange={(e) => setExId(e.target.value)}>
@@ -217,6 +223,32 @@ export default function AnalyticsPage() {
         Nguồn: Epley (1985); Brzycki (1993); Schoenfeld, Ogborn & Krieger (2017). Danh mục tài liệu đầy đủ trong Cài đặt → Nguồn tham khảo.
       </p>
     </div>
+  );
+}
+
+/** "Bài đang chững": tối đa 5 bài có 4 buổi gần nhất không vượt mốc cũ (không tính khi có buổi deload xen giữa). */
+function StagnantCard({ ids, sessions, formula, names }: { ids: string[]; sessions: WorkoutSession[]; formula: OneRmFormula; names: (id: string) => string }) {
+  const list = useMemo(() => ids.filter((id) => stagnation(sessions, id, formula).stagnant).slice(0, 5), [ids, sessions, formula]);
+  return (
+    <Card title="Bài đang chững">
+      {list.length === 0 ? (
+        <p className="text-sm text-muted">Chưa có bài nào chững 4 buổi liền. 👍</p>
+      ) : (
+        <ul className="space-y-1 text-sm" data-testid="stagnant-list">
+          {list.map((id) => (
+            <li key={id}>
+              <Link to={`/thu-vien/${id}`} className="flex min-h-[44px] items-center justify-between gap-2 rounded-lg px-1 hover:bg-surface2">
+                <span>{names(id)}</span>
+                <span className="text-xs text-warn">4 buổi chưa tiến bộ</span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+      <Explain>
+        <p>Xét 4 buổi gần nhất có bài: nếu e1RM tốt nhất của 3 buổi mới nhất không vượt mức tốt nhất từ buổi thứ 4 trở về trước, và không có buổi deload xen giữa, bài được coi là chững. Gợi ý: giảm tạ 10% hoặc nghỉ thêm. Ứng dụng không tự đổi gì.</p>
+      </Explain>
+    </Card>
   );
 }
 

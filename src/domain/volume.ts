@@ -43,6 +43,8 @@ export interface WeekBucket {
   sessions: number;
   sets: number;
   volumeKg: number;
+  /** v1.8: số buổi deload trong tuần (vẫn được tính vào số buổi/hiệp/khối lượng). */
+  deloadSessions: number;
 }
 
 /** Gom buổi đã hoàn thành theo tuần (Thứ Hai–Chủ Nhật), lấp cả tuần trống trong khoảng. */
@@ -52,7 +54,13 @@ export function weeklyBuckets(sessions: WorkoutSession[], fromISO: string, toISO
   for (let w = startOfWeek(fromISO); w <= last; w = addDays(w, 7)) {
     const end = addDays(w, 6);
     const inWeek = sessions.filter((s) => s.date >= w && s.date <= end);
-    buckets.push({ weekStart: w, sessions: inWeek.length, sets: countWorkingSets(inWeek), volumeKg: totalVolume(inWeek) });
+    buckets.push({
+      weekStart: w,
+      sessions: inWeek.length,
+      sets: countWorkingSets(inWeek),
+      volumeKg: totalVolume(inWeek),
+      deloadSessions: inWeek.filter((s) => s.isDeload).length,
+    });
   }
   return buckets;
 }
