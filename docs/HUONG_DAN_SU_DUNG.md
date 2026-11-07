@@ -47,8 +47,9 @@
 
 ## Bước 7. Ghi bữa ăn và kiểm tra bữa đó có phù hợp không
 
-- Cách nhanh nhất: Ăn uống → tab "Thực đơn Việt" → chọn 1 trong 3 thực đơn mẫu → "Dùng cho hôm nay". Cả ngày được điền sẵn, bạn chỉ sửa gram nếu ăn khác.
-- Tự ghi món: tab "Món của tôi" → "Thêm thực phẩm Việt Nam" (36 món, số liệu Viện Dinh dưỡng) hoặc tự thêm theo nhãn bao bì.
+- Cách nhanh nhất: Ăn uống → tab "Thực đơn Việt" → chọn 1 trong 4 thực đơn mẫu (có 1 ngày ăn ngoài kiểu Sài Gòn) → "Dùng cho hôm nay".
+- Ăn ngoài quán: "Thêm món" → tab "Món ăn sẵn" → chọn cơm tấm, hủ tiếu, bánh mì, bún bò… (18 món miền Nam, số liệu ước tính theo công thức).
+- Lần đầu: tab "Món của tôi" → bấm "Thêm 18 món miền Nam + 36 thực phẩm Việt Nam", hoặc tự thêm món theo nhãn bao bì.
 - Hằng ngày: tab Hôm nay → "Thêm món" ở từng bữa → nhập số khẩu phần → chạm vào món.
 - Ngay dưới mỗi bữa, app chấm: Phù hợp / Hơi thiếu đạm / Thiếu đạm, và gợi ý món để bù (chạm là thêm luôn).
 - Muốn app đánh giá cả calories: đặt mục tiêu calories trong Thêm → Cài đặt.

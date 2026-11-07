@@ -129,12 +129,12 @@ const n1 = (x: number) => (Math.round(x * 10) / 10).toString().replace('.', ',')
 const n0 = (x: number) => Math.round(x).toString();
 let v = `# Thực đơn Việt Nam mẫu cho người tập tăng cơ
 
-> Ba thực đơn 1 ngày, món quen thuộc với người Việt, thiết kế cho người khoảng 65 kg tập tăng cơ, ăn 4 bữa/ngày. Có sẵn trong app: **Ăn uống → tab "Thực đơn Việt" → "Dùng cho hôm nay"**.
+> Bốn thực đơn 1 ngày (3 ngày nấu ở nhà + 1 ngày ăn ngoài kiểu Sài Gòn), món quen thuộc với người Việt, thiết kế cho người khoảng 65 kg tập tăng cơ, ăn 4 bữa/ngày. Có sẵn trong app: **Ăn uống → tab "Thực đơn Việt" → "Dùng cho hôm nay"**.
 
 ## Nguyên tắc thiết kế
 
 - **Đạm (protein):** mỗi bữa ≥ 26 g, cả ngày 105–130 g. Chia đều khoảng 4 bữa, mỗi bữa ~0,4 g/kg giúp tối đa hóa tổng hợp cơ (Schoenfeld & Aragon, 2018); tổng 1,6–2,0 g/kg/ngày (Morton et al., 2018).
-- **Món ăn:** bữa sáng kiểu Việt (bánh mì, phở, bún); trưa và tối là cơm + món mặn + rau + canh; bữa phụ sau tập.
+- **Món ăn:** bữa sáng kiểu Việt (bánh mì, phở, bún); trưa và tối là cơm + món mặn + rau + canh; bữa phụ sau tập. Ngày ăn ngoài dùng món quán (cơm tấm, hủ tiếu, gỏi cuốn) với số liệu **ước tính theo công thức** — xem MON_AN_MIEN_NAM.md.
 - **Số liệu:** nguyên liệu lấy từ *Bảng thành phần thực phẩm Việt Nam* (Viện Dinh dưỡng, 2007), giá trị trên 100 g phần ăn được ở dạng sống. Bảng không có cơm chín và ức gà riêng nên hai món này lấy từ USDA FoodData Central (U.S. Department of Agriculture, 2019). Dầu ăn được tính riêng.
 - **Calories:** app không đặt mục tiêu calories. Các thực đơn cung cấp khoảng ${Math.min(...VN_PLANS.map((p) => planMacro(p).kcal)).toLocaleString('vi-VN')}–${Math.max(...VN_PLANS.map((p) => planMacro(p).kcal)).toLocaleString('vi-VN')} kcal; điều chỉnh bằng lượng cơm theo diễn biến cân nặng (xem cuối tài liệu).
 
@@ -153,7 +153,7 @@ for (const p of VN_PLANS) {
     v += `### ${MEAL_LABELS[m.meal]}: ${m.title}\n\n${m.howTo}\n\n| Thực phẩm | Khối lượng | Đạm (g) | Carb (g) | Fat (g) | kcal |\n|---|---|---|---|---|---|\n`;
     for (const it of m.items) {
       const x = itemMacro(it);
-      v += `| ${foodName(it.foodId)} | ${it.grams} g | ${n1(x.proteinG)} | ${n1(x.carbG)} | ${n1(x.fatG)} | ${n0(x.kcal)} |\n`;
+      v += `| ${foodName(it.foodId)} | ${it.portions != null ? `${it.portions} phần (ước tính)` : `${it.grams} g`} | ${n1(x.proteinG)} | ${n1(x.carbG)} | ${n1(x.fatG)} | ${n0(x.kcal)} |\n`;
     }
     v += `| **Cộng bữa** | | **${n1(mm.proteinG)}** | ${n1(mm.carbG)} | ${n1(mm.fatG)} | **${n0(mm.kcal)}** |\n\n`;
   }
@@ -201,3 +201,57 @@ ${VN_FOODS.map((x) => `| ${x.name} | ${x.fctCode ? `Viện Dinh dưỡng (2007),
 `;
 out('THUC_DON_VIET_NAM.md', v);
 console.log('✓ docs/THUC_DON_VIET_NAM.md');
+
+// ---------- Món ăn miền Nam ----------
+import { SOUTHERN_DISHES, DISH_CATEGORY_LABEL, dishMacro, ingredientById } from '../src/data/southernDishes';
+
+let s2 = `# Món ăn quen thuộc miền Nam — năng lượng và đạm ước tính
+
+> Có sẵn trong app: **Ăn uống → Thêm món → tab "Món ăn sẵn"**. Mỗi món là 1 phần ăn (dĩa/tô/ổ); nếu ăn nhiều hơn hoặc ít hơn, sửa số phần (ví dụ 1,5).
+
+## Cách tính
+
+- **Chưa có bảng chính thức về năng lượng món ăn hàng quán theo khẩu phần.** Nguồn công khai trên mạng lệch nhau nhiều (ví dụ một tô hủ tiếu được ghi từ khoảng 350 đến 650 kcal tùy nguồn).
+- Vì vậy mỗi món được **tính từ công thức nguyên liệu**: khối lượng nguyên liệu trong 1 phần ăn ở quán bình dân (giả định, ghi rõ bên dưới) × giá trị dinh dưỡng của nguyên liệu trong *Bảng thành phần thực phẩm Việt Nam* (Viện Dinh dưỡng, 2007). Cơm chín lấy theo USDA FoodData Central (U.S. Department of Agriculture, 2019).
+- Thịt, cá tính theo khối lượng sống, phần ăn được. **Không tính nước dùng** của phở, hủ tiếu, bún bò vì chưa có số liệu chính thống — năng lượng thực tế có thể cao hơn.
+- Vì khẩu phần là giả định, mọi món đều gắn nhãn **"Ước tính"** trong app.
+
+## Tóm tắt
+
+| Món | Phần ăn | Khối lượng | kcal | Đạm (g) | Carb (g) | Fat (g) |
+|---|---|---|---|---|---|---|
+${SOUTHERN_DISHES.map((d) => {
+  const m = dishMacro(d);
+  return `| ${d.name} | ${d.portion} | ${d.category === 'do-uong' ? '—' : `~${m.grams} g`} | ${m.kcal} | ${n1(m.proteinG)} | ${n1(m.carbG)} | ${n1(m.fatG)} |`;
+}).join('\n')}
+
+**Mẹo chọn món cho người tập tăng cơ:** bữa chính nên đạt khoảng 26 g đạm trở lên (Schoenfeld & Aragon, 2018).
+- **Đạt ≥ 26 g đạm:** ${SOUTHERN_DISHES.filter((d) => d.category !== 'do-uong' && dishMacro(d).proteinG >= 26).map((d) => d.name).join(', ')}.
+- **Dưới 26 g — nên ăn kèm sữa, trứng hoặc thêm thịt:** ${SOUTHERN_DISHES.filter((d) => d.category !== 'do-uong' && dishMacro(d).proteinG < 26).map((d) => d.name).join(', ')}.
+- Món nhiều dầu mỡ (fat ≥ 25 g/phần): ${SOUTHERN_DISHES.filter((d) => dishMacro(d).fatG >= 25).map((d) => d.name).join(', ')} — xin ít mỡ hành nếu muốn giảm năng lượng.
+
+## Công thức từng món
+
+`;
+for (const cat of Object.keys(DISH_CATEGORY_LABEL) as (keyof typeof DISH_CATEGORY_LABEL)[]) {
+  const list = SOUTHERN_DISHES.filter((d) => d.category === cat);
+  if (!list.length) continue;
+  s2 += `### ${DISH_CATEGORY_LABEL[cat]}\n\n`;
+  for (const d of list) {
+    const m = dishMacro(d);
+    s2 += `#### ${d.name} (${d.portion})\n\n${d.note ? `*${d.note}*\n\n` : ''}| Nguyên liệu | Khối lượng | Nguồn |\n|---|---|---|\n`;
+    for (const it of d.recipe) {
+      const x = ingredientById(it.foodId)!;
+      s2 += `| ${x.name} | ${it.grams} g | ${x.fctCode ? `Viện Dinh dưỡng (2007), mã ${x.fctCode}` : 'USDA (2019)'} |\n`;
+    }
+    s2 += `| **Cộng** | **~${m.grams} g** | **${m.kcal} kcal · đạm ${n1(m.proteinG)} g · carb ${n1(m.carbG)} g · fat ${n1(m.fatG)} g** |\n\n`;
+  }
+}
+s2 += `## Tài liệu tham khảo
+
+- Schoenfeld, B. J., & Aragon, A. A. (2018). How much protein can the body use in a single meal for muscle-building? Implications for daily protein distribution. *Journal of the International Society of Sports Nutrition, 15*, Article 10. https://doi.org/10.1186/s12970-018-0215-1
+- U.S. Department of Agriculture, Agricultural Research Service. (2019). *FoodData Central* [Data set]. https://fdc.nal.usda.gov/
+- Viện Dinh dưỡng. (2007). *Bảng thành phần thực phẩm Việt Nam* [Vietnamese food composition table]. Nhà xuất bản Y học. https://www.fao.org/fileadmin/templates/food_composition/documents/pdf/VTN_FCT_2007.pdf
+`;
+out('MON_AN_MIEN_NAM.md', s2);
+console.log('✓ docs/MON_AN_MIEN_NAM.md');

@@ -1,15 +1,21 @@
 import type { MealSlot } from '../db/types';
 import { VN_FOODS } from './vnFoods';
+import { dishesAsFoods } from './southernDishes';
 
 /**
  * Thực đơn mẫu kiểu Việt Nam cho người tập tăng cơ (khoảng 65 kg, 4 bữa/ngày).
  * Thiết kế: mỗi bữa ≥ 26 g đạm (≈ 0,4 g/kg/bữa — Schoenfeld & Aragon, 2018), tổng ngày 105–130 g.
  * Khối lượng tính theo gram PHẦN ĂN ĐƯỢC (thịt, cá cân sống; cơm cân chín). Không đặt mục tiêu calories.
  */
+/** grams: nguyên liệu tính theo gram (100 g = 1 khẩu phần); portions: món ăn sẵn tính theo phần (dĩa/tô/ổ). */
 export interface VnPlanItem {
   foodId: string;
-  grams: number;
+  grams?: number;
+  portions?: number;
 }
+
+/** Số "khẩu phần" lưu trong app cho 1 dòng thực đơn. */
+export const itemServings = (it: VnPlanItem): number => it.portions ?? (it.grams ?? 0) / 100;
 export interface VnPlanMeal {
   meal: MealSlot;
   title: string;
@@ -24,6 +30,7 @@ export interface VnPlan {
 }
 
 const i = (foodId: string, grams: number): VnPlanItem => ({ foodId, grams });
+const dish = (foodId: string, portions = 1): VnPlanItem => ({ foodId, portions });
 
 export const VN_PLANS: VnPlan[] = [
   {
@@ -119,6 +126,37 @@ export const VN_PLANS: VnPlan[] = [
       },
     ],
   },
+  {
+    id: 'vn-plan-sg',
+    name: 'Ngày ăn ngoài kiểu Sài Gòn — Bánh mì, cơm tấm, gỏi cuốn, hủ tiếu',
+    note: 'Dùng món quán quen thuộc (số liệu ước tính theo công thức). Ngày có buổi tập: ăn gỏi cuốn + sữa sau tập.',
+    meals: [
+      {
+        meal: 'breakfast',
+        title: 'Bánh mì ốp la + 1 ly sữa đậu nành',
+        howTo: '1 ổ bánh mì ốp la 2 trứng; 1 ly sữa đậu nành 250 ml.',
+        items: [dish('dish-banh-mi-op-la'), dish('dish-sua-dau-nanh')],
+      },
+      {
+        meal: 'lunch',
+        title: 'Cơm tấm sườn ốp la',
+        howTo: '1 dĩa cơm tấm sườn nướng, 1 trứng ốp la, đồ chua, nước mắm. Hạn chế chan thêm mỡ hành.',
+        items: [dish('dish-com-tam-suon-op-la')],
+      },
+      {
+        meal: 'snack',
+        title: '2 cuốn gỏi cuốn + 1 ly sữa tươi (sau tập)',
+        howTo: '2 cuốn gỏi cuốn tôm thịt kèm tương; 250 ml sữa tươi.',
+        items: [dish('dish-goi-cuon'), i('vn-10001', 250)],
+      },
+      {
+        meal: 'dinner',
+        title: 'Hủ tiếu Nam Vang',
+        howTo: '1 tô hủ tiếu Nam Vang (thịt, tôm, gan, tim). Thêm giá, hẹ.',
+        items: [dish('dish-hu-tieu-nam-vang')],
+      },
+    ],
+  },
 ];
 
 export interface Macro {
@@ -128,13 +166,13 @@ export interface Macro {
   fatG: number;
 }
 
-const FOOD = new Map(VN_FOODS.map((x) => [x.id, x]));
+const FOOD = new Map<string, { name: string; kcal: number; proteinG: number; carbG: number; fatG: number }>([...VN_FOODS, ...dishesAsFoods()].map((x) => [x.id, x]));
 const r1 = (n: number) => Math.round(n * 10) / 10;
 
 export function itemMacro(it: VnPlanItem): Macro {
   const food = FOOD.get(it.foodId);
   if (!food) throw new Error(`Thiếu thực phẩm ${it.foodId}`);
-  const k = it.grams / 100;
+  const k = itemServings(it);
   return { kcal: food.kcal * k, proteinG: food.proteinG * k, carbG: food.carbG * k, fatG: food.fatG * k };
 }
 

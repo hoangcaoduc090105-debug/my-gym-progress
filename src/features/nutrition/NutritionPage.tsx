@@ -4,7 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, ClipboardList, Pencil, Plus, Star, Trash2 } from 'lucide-react';
 import { db } from '../../db/db';
 import { MEAL_LABELS, MEAL_SLOTS, type Food, type FoodLog, type MealPlan, type MealPlanItem, type MealSlot } from '../../db/types';
-import { Badge, Button, Card, EmptyState, Explain, Field, IconButton, Modal, NumberInput, PageHeader, Spinner, Tabs, Toggle, cx } from '../../components/ui';
+import { Badge, Button, Card, EmptyState, Explain, Field, IconButton, Modal, NumberInput, PageHeader, Segmented, Spinner, Tabs, Toggle, cx } from '../../components/ui';
 import { useFeedback } from '../../components/feedback';
 import { useProfile } from '../../app/useAppData';
 import { addFoodLog, applyMealPlan, installVietnameseMenus, deleteFood, deleteFoodLog, deleteMealPlan, saveFood, saveMealPlan, toggleFavoriteFood, updateFoodLogServings } from '../../db/repo';
@@ -14,6 +14,10 @@ import { fmt0, fmt1 } from '../../lib/format';
 import { normalizeVi } from '../workout/ExercisePicker';
 import { checkMeal, proteinPerMeal, suggestProteinFill, type MealVerdict } from '../../domain/mealCheck';
 import { VN_FOODS } from '../../data/vnFoods';
+import { dishesAsFoods } from '../../data/southernDishes';
+
+const ALL_PRESET = () => [...VN_FOODS, ...dishesAsFoods()];
+const SOUTHERN_COUNT = dishesAsFoods().length;
 import { VnPlans } from './VnPlans';
 import { CheckCircle2, AlertTriangle, CircleDashed } from 'lucide-react';
 
@@ -264,12 +268,12 @@ function StarterFoodsButton() {
       block
       variant="outline"
       onClick={() =>
-        void installVietnameseMenus(VN_FOODS, [])
-          .then((r) => toast(r.foods ? `Đã thêm ${r.foods} thực phẩm Việt Nam` : 'Các thực phẩm Việt Nam đã có sẵn'))
+        void installVietnameseMenus(ALL_PRESET(), [])
+          .then((r) => toast(r.foods ? `Đã thêm ${r.foods} món và thực phẩm Việt Nam` : 'Các món và thực phẩm Việt Nam đã có sẵn'))
           .catch(toastError)
       }
     >
-      Thêm {VN_FOODS.length} thực phẩm Việt Nam (số liệu Viện Dinh dưỡng)
+      Thêm {SOUTHERN_COUNT} món miền Nam + {VN_FOODS.length} thực phẩm Việt Nam
     </Button>
   );
 }
@@ -315,7 +319,14 @@ function AddFoodModal({ meal, date, onClose }: { meal: MealSlot | null; date: st
       setServings(1);
     }
   }, [meal]);
-  const list = useMemo(() => (foods ?? []).filter((f) => !q || normalizeVi(f.name).includes(normalizeVi(q))), [foods, q]);
+  const [kind, setKind] = useState<'all' | 'dish' | 'ingredient'>('all');
+  const list = useMemo(
+    () =>
+      (foods ?? [])
+        .filter((f) => kind === 'all' || (kind === 'dish' ? f.id.startsWith('dish-') : !f.id.startsWith('dish-')))
+        .filter((f) => !q || normalizeVi(f.name).includes(normalizeVi(q))),
+    [foods, q, kind],
+  );
 
   async function add(f: Food) {
     if (!meal || !servings || servings <= 0) return toast('Nhập số khẩu phần > 0', 'error');
@@ -336,6 +347,16 @@ function AddFoodModal({ meal, date, onClose }: { meal: MealSlot | null; date: st
             <input aria-label="Tìm thực phẩm" placeholder="Tìm thực phẩm đã lưu…" value={q} onChange={(e) => setQ(e.target.value)} />
             <NumberInput aria-label="Số khẩu phần" value={servings} min={0} max={100} onChange={setServings} className="text-center" placeholder="khẩu phần" />
           </div>
+          <Segmented
+            className="w-full"
+            value={kind}
+            onChange={setKind}
+            options={[
+              { value: 'all', label: 'Tất cả' },
+              { value: 'dish', label: 'Món ăn sẵn' },
+              { value: 'ingredient', label: 'Nguyên liệu' },
+            ]}
+          />
           <ul className="divide-y divide-line/60">
             {list.map((f) => (
               <li key={f.id}>
@@ -355,7 +376,7 @@ function AddFoodModal({ meal, date, onClose }: { meal: MealSlot | null; date: st
             ))}
             {list.length === 0 && <li className="py-4 text-center text-sm text-muted">Chưa có thực phẩm phù hợp.</li>}
           </ul>
-          {(foods ?? []).length === 0 && <StarterFoodsButton />}
+          {ALL_PRESET().some((vf) => !(foods ?? []).some((f) => f.id === vf.id)) && <StarterFoodsButton />}
           <Button block variant="outline" icon={<Plus size={16} />} onClick={() => setCreating(true)}>
             Tạo thực phẩm mới
           </Button>
@@ -521,7 +542,7 @@ function FoodsTab() {
           </ul>
         </Card>
       )}
-      {foods.length > 0 && VN_FOODS.some((vf) => !foods.some((f) => f.id === vf.id)) && <StarterFoodsButton />}
+      {foods.length > 0 && ALL_PRESET().some((vf) => !foods.some((f) => f.id === vf.id)) && <StarterFoodsButton />}
       <FoodFormModal open={open} initial={editing} onClose={() => setOpen(false)} />
     </div>
   );

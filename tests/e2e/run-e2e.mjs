@@ -150,10 +150,14 @@ try {
     await page.getByTestId('meal-verdict').getByText('Bữa này: Phù hợp').waitFor();
     // Nạp món cơ bản rồi thêm 1 quả trứng vào bữa trưa → bữa thiếu đạm + có gợi ý bù
     await page.getByRole('tab', { name: 'Món của tôi' }).click();
-    await page.getByRole('button', { name: /thực phẩm Việt Nam \(số liệu Viện Dinh dưỡng\)/ }).click();
+    await page.getByRole('button', { name: /món miền Nam/ }).click();
     await page.getByText(/^Trứng gà/).first().waitFor();
     await page.getByRole('tab', { name: 'Hôm nay' }).click();
     await page.getByRole('button', { name: 'Thêm món' }).nth(1).click();
+    await page.getByRole('tab', { name: 'Món ăn sẵn' }).click();
+    await page.getByRole('button', { name: /Cơm tấm sườn bì chả/ }).waitFor();
+    await shot('05c-dishes');
+    await page.getByRole('tab', { name: 'Nguyên liệu' }).click();
     await page.getByRole('button', { name: /^Trứng gà/ }).first().click();
     await page.getByText('Bữa này: Thiếu đạm').waitFor();
     await page.getByRole('button', { name: /\+ .*đạm/ }).first().waitFor();

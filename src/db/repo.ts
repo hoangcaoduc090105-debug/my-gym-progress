@@ -372,7 +372,7 @@ export async function deleteFood(id: string): Promise<void> {
  */
 export async function installVietnameseMenus(
   foods: (Omit<FoodInput, 'isFavorite' | 'id'> & { id: string })[],
-  plans: { id: string; name: string; meals: { meal: MealSlot; items: { foodId: string; grams: number }[] }[] }[],
+  plans: { id: string; name: string; meals: { meal: MealSlot; items: { foodId: string; grams?: number; portions?: number }[] }[] }[],
 ): Promise<{ foods: number; plans: number }> {
   const now = nowISO();
   let nf = 0;
@@ -390,7 +390,7 @@ export async function installVietnameseMenus(
       const plan = {
         id: p.id,
         name: p.name,
-        items: p.meals.flatMap((m) => m.items.map((it) => ({ foodId: it.foodId, meal: m.meal, servings: Math.round((it.grams / 100) * 100) / 100 }))),
+        items: p.meals.flatMap((m) => m.items.map((it) => ({ foodId: it.foodId, meal: m.meal, servings: Math.round((it.portions ?? (it.grams ?? 0) / 100) * 100) / 100 }))),
         createdAt: now,
         updatedAt: now,
       };

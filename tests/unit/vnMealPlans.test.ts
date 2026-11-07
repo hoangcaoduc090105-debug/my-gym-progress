@@ -1,4 +1,5 @@
 import { VN_FOODS } from '../../src/data/vnFoods';
+import { dishesAsFoods } from '../../src/data/southernDishes';
 import { VN_PLANS, mealMacro, planMacro } from '../../src/data/vnMealPlans';
 import { kcalFromMacros } from '../../src/domain/nutrition';
 
@@ -21,6 +22,7 @@ describe('Thực đơn Việt Nam mẫu', () => {
     const t = planMacro(p);
     expect(t.proteinG).toBeGreaterThanOrEqual(105);
     expect(t.proteinG).toBeLessThanOrEqual(130);
-    for (const m of p.meals) for (const it of m.items) expect(VN_FOODS.some((f) => f.id === it.foodId), it.foodId).toBe(true);
+    const known = [...VN_FOODS, ...dishesAsFoods()];
+    for (const m of p.meals) for (const it of m.items) expect(known.some((f) => f.id === it.foodId), it.foodId).toBe(true);
   });
 });

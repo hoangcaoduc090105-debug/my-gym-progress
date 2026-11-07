@@ -5,6 +5,7 @@ import { Badge, Button, Card, cx } from '../../components/ui';
 import { useFeedback } from '../../components/feedback';
 import { applyMealPlan, installVietnameseMenus } from '../../db/repo';
 import { VN_FOODS } from '../../data/vnFoods';
+import { dishesAsFoods } from '../../data/southernDishes';
 import { VN_PLANS, foodName, itemMacro, mealMacro, planMacro, type VnPlan } from '../../data/vnMealPlans';
 import { fmt0, fmt1 } from '../../lib/format';
 import { todayISO } from '../../lib/date';
@@ -16,6 +17,7 @@ export function VnPlans({ onApplied }: { onApplied?: () => void }) {
       <Card className="border-accent/30 bg-accent/5">
         <div className="text-sm leading-relaxed">
           <div className="font-semibold">Thực đơn Việt Nam mẫu cho người tập tăng cơ</div>
+          <p className="mt-1 text-muted">Gồm 3 ngày nấu ở nhà và 1 ngày ăn ngoài kiểu Sài Gòn.</p>
           <p className="mt-1 text-muted">
             Món quen thuộc (bánh mì, phở, bún, cơm + món mặn + rau + canh). Mỗi bữa ≥ 26 g đạm, cả ngày 105–130 g. Số liệu nguyên liệu lấy từ Bảng thành phần thực phẩm Việt Nam (Viện
             Dinh dưỡng, 2007); cơm chín và ức gà theo USDA FoodData Central (2019).
@@ -70,7 +72,7 @@ function PlanCard({ plan, onApplied }: { plan: VnPlan; onApplied?: () => void })
     });
     if (!ok) return;
     try {
-      await installVietnameseMenus(VN_FOODS, VN_PLANS);
+      await installVietnameseMenus([...VN_FOODS, ...dishesAsFoods()], VN_PLANS);
       const r = await applyMealPlan(plan.id, todayISO());
       toast(`Đã thêm ${r.added} món vào nhật ký hôm nay`);
       onApplied?.();
@@ -120,7 +122,7 @@ function PlanCard({ plan, onApplied }: { plan: VnPlan; onApplied?: () => void })
                         return (
                           <tr key={it.foodId} className="border-t border-line/50">
                             <td className="py-1">{foodName(it.foodId)}</td>
-                            <td className="text-right text-muted">{it.grams} g</td>
+                            <td className="text-right text-muted">{it.portions != null ? `${it.portions} phần` : `${it.grams} g`}</td>
                             <td className="w-16 text-right">{fmt1(x.proteinG)} g</td>
                             <td className="w-16 text-right text-muted">{fmt0(x.kcal)} kcal</td>
                           </tr>

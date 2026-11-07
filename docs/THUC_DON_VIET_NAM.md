@@ -1,13 +1,13 @@
 # Thực đơn Việt Nam mẫu cho người tập tăng cơ
 
-> Ba thực đơn 1 ngày, món quen thuộc với người Việt, thiết kế cho người khoảng 65 kg tập tăng cơ, ăn 4 bữa/ngày. Có sẵn trong app: **Ăn uống → tab "Thực đơn Việt" → "Dùng cho hôm nay"**.
+> Bốn thực đơn 1 ngày (3 ngày nấu ở nhà + 1 ngày ăn ngoài kiểu Sài Gòn), món quen thuộc với người Việt, thiết kế cho người khoảng 65 kg tập tăng cơ, ăn 4 bữa/ngày. Có sẵn trong app: **Ăn uống → tab "Thực đơn Việt" → "Dùng cho hôm nay"**.
 
 ## Nguyên tắc thiết kế
 
 - **Đạm (protein):** mỗi bữa ≥ 26 g, cả ngày 105–130 g. Chia đều khoảng 4 bữa, mỗi bữa ~0,4 g/kg giúp tối đa hóa tổng hợp cơ (Schoenfeld & Aragon, 2018); tổng 1,6–2,0 g/kg/ngày (Morton et al., 2018).
-- **Món ăn:** bữa sáng kiểu Việt (bánh mì, phở, bún); trưa và tối là cơm + món mặn + rau + canh; bữa phụ sau tập.
+- **Món ăn:** bữa sáng kiểu Việt (bánh mì, phở, bún); trưa và tối là cơm + món mặn + rau + canh; bữa phụ sau tập. Ngày ăn ngoài dùng món quán (cơm tấm, hủ tiếu, gỏi cuốn) với số liệu **ước tính theo công thức** — xem MON_AN_MIEN_NAM.md.
 - **Số liệu:** nguyên liệu lấy từ *Bảng thành phần thực phẩm Việt Nam* (Viện Dinh dưỡng, 2007), giá trị trên 100 g phần ăn được ở dạng sống. Bảng không có cơm chín và ức gà riêng nên hai món này lấy từ USDA FoodData Central (U.S. Department of Agriculture, 2019). Dầu ăn được tính riêng.
-- **Calories:** app không đặt mục tiêu calories. Các thực đơn cung cấp khoảng 2.051–2.196 kcal; điều chỉnh bằng lượng cơm theo diễn biến cân nặng (xem cuối tài liệu).
+- **Calories:** app không đặt mục tiêu calories. Các thực đơn cung cấp khoảng 2.051–2.285 kcal; điều chỉnh bằng lượng cơm theo diễn biến cân nặng (xem cuối tài liệu).
 
 ## Cách cân đong
 
@@ -177,6 +177,50 @@ Nửa ổ bánh mì (~60 g) kẹp 70 g giò lụa; 200 ml sữa tươi.
 | Cam | 150 g | 1,4 | 12,5 | 0,2 | 57 |
 | Dầu ăn (dầu thực vật) | 7 g | 0 | 0 | 7 | 63 |
 | **Cộng bữa** | | **37,1** | 86,1 | 8,8 | **582** |
+
+## Ngày ăn ngoài kiểu Sài Gòn — Bánh mì, cơm tấm, gỏi cuốn, hủ tiếu
+
+*Dùng món quán quen thuộc (số liệu ước tính theo công thức). Ngày có buổi tập: ăn gỏi cuốn + sữa sau tập.*
+
+**Tổng ngày:** 2285 kcal · đạm 122 g · carb 256 g · fat 85 g
+
+### Bữa sáng: Bánh mì ốp la + 1 ly sữa đậu nành
+
+1 ổ bánh mì ốp la 2 trứng; 1 ly sữa đậu nành 250 ml.
+
+| Thực phẩm | Khối lượng | Đạm (g) | Carb (g) | Fat (g) | kcal |
+|---|---|---|---|---|---|
+| Bánh mì ốp la (2 trứng) | 1 phần (ước tính) | 22,9 | 53,7 | 20,4 | 490 |
+| Sữa đậu nành (1 ly) | 1 phần (ước tính) | 7,8 | 10,9 | 4 | 110 |
+| **Cộng bữa** | | **30,7** | 64,6 | 24,4 | **600** |
+
+### Bữa trưa: Cơm tấm sườn ốp la
+
+1 dĩa cơm tấm sườn nướng, 1 trứng ốp la, đồ chua, nước mắm. Hạn chế chan thêm mỡ hành.
+
+| Thực phẩm | Khối lượng | Đạm (g) | Carb (g) | Fat (g) | kcal |
+|---|---|---|---|---|---|
+| Cơm tấm sườn ốp la | 1 phần (ước tính) | 34,3 | 80,4 | 31,4 | 751 |
+| **Cộng bữa** | | **34,3** | 80,4 | 31,4 | **751** |
+
+### Bữa phụ: 2 cuốn gỏi cuốn + 1 ly sữa tươi (sau tập)
+
+2 cuốn gỏi cuốn tôm thịt kèm tương; 250 ml sữa tươi.
+
+| Thực phẩm | Khối lượng | Đạm (g) | Carb (g) | Fat (g) | kcal |
+|---|---|---|---|---|---|
+| Gỏi cuốn tôm thịt (2 cuốn) | 1 phần (ước tính) | 17,3 | 33,3 | 7 | 265 |
+| Sữa bò tươi | 250 g | 9,8 | 12 | 11 | 185 |
+| **Cộng bữa** | | **27,1** | 45,3 | 18 | **450** |
+
+### Bữa tối: Hủ tiếu Nam Vang
+
+1 tô hủ tiếu Nam Vang (thịt, tôm, gan, tim). Thêm giá, hẹ.
+
+| Thực phẩm | Khối lượng | Đạm (g) | Carb (g) | Fat (g) | kcal |
+|---|---|---|---|---|---|
+| Hủ tiếu Nam Vang | 1 phần (ước tính) | 29,9 | 65,8 | 11,2 | 484 |
+| **Cộng bữa** | | **29,9** | 65,8 | 11,2 | **484** |
 
 ## Đổi món tương đương lượng đạm (~21 g)
 
