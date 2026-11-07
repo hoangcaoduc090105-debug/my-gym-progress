@@ -1,7 +1,7 @@
 {
   "name": "my-gym-progress",
   "private": true,
-  "version": "1.8.2",
+  "version": "1.9.0",
   "type": "module",
   "description": "Ứng dụng local-first theo dõi tập gym, số đo cơ thể và dinh dưỡng. Không backend, không AI API.",
   "scripts": {

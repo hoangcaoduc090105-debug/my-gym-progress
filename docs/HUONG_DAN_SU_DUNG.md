@@ -97,6 +97,26 @@ Xuất CSV từ app cũ (Strong: Settings → Export Strong Data; Hevy: Settings
 - Cài đặt → Tập luyện → bật **Thông báo khi có buổi đến hạn**: khi mở app vào ngày có lịch, app báo một lần trong ngày. Trên iPhone, cần cài app lên màn hình chính trước.
 - App không có máy chủ nên **không nhắc được khi đang đóng**. Muốn điện thoại tự nhắc: Tập → tab **Lịch** → **Thêm vào Lịch (.ics)**, mở tệp vừa tải để thêm vào ứng dụng Lịch. Lịch sẽ nhắc trước 1 giờ (giờ mặc định 18:00, sửa được trong Lịch).
 
+## Tính năng mới ở bản 1.9
+
+### Màn hình tập gọn hơn trên điện thoại
+Mỗi bài chỉ còn hai nút ở đầu: **Xem kỹ thuật** và nút **⋯**. Bấm ⋯ để Thay bài, Đưa lên, Đưa xuống hoặc Bỏ bài. Bài đã làm xong hết hiệp từ trước sẽ thu gọn thành một dòng tóm tắt; bấm dòng đó (hoặc mũi tên) để mở lại.
+
+### Tổng kết sau buổi
+Sau khi bấm Hoàn thành, trang buổi tập có thẻ **So với lần trước**: khối lượng và số hiệp chênh bao nhiêu, bài nào tăng/giảm tạ, bài nào mới. Lần đầu tập buổi đó thì app chỉ nhắc là lần sau sẽ so sánh. Nút **Lưu ảnh tóm tắt** tạo một ảnh PNG (tên buổi, ngày, 3 số chính, các bài, kỷ lục) để gửi bạn bè; ảnh được vẽ ngay trên máy.
+
+### Giáo án mẫu
+Tập → Giáo án → **Thêm từ mẫu**: Toàn thân 2 buổi (người bận), Trên/Dưới 4 buổi, Đẩy/Kéo/Chân 6 buổi. Chọn **Thêm và dùng ngay** hoặc **Chỉ thêm**; thêm lại mẫu đã có sẽ không tạo trùng. Màn chào mừng lần đầu cũng hỏi bạn tập được mấy buổi mỗi tuần để chọn sẵn.
+
+### Hiệp khởi động tự tính
+Trong bài, sau khi đã nhập (hoặc app đã gợi ý) mức tạ làm việc, bấm **Thêm khởi động**: app chèn 3 hiệp K ở 40 %, 60 %, 80 % mức tạ (8, 5, 3 lần). Tạ đòn làm tròn theo đĩa bạn có; bài khác theo bước 2,5 kg hoặc 2,5 lb. Sửa hay xóa tùy ý; hiệp K không tính vào thống kê.
+
+### Chuỗi tuần tập đều
+Ô **Buổi tập tuần này** trên trang Hôm nay hiện x/mục tiêu và số tuần liên tiếp bạn đạt đủ mục tiêu. Mục tiêu mặc định là số buổi của giáo án đang dùng; đổi trong Cài đặt → Tập luyện → **Mục tiêu buổi/tuần**. Tuần đang dở không làm đứt chuỗi.
+
+### Sửa nhỏ
+Màn chào mừng nhận cân nặng theo kg hoặc lb. Bảng ghép tên bài khi nhập CSV từ Strong/Hevy nay nằm trong tệp sao lưu, đổi máy không phải ghép lại.
+
 ## Giải thích nhanh các nút trên màn hình tập
 
 | Thành phần | Ý nghĩa |

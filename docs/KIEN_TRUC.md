@@ -58,3 +58,13 @@ Schema Zod khai báo các trường trên là `optional()` để không bị lo�
 ## Cập nhật ứng dụng
 
 Service worker dùng chế độ `prompt`. Khi có bản mới, app chỉ hiện thông báo và người dùng chọn thời điểm cập nhật. IndexedDB nằm tách biệt với cache của service worker nên cập nhật không chạm vào dữ liệu.
+
+### v1.9.0 — chỉ thêm trường tùy chọn (vẫn Dexie version 2, định dạng sao lưu 2)
+
+| Nơi | Trường mới | Ý nghĩa | Bản ghi cũ |
+|---|---|---|---|
+| `Settings` | `weeklyTarget: number \| null` | Mục tiêu buổi/tuần cho chuỗi tuần tập đều (`domain/streak.ts`); null = theo số buổi của giáo án đang dùng | `withSettingsDefaults` điền null |
+| Tệp sao lưu | `extras.csvNameMap?` | Bảng ghép tên bài CSV (meta `csvNameMap`); replace thay toàn bộ, merge gộp (tệp đè) | vắng = không đụng meta |
+| `meta` | `fix.typo.czhinh` | Đã chạy `fixKnownTypos()` một lần (sửa mô tả giáo án seed cũ) | — |
+
+Giáo án mẫu (`src/data/programTemplates.ts`) là dữ liệu tĩnh tải lười, tạo giáo án mới với id riêng qua `repo.addProgramFromTemplate`; không nằm trong seed.

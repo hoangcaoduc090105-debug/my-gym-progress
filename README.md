@@ -11,7 +11,7 @@
 | Module | Nội dung |
 |---|---|
 | Tổng quan | Cân nặng, chiều cao, thay đổi trong tuần, số buổi và số hiệp trong tuần, buổi kế tiếp, nhóm cơ đã tập, kỷ lục gần đây, nhắc đo vòng |
-| Lịch tập | Giáo án (tạo/sửa/nhân bản), lịch theo ngày, ghi hiệp (kg, số lần, RIR), ghi chú, chép thông số buổi trước, đồng hồ nghỉ, gợi ý tăng tạ, lịch sử |
+| Lịch tập | Giáo án (tạo/sửa/nhân bản, 3 mẫu có sẵn), lịch theo ngày, ghi hiệp (kg hoặc lb, số lần, RIR), hiệp khởi động tự tính, superset, thay bài giữa buổi, máy tính đĩa tạ, ghi chú, chép thông số buổi trước, đồng hồ nghỉ, gợi ý tăng tạ, deload, tổng kết so với lần trước kèm ảnh tóm tắt, lịch sử |
 | Thư viện bài tập | 57 bài, 10 nhóm cơ, tên Việt/Anh, nhóm cơ chính/phụ, dụng cụ, hướng dẫn, lỗi thường gặp, bài thay thế, bài tự tạo |
 | Tiến độ cơ thể | Cân nặng và 6 số đo vòng, biểu đồ theo ngày/tuần/tháng, ảnh tiến độ lưu trên máy, so sánh 2 ảnh |
 | Dinh dưỡng | Thực phẩm tự nhập (có nhãn "Ước tính" hoặc "Đã xác minh"), nhật ký theo bữa, thực đơn mẫu, tiến độ protein |
