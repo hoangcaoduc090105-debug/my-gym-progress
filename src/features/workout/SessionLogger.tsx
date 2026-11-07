@@ -1,10 +1,10 @@
 import { Suspense, lazy, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { ArrowDown, ArrowLeftRight, ArrowUp, BookOpen, Disc, Check, ClipboardCopy, Info, Minus, Plus, Timer, Trash2, TrendingUp } from 'lucide-react';
+import { ArrowDown, ArrowLeftRight, ArrowUp, BookOpen, ChevronDown, ChevronUp, Disc, Check, ClipboardCopy, Info, Minus, Plus, Timer, Trash2, TrendingUp } from 'lucide-react';
 import { db } from '../../db/db';
 import { MUSCLE_LABELS, type Exercise, type SessionExercise, type SetEntry, type Settings } from '../../db/types';
-import { Badge, Button, Card, IconButton, Modal, NumberInput, PageHeader, Spinner, cx } from '../../components/ui';
+import { Badge, Button, Card, IconButton, Menu, Modal, NumberInput, PageHeader, Spinner, cx } from '../../components/ui';
 import { useFeedback } from '../../components/feedback';
 import { useExerciseMap, useSettings } from '../../app/useAppData';
 import { emptySet, finishSession, lastPerformances, replaceExerciseInProgramDay, softDeleteSession } from '../../db/repo';
@@ -434,30 +434,45 @@ function ExerciseBlock(props: {
   const isBarbell = ex?.equipment === 'barbell';
   /** Tạ dự kiến từ buổi trước (buổi deload: ≈ 60%). */
   const planned = (kg: number) => (props.isDeload ? deloadWeight(kg, isBarbell ? settings.barbell : null) : kg);
-  const cols = isBarbell ? 'grid-cols-[32px_1fr_44px_1fr_60px_48px]' : 'grid-cols-[36px_1fr_1fr_64px_48px]';
+  // Cột hẹp hơn (v1.9) để ô "Lần" trên màn 375 px không cắt gợi ý "10–12".
+  const cols = isBarbell ? 'grid-cols-[28px_1fr_40px_1fr_52px_44px]' : 'grid-cols-[32px_1fr_1fr_56px_44px]';
   const [plateFor, setPlateFor] = useState<number | null>(null);
   const [howOpen, setHowOpen] = useState(false);
   const [histOpen, setHistOpen] = useState(false);
+  // Bài đã xong hết hiệp lúc mở trang => thu gọn (bấm tiêu đề để mở lại). Không tự thu gọn ngay khi ✓ hiệp cuối.
+  const allDone = se.sets.length > 0 && se.sets.every((x) => x.done);
+  const [collapsed, setCollapsed] = useState(allDone);
   const setField = (i: number, patch: Partial<SetEntry>) => onChange((e) => ({ ...e, sets: e.sets.map((x, k) => (k === i ? { ...x, ...patch } : x)) }));
   let workIdx = 0;
+  const name = ex?.nameVi ?? 'Bài tập đã bị xóa';
+  const summary = se.sets
+    .filter((x) => x.done)
+    .map((x) => `${x.isWarmup ? 'K ' : ''}${units.fmt(x.weightKg ?? 0)}×${x.reps ?? 0}`)
+    .join(', ');
 
   return (
     <Card id={`se-${se.id}`} className="scroll-mt-4">
-      <div className="mb-2 flex items-start gap-1">
+      <div className="mb-2 flex items-center gap-1">
         {props.groupLabel && (
-          <Badge tone="accent" className="mt-0.5 shrink-0">
+          <Badge tone="accent" className="shrink-0">
             {props.groupLabel}
           </Badge>
         )}
         <div className="min-w-0 flex-1">
-          <Link to={`/thu-vien/${se.exerciseId}`} className="font-semibold leading-tight hover:text-accent">
-            {ex?.nameVi ?? 'Bài tập đã bị xóa'}
-          </Link>
-          {se.replacedFrom && <div className="text-xs text-muted">Đã thay bài giữa buổi</div>}
-          <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-muted">
-            {ex && <Badge tone="accent">{MUSCLE_LABELS[ex.primaryMuscle]}</Badge>}
+          <div className="flex min-w-0 items-center gap-1">
+            <Link to={`/thu-vien/${se.exerciseId}`} className="min-w-0 truncate font-semibold leading-tight hover:text-accent" title={name}>
+              {name}
+            </Link>
+            {se.replacedFrom && (
+              <Badge tone="info" className="shrink-0">
+                Đã thay
+              </Badge>
+            )}
+          </div>
+          <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-muted">
+            {ex && <span className="shrink-0 text-accent">{MUSCLE_LABELS[ex.primaryMuscle]}</span>}
             {t && (
-              <span>
+              <span className="min-w-0 truncate">
                 {t.sets} × {t.repMin}–{t.repMax} · RIR {t.targetRIR} · nghỉ {formatClock(t.restSec)}
               </span>
             )}
@@ -468,21 +483,30 @@ function ExerciseBlock(props: {
             <BookOpen size={18} />
           </IconButton>
         )}
-        <IconButton label="Thay bài" onClick={props.onSwap}>
-          <ArrowLeftRight size={16} />
-        </IconButton>
-        <IconButton label="Đưa lên" disabled={props.first} onClick={() => props.onMove(-1)}>
-          <ArrowUp size={16} />
-        </IconButton>
-        <IconButton label="Đưa xuống" disabled={props.last} onClick={() => props.onMove(1)}>
-          <ArrowDown size={16} />
-        </IconButton>
-        <IconButton label="Bỏ bài" onClick={props.onRemove}>
-          <Trash2 size={16} />
+        <Menu
+          label="Thêm thao tác"
+          items={[
+            { label: 'Thay bài', icon: <ArrowLeftRight size={16} />, onSelect: props.onSwap },
+            { label: 'Đưa lên', icon: <ArrowUp size={16} />, disabled: props.first, onSelect: () => props.onMove(-1) },
+            { label: 'Đưa xuống', icon: <ArrowDown size={16} />, disabled: props.last, onSelect: () => props.onMove(1) },
+            { label: 'Bỏ bài', icon: <Trash2 size={16} />, danger: true, onSelect: props.onRemove },
+          ]}
+        />
+        <IconButton label={collapsed ? `Mở rộng ${name}` : `Thu gọn ${name}`} aria-expanded={!collapsed} onClick={() => setCollapsed((c) => !c)}>
+          {collapsed ? <ChevronDown size={18} /> : <ChevronUp size={18} />}
         </IconButton>
       </div>
 
-      {hint && (
+      {collapsed && (
+        <button type="button" onClick={() => setCollapsed(false)} className="flex min-h-[44px] w-full items-center gap-2 rounded-xl bg-accent/10 px-3 text-left text-sm" data-testid="collapsed-summary">
+          <Check size={16} className="shrink-0 text-accent" />
+          <span className="min-w-0 flex-1 truncate">
+            {se.sets.length} hiệp xong · <span className="tabular">{summary}</span>
+          </span>
+        </button>
+      )}
+
+      {!collapsed && hint && (
         <button
           type="button"
           onClick={() => setHistOpen(true)}
@@ -501,18 +525,19 @@ function ExerciseBlock(props: {
           <span className="shrink-0 text-info underline">3 buổi</span>
         </button>
       )}
-      {props.isDeload ? (
+      {!collapsed && (props.isDeload ? (
         <div className="mb-3 rounded-xl bg-warn/10 p-2.5 text-xs text-warn">Buổi nhẹ: dùng khoảng 60% mức tạ buổi trước (đã điền sẵn gợi ý), bớt 1 hiệp.</div>
       ) : (
         sg && <SuggestionBanner sg={sg} fmtU={units.fmtU} />
-      )}
-      {props.stagnant && (
+      ))}
+      {!collapsed && props.stagnant && (
         <div className="-mt-1 mb-3 flex gap-2 rounded-xl bg-warn/10 p-2.5 text-xs text-warn" data-testid="stagnation">
           <Info size={16} className="shrink-0" />
           <span>4 buổi chưa tiến bộ — cân nhắc giảm tạ 10% hoặc nghỉ thêm.</span>
         </div>
       )}
 
+      <div hidden={collapsed}>
       <div className={cx('grid items-center gap-1.5 text-center text-xs text-muted', cols)}>
         <div>Hiệp</div>
         <div className={isBarbell ? 'col-span-2' : undefined}>{units.unit}</div>
@@ -622,6 +647,7 @@ function ExerciseBlock(props: {
         onChange={(e) => { const v = e.target.value; props.onChangeText((x) => ({ ...x, note: v })); }}
         onBlur={props.onBlurText}
       />
+      </div>
       {plateFor != null && (
         <Suspense fallback={null}>
           <PlateCalculator

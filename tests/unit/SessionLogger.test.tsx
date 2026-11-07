@@ -122,7 +122,9 @@ describe('SessionLogger — Thay bài (v1.8.0)', () => {
     await sleep(600);
     const orig = (await db.sessions.get(s.id))!.exercises[0]!;
 
-    fireEvent.click(screen.getAllByRole('button', { name: 'Thay bài' })[0]!);
+    // v1.9: "Thay bài" nằm trong menu ⋯ của bài
+    fireEvent.click(screen.getAllByRole('button', { name: 'Thêm thao tác' })[0]!);
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Thay bài' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Thay bằng Đạp đùi máy' }, { timeout: LAZY_WAIT }));
     // Buổi theo giáo án => hỏi phạm vi; chọn "Chỉ buổi này"
     fireEvent.click(await screen.findByRole('button', { name: 'Chỉ buổi này' }, { timeout: LAZY_WAIT }));
@@ -227,5 +229,39 @@ describe('SessionLogger — đơn vị lb (v1.8.0)', () => {
     await sleep(50);
     await waitFor(async () => expect((await db.sessions.get(s.id))!.exercises[0]!.sets[0]!.weightKg).toBe(102.06));
     expect((await db.sessions.get(s.id))!.exercises[1]!.sets[0]!.weightKg).toBe(60);
+  });
+});
+
+describe('SessionLogger — thu gọn bài đã xong (v1.9.0)', () => {
+  afterEach(() => saveSpy.mockReset());
+
+  it('bài xong hết hiệp lúc mở trang => thu gọn, hiện tóm tắt; bấm tóm tắt thì mở lại', async () => {
+    await settleThenReset();
+    const p = (await repo.getActiveProgram())!;
+    const s = await repo.startSession({ programId: p.id, programDayId: 'day-a' });
+    s.exercises[0]!.sets = s.exercises[0]!.sets.map((x, i) => ({ ...x, weightKg: 20, reps: 10 - i, done: true }));
+    await repo.saveSession(s);
+    render(
+      <FeedbackProvider>
+        <RestTimerProvider sound={false} vibrate={false}>
+          <MemoryRouter initialEntries={[`/tap/${s.id}`]}>
+            <Routes>
+              <Route path="/tap/:id" element={<SessionLogger />} />
+            </Routes>
+          </MemoryRouter>
+        </RestTimerProvider>
+      </FeedbackProvider>,
+    );
+    await screen.findByRole('heading', { name: 'Đang tập' });
+    const summary = await screen.findByTestId('collapsed-summary');
+    expect(summary.textContent).toContain(`${s.exercises[0]!.sets.length} hiệp xong`);
+    expect(summary.textContent).toContain('20×10');
+    // Bài thứ 2 chưa làm => không thu gọn
+    expect(screen.getAllByTestId('collapsed-summary')).toHaveLength(1);
+    const inputsBefore = screen.getAllByLabelText('Mức tạ hiệp 1');
+    expect(inputsBefore.every((el) => !el.closest('[hidden]'))).toBe(false);
+    fireEvent.click(summary);
+    expect(screen.queryByTestId('collapsed-summary')).toBeNull();
+    expect(screen.getAllByLabelText('Mức tạ hiệp 1').every((el) => !el.closest('[hidden]'))).toBe(true);
   });
 });

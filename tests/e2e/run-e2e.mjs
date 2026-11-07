@@ -324,7 +324,11 @@ try {
     await page.goto(BASE + '#/lich-tap');
     await page.getByRole('button', { name: /^Bắt đầu Buổi/ }).click();
     await page.getByRole('heading', { name: 'Đang tập' }).waitFor();
-    await page.getByRole('button', { name: 'Thay bài' }).first().click();
+    await noOverflow();
+    await shot('12-logger-mobile');
+    // v1.9: thao tác phụ nằm trong menu ⋯
+    await page.getByRole('button', { name: 'Thêm thao tác' }).first().click();
+    await page.getByRole('menuitem', { name: 'Thay bài' }).click();
     const dlg = page.getByRole('dialog', { name: /^Thay bài:/ });
     await dlg.getByText('Bài thay thế gợi ý').waitFor();
     const alt = dlg.getByRole('button', { name: /^Thay bằng / }).first();
@@ -332,8 +336,9 @@ try {
     await shot('12-swap');
     await alt.click();
     await page.getByRole('dialog').getByRole('button', { name: 'Chỉ buổi này' }).click();
-    await page.getByText('Đã thay bài giữa buổi').first().waitFor();
+    await page.getByText('Đã thay', { exact: true }).first().waitFor();
     await page.getByRole('link', { name: newName, exact: true }).first().waitFor();
+    await noOverflow();
     await cancelCurrent();
   });
 

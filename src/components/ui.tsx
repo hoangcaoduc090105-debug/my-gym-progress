@@ -1,7 +1,7 @@
 import { cloneElement, forwardRef, isValidElement, useEffect, useId, useLayoutEffect, useRef, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { useFieldErrorsContext } from '../lib/formErrors';
-import { ChevronDown, ChevronLeft, Info, X } from 'lucide-react';
+import { ChevronDown, ChevronLeft, EllipsisVertical, Info, X } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { parseNumber } from '../lib/format';
 
@@ -61,6 +61,99 @@ export const IconButton = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTM
     </button>
   );
 });
+
+export interface MenuItem {
+  label: string;
+  icon?: ReactNode;
+  onSelect: () => void;
+  disabled?: boolean;
+  danger?: boolean;
+}
+
+/**
+ * Menu thao tác phụ (nút ⋯): gom các nút ít dùng để đầu thẻ không chật trên điện thoại.
+ * - Nút mở: aria-haspopup="menu", aria-expanded; danh sách role="menu", mục role="menuitem", mục tắt aria-disabled.
+ * - Mở => focus mục đầu; ↑/↓ xoay vòng, Home/End, Esc hoặc Tab đóng và trả focus về nút; bấm ngoài đóng.
+ */
+export function Menu({ label, items, className }: { label: string; items: MenuItem[]; className?: string }) {
+  const [open, setOpen] = useState(false);
+  const btn = useRef<HTMLButtonElement>(null);
+  const list = useRef<HTMLDivElement>(null);
+  const menuId = useId();
+  useEffect(() => {
+    if (!open) return;
+    const first = list.current?.querySelector<HTMLElement>('[role="menuitem"]:not([aria-disabled="true"])');
+    first?.focus();
+    const onDown = (e: PointerEvent) => {
+      const t = e.target as Node;
+      if (!list.current?.contains(t) && !btn.current?.contains(t)) setOpen(false);
+    };
+    document.addEventListener('pointerdown', onDown);
+    return () => document.removeEventListener('pointerdown', onDown);
+  }, [open]);
+  const close = (refocus: boolean) => {
+    setOpen(false);
+    if (refocus) btn.current?.focus();
+  };
+  const onKeyDown = (e: React.KeyboardEvent) => {
+    const els = Array.from(list.current?.querySelectorAll<HTMLElement>('[role="menuitem"]:not([aria-disabled="true"])') ?? []);
+    const i = els.indexOf(document.activeElement as HTMLElement);
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      e.stopPropagation();
+      close(true);
+    } else if (e.key === 'Tab') {
+      close(false);
+    } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (!els.length) return;
+      const n = e.key === 'ArrowDown' ? (i + 1) % els.length : (i - 1 + els.length) % els.length;
+      els[n]?.focus();
+    } else if (e.key === 'Home' || e.key === 'End') {
+      e.preventDefault();
+      (e.key === 'Home' ? els[0] : els[els.length - 1])?.focus();
+    }
+  };
+  return (
+    <div className={cx('relative shrink-0', className)}>
+      <IconButton ref={btn} label={label} aria-haspopup="menu" aria-expanded={open} aria-controls={open ? menuId : undefined} onClick={() => setOpen((o) => !o)}>
+        <EllipsisVertical size={20} />
+      </IconButton>
+      {open && (
+        <div
+          ref={list}
+          id={menuId}
+          role="menu"
+          aria-label={label}
+          onKeyDown={onKeyDown}
+          className="absolute right-0 top-full z-30 mt-1 min-w-[12rem] overflow-hidden rounded-xl border border-line bg-surface p-1 shadow-2xl"
+        >
+          {items.map((it) => (
+            <button
+              key={it.label}
+              type="button"
+              role="menuitem"
+              tabIndex={-1}
+              aria-disabled={it.disabled || undefined}
+              onClick={() => {
+                if (it.disabled) return;
+                close(true);
+                it.onSelect();
+              }}
+              className={cx(
+                'flex h-11 w-full items-center gap-2.5 rounded-lg px-3 text-left text-sm',
+                it.disabled ? 'cursor-not-allowed opacity-40' : it.danger ? 'text-danger hover:bg-danger/10' : 'hover:bg-surface2',
+              )}
+            >
+              {it.icon && <span className="shrink-0 text-muted">{it.icon}</span>}
+              {it.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function Card({ children, className, title, action, id }: { children: ReactNode; className?: string; title?: ReactNode; action?: ReactNode; id?: string }) {
   return (
