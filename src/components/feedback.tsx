@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from 'react';
 import { AlertTriangle, CheckCircle2, X } from 'lucide-react';
+import { createPortal } from 'react-dom';
 import { Button, cx, Modal } from './ui';
 import { errorMessage } from '../db/errors';
 
@@ -55,7 +56,8 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
   return (
     <Ctx.Provider value={{ toast, toastError, confirm }}>
       {children}
-      <div className="pointer-events-none fixed inset-x-0 top-0 z-[60] flex flex-col items-center gap-2 p-3 pt-safe" aria-live="polite">
+      {createPortal(
+      <div data-live-region="" className="pointer-events-none fixed inset-x-0 top-0 z-[60] flex flex-col items-center gap-2 p-3 pt-safe" aria-live="polite">
         {toasts.map((t) => (
           <div
             key={t.id}
@@ -67,12 +69,14 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
           >
             {t.kind === 'error' ? <AlertTriangle size={18} className="mt-0.5 shrink-0" /> : <CheckCircle2 size={18} className="mt-0.5 shrink-0" />}
             <span className="flex-1">{t.text}</span>
-            <button aria-label="Đóng thông báo" onClick={() => setToasts((x) => x.filter((y) => y.id !== t.id))}>
+            <button type="button" aria-label="Đóng thông báo" className="-my-2.5 -mr-3 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl" onClick={() => setToasts((x) => x.filter((y) => y.id !== t.id))}>
               <X size={16} />
             </button>
           </div>
         ))}
-      </div>
+      </div>,
+      document.body,
+      )}
       <Modal
         open={!!dialog}
         onClose={() => close(false)}

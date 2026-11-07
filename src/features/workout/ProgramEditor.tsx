@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { setLeaveGuard } from '../../lib/leaveGuard';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowDown, ArrowUp, Plus, Save, Trash2 } from 'lucide-react';
 import { db } from '../../db/db';
@@ -20,6 +21,25 @@ function move<T>(arr: T[], i: number, d: number): T[] {
   return c;
 }
 
+const draftKeyFor = (id: string | undefined) => `mgp.programDraft.${id ?? 'moi'}`;
+function readDraft(key: string): Program | null {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const d = JSON.parse(raw) as Program;
+    return d && typeof d === 'object' && Array.isArray(d.days) ? d : null;
+  } catch {
+    return null;
+  }
+}
+function removeDraft(key: string) {
+  try {
+    localStorage.removeItem(key);
+  } catch {
+    /* bỏ qua */
+  }
+}
+
 export function ProgramEditor() {
   const { id } = useParams();
   const nav = useNavigate();
@@ -31,20 +51,106 @@ export function ProgramEditor() {
   const [dirty, setDirty] = useState(false);
   const fe = useFieldErrors();
 
+  const draftKey = draftKeyFor(id);
+
   useEffect(() => {
+    let cancelled = false;
     void (async () => {
+      let base: Program | null = null;
       if (id === 'moi') {
         const now = nowISO();
-        setP({ id: uid('prog'), name: 'Giáo án mới', description: '', isActive: false, createdAt: now, updatedAt: now, days: [{ id: uid('day'), name: 'Buổi A', exercises: [] }] });
+        base = { id: uid('prog'), name: 'Giáo án mới', description: '', isActive: false, createdAt: now, updatedAt: now, days: [{ id: uid('day'), name: 'Buổi A', exercises: [] }] };
       } else {
         const found = await db.programs.get(id ?? '');
         if (!found) {
           toast('Không tìm thấy giáo án', 'error');
           nav('/lich-tap?tab=programs', { replace: true });
-        } else setP(structuredClone(found));
+          return;
+        }
+        base = structuredClone(found);
+      }
+      if (cancelled) return;
+      const draft = readDraft(draftKey);
+      if (draft && JSON.stringify(draft) !== JSON.stringify(base)) {
+        setP(base);
+        const ok = await confirm({ title: 'Khôi phục bản nháp?', message: 'Lần trước bạn sửa giáo án này nhưng chưa lưu. Khôi phục các thay đổi đó?', confirmText: 'Khôi phục', cancelText: 'Bỏ nháp' });
+        if (cancelled) return;
+        if (ok) {
+          setP(draft);
+          setDirty(true);
+        } else removeDraft(draftKey);
+      } else {
+        if (draft) removeDraft(draftKey);
+        setP(base);
       }
     })();
-  }, [id, nav, toast]);
+    return () => {
+      cancelled = true;
+    };
+  }, [id, nav, toast, confirm, draftKey]);
+
+  // Bản nháp: ghi localStorage mỗi 1 giây khi có thay đổi chưa lưu.
+  const latest = useRef(p);
+  latest.current = p;
+  useEffect(() => {
+    if (!dirty) return;
+    let last = '';
+    const write = () => {
+      const json = JSON.stringify(latest.current);
+      if (json === last || !latest.current) return;
+      last = json;
+      try {
+        localStorage.setItem(draftKey, json);
+      } catch {
+        /* hết chỗ / chế độ riêng tư — bỏ qua bản nháp */
+      }
+    };
+    const t = setInterval(write, 1000);
+    return () => {
+      clearInterval(t);
+    };
+  }, [dirty, draftKey]);
+
+  // Đóng tab / tải lại khi còn thay đổi: trình duyệt hỏi xác nhận.
+  useEffect(() => {
+    if (!dirty) return;
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      try {
+        if (latest.current) localStorage.setItem(draftKey, JSON.stringify(latest.current));
+      } catch {
+        /* bỏ qua */
+      }
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [dirty, draftKey]);
+
+  const askLeave = useCallback(async () => {
+    const ok = await confirm({ title: 'Có thay đổi chưa lưu. Rời trang?', message: 'Các thay đổi chưa lưu sẽ bị bỏ.', confirmText: 'Rời trang', cancelText: 'Hủy', danger: true });
+    if (ok) {
+      removeDraft(draftKey);
+      setDirty(false);
+    }
+    return ok;
+  }, [confirm, draftKey]);
+
+  // Link điều hướng của app (thanh bên / thanh dưới) đi qua askLeave khi đang dirty.
+  useEffect(() => {
+    if (!dirty) return;
+    setLeaveGuard(askLeave);
+    return () => setLeaveGuard(null);
+  }, [dirty, askLeave]);
+
+  /** Mọi lần rời trang từ trình sửa đi qua đây. */
+  const leave = useCallback(
+    async (go: () => void) => {
+      if (dirty && !(await askLeave())) return;
+      go();
+    },
+    [dirty, askLeave],
+  );
 
   if (!p || !exMap) return <Spinner />;
 
@@ -64,6 +170,8 @@ export function ProgramEditor() {
     try {
       await saveProgram(p);
       setDirty(false);
+      setLeaveGuard(null);
+      removeDraft(draftKey);
       toast('Đã lưu giáo án');
       nav('/lich-tap?tab=programs');
     } catch (e) {
@@ -77,6 +185,7 @@ export function ProgramEditor() {
       <PageHeader
         title={id === 'moi' ? 'Tạo giáo án' : 'Sửa giáo án'}
         back={true}
+        onBack={() => void leave(() => nav(-1))}
         action={
           <Button variant="primary" icon={<Save size={18} />} onClick={() => void save()}>
             Lưu

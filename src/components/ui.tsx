@@ -1,4 +1,5 @@
-import { cloneElement, forwardRef, isValidElement, useEffect, useId, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode } from 'react';
+import { cloneElement, forwardRef, isValidElement, useEffect, useId, useLayoutEffect, useRef, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { useFieldErrorsContext } from '../lib/formErrors';
 import { ChevronDown, ChevronLeft, Info, X } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -43,15 +44,13 @@ export const Button = forwardRef<
   );
 });
 
-export function IconButton({
-  label,
-  children,
-  className,
-  variant = 'ghost',
-  ...rest
-}: ButtonHTMLAttributes<HTMLButtonElement> & { label: string; variant?: Variant }) {
+export const IconButton = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLButtonElement> & { label: string; variant?: Variant }>(function IconButton(
+  { label, children, className, variant = 'ghost', ...rest },
+  ref,
+) {
   return (
     <button
+      ref={ref}
       type="button"
       aria-label={label}
       title={label}
@@ -61,7 +60,7 @@ export function IconButton({
       {children}
     </button>
   );
-}
+});
 
 export function Card({ children, className, title, action, id }: { children: ReactNode; className?: string; title?: ReactNode; action?: ReactNode; id?: string }) {
   return (
@@ -77,12 +76,12 @@ export function Card({ children, className, title, action, id }: { children: Rea
   );
 }
 
-export function PageHeader({ title, subtitle, back, action }: { title: string; subtitle?: ReactNode; back?: string | true; action?: ReactNode }) {
+export function PageHeader({ title, subtitle, back, action, onBack }: { title: string; subtitle?: ReactNode; back?: string | true; action?: ReactNode; onBack?: () => void }) {
   const nav = useNavigate();
   return (
     <header className="mb-4 flex items-start gap-2">
       {back && (
-        <IconButton label="Quay lại" onClick={() => (back === true ? nav(-1) : nav(back))} className="-ml-2">
+        <IconButton label="Quay lại" onClick={() => (onBack ? onBack() : back === true ? nav(-1) : nav(back))} className="-ml-2">
           <ChevronLeft size={22} />
         </IconButton>
       )}
@@ -254,15 +253,39 @@ export function NumberInput({
   );
 }
 
+/** Phím ←/→/Home/End chuyển tab trong role="tablist" (focus đi theo, kích hoạt luôn). */
+function useTablistKeys<T extends string>(values: T[], value: T, onChange: (v: T) => void) {
+  return (e: React.KeyboardEvent<HTMLElement>) => {
+    const i = values.indexOf(value);
+    let n = -1;
+    if (e.key === 'ArrowRight') n = (i + 1) % values.length;
+    else if (e.key === 'ArrowLeft') n = (i - 1 + values.length) % values.length;
+    else if (e.key === 'Home') n = 0;
+    else if (e.key === 'End') n = values.length - 1;
+    if (n < 0) return;
+    e.preventDefault();
+    const next = values[n];
+    if (next === undefined) return;
+    onChange(next);
+    e.currentTarget.querySelectorAll<HTMLElement>('[role="tab"]')[n]?.focus();
+  };
+}
+
 export function Segmented<T extends string>({ value, onChange, options, className }: { value: T; onChange: (v: T) => void; options: { value: T; label: ReactNode }[]; className?: string }) {
+  const onKeyDown = useTablistKeys(
+    options.map((o) => o.value),
+    value,
+    onChange,
+  );
   return (
-    <div role="tablist" className={cx('inline-flex rounded-xl bg-surface2 p-1', className)}>
+    <div role="tablist" onKeyDown={onKeyDown} className={cx('inline-flex rounded-xl bg-surface2 p-1', className)}>
       {options.map((o) => (
         <button
           key={o.value}
           type="button"
           role="tab"
           aria-selected={value === o.value}
+          tabIndex={value === o.value ? 0 : -1}
           onClick={() => onChange(o.value)}
           className={cx(
             'h-9 flex-1 whitespace-nowrap rounded-lg px-3 text-sm font-medium transition-colors',
@@ -277,14 +300,20 @@ export function Segmented<T extends string>({ value, onChange, options, classNam
 }
 
 export function Tabs<T extends string>({ value, onChange, tabs }: { value: T; onChange: (v: T) => void; tabs: { value: T; label: string }[] }) {
+  const onKeyDown = useTablistKeys(
+    tabs.map((t) => t.value),
+    value,
+    onChange,
+  );
   return (
-    <div role="tablist" className="-mx-4 mb-4 flex gap-1 overflow-x-auto border-b border-line px-4">
+    <div role="tablist" onKeyDown={onKeyDown} className="-mx-4 mb-4 flex gap-1 overflow-x-auto border-b border-line px-4">
       {tabs.map((t) => (
         <button
           key={t.value}
           type="button"
           role="tab"
           aria-selected={value === t.value}
+          tabIndex={value === t.value ? 0 : -1}
           onClick={() => onChange(t.value)}
           className={cx(
             'h-11 shrink-0 border-b-2 px-3 text-sm font-semibold transition-colors',
@@ -298,22 +327,90 @@ export function Tabs<T extends string>({ value, onChange, tabs }: { value: T; on
   );
 }
 
+const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+function focusables(root: HTMLElement): HTMLElement[] {
+  return Array.from(root.querySelectorAll<HTMLElement>(FOCUSABLE)).filter((el) => !el.hasAttribute('inert') && el.getAttribute('aria-hidden') !== 'true');
+}
+
+/**
+ * Hộp thoại: render vào document.body (portal), nền phía sau được đặt `inert` + `aria-hidden`,
+ * focus vào phần tử đầu tiên của nội dung (không có thì nút Đóng), Tab/Shift+Tab xoay vòng trong hộp thoại,
+ * Esc đóng hộp thoại trên cùng, đóng xong trả focus về phần tử đã mở.
+ */
 export function Modal({ open, onClose, title, children, footer, wide }: { open: boolean; onClose: () => void; title: string; children: ReactNode; footer?: ReactNode; wide?: boolean }) {
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
-    window.addEventListener('keydown', onKey);
-    const prev = document.body.style.overflow;
+  const host = useRef<HTMLDivElement | null>(null);
+  const panel = useRef<HTMLDivElement>(null);
+  const body = useRef<HTMLDivElement>(null);
+  const closeBtn = useRef<HTMLButtonElement>(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+  if (open && !host.current && typeof document !== 'undefined') host.current = document.createElement('div');
+
+  useLayoutEffect(() => {
+    const el = host.current;
+    if (!open || !el) return;
+    const opener = document.activeElement as HTMLElement | null;
+    document.body.appendChild(el);
+    // Nền phía sau: inert + aria-hidden (giữ nguyên giá trị cũ để trả lại khi đóng — hỗ trợ hộp thoại lồng nhau).
+    const changed: { node: Element; inert: boolean; hidden: string | null }[] = [];
+    for (const node of Array.from(document.body.children)) {
+      // Vùng thông báo (toast) vẫn phải đọc được khi hộp thoại mở.
+      if (node === el || node.tagName === 'SCRIPT' || node.hasAttribute('data-live-region')) continue;
+      changed.push({ node, inert: node.hasAttribute('inert'), hidden: node.getAttribute('aria-hidden') });
+      node.setAttribute('inert', '');
+      node.setAttribute('aria-hidden', 'true');
+    }
+    const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
+    const first = (body.current && focusables(body.current)[0]) || (panel.current && focusables(panel.current).find((x) => x !== closeBtn.current)) || closeBtn.current;
+    first?.focus();
     return () => {
-      window.removeEventListener('keydown', onKey);
-      document.body.style.overflow = prev;
+      for (const c of changed) {
+        if (!c.inert) c.node.removeAttribute('inert');
+        if (c.hidden == null) c.node.removeAttribute('aria-hidden');
+        else c.node.setAttribute('aria-hidden', c.hidden);
+      }
+      document.body.style.overflow = prevOverflow;
+      el.remove();
+      if (opener && opener.isConnected && typeof opener.focus === 'function') opener.focus();
     };
-  }, [open, onClose]);
-  if (!open) return null;
-  return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center sm:p-4" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+  }, [open]);
+
+  if (!open || !host.current) return null;
+
+  const onKeyDown = (e: React.KeyboardEvent) => {
+    // Sự kiện React đi qua cây component kể cả portal: chặn để hộp thoại cha không xử lý lại.
+    if (e.key === 'Escape' || e.key === 'Tab') e.stopPropagation();
+    if (e.key === 'Escape') {
+      onCloseRef.current();
+      return;
+    }
+    if (e.key !== 'Tab' || !panel.current) return;
+    const list = focusables(panel.current);
+    if (list.length === 0) {
+      e.preventDefault();
+      return;
+    }
+    const firstEl = list[0]!;
+    const lastEl = list[list.length - 1]!;
+    const active = document.activeElement;
+    if (e.shiftKey && (active === firstEl || !panel.current.contains(active))) {
+      e.preventDefault();
+      lastEl.focus();
+    } else if (!e.shiftKey && (active === lastEl || !panel.current.contains(active))) {
+      e.preventDefault();
+      firstEl.focus();
+    }
+  };
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center sm:p-4"
+      onMouseDown={(e) => e.target === e.currentTarget && onClose()}
+      onKeyDown={onKeyDown}
+    >
       <div
+        ref={panel}
         role="dialog"
         aria-modal="true"
         aria-label={title}
@@ -321,14 +418,17 @@ export function Modal({ open, onClose, title, children, footer, wide }: { open: 
       >
         <div className="flex items-center justify-between border-b border-line px-4 py-2">
           <h2 className="font-semibold">{title}</h2>
-          <IconButton label="Đóng" onClick={onClose}>
+          <IconButton ref={closeBtn} label="Đóng" onClick={onClose}>
             <X size={20} />
           </IconButton>
         </div>
-        <div className="flex-1 overflow-y-auto p-4">{children}</div>
+        <div ref={body} className="flex-1 overflow-y-auto p-4">
+          {children}
+        </div>
         {footer && <div className="flex gap-2 border-t border-line p-3 pb-safe">{footer}</div>}
       </div>
-    </div>
+    </div>,
+    host.current,
   );
 }
 

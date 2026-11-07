@@ -1,4 +1,5 @@
-import { NavLink, Outlet, useLocation, Link } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, useNavigate, Link } from 'react-router-dom';
+import { confirmLeave, hasLeaveGuard } from '../lib/leaveGuard';
 import { BarChart3, BookOpen, CircleHelp, Dumbbell, Grid2x2, Home, Ruler, Settings, Utensils, Play } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { cx } from '../components/ui';
@@ -43,8 +44,19 @@ function ActiveWorkoutBanner() {
 
 export function Layout() {
   const loc = useLocation();
+  const nav = useNavigate();
+  // Link nội bộ khi trang đang có thay đổi chưa lưu: hỏi trước, đồng ý mới chuyển.
+  const onClickCapture = (e: React.MouseEvent) => {
+    if (!hasLeaveGuard() || e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    const a = (e.target as HTMLElement).closest('a[href]');
+    const href = a?.getAttribute('href');
+    if (!a || !href?.startsWith('#/') || a.getAttribute('target') === '_blank') return;
+    e.preventDefault();
+    e.stopPropagation();
+    void confirmLeave().then((ok) => ok && nav(href.slice(1)));
+  };
   return (
-    <div className="min-h-dvh md:flex">
+    <div className="min-h-dvh md:flex" onClickCapture={onClickCapture}>
       <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col border-r border-line bg-surface/60 p-4 md:flex">
         <div className="mb-6 flex items-center gap-2 px-2">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent text-white">
@@ -93,7 +105,7 @@ export function Layout() {
       <RestTimerBar />
 
       <nav
-        aria-label="Điều hướng chính"
+        aria-label="Điều hướng nhanh"
         className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-line bg-surface/95 pb-safe backdrop-blur md:hidden"
       >
         {NAV.map(({ to, short, icon: Icon, ...r }) => (

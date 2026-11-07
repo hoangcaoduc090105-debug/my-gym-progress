@@ -199,6 +199,7 @@ function MetricCharts({ metrics }: { metrics: BodyMetric[] }) {
             key={f}
             type="button"
             onClick={() => setField(f)}
+            aria-pressed={field === f}
             className={cx('h-9 shrink-0 rounded-full px-3 text-sm font-medium', field === f ? 'bg-accent text-accent-ink' : 'bg-surface2 text-muted')}
           >
             {BODY_FIELD_LABELS[f]}

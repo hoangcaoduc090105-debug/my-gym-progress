@@ -53,6 +53,7 @@ export function Library() {
               key={m}
               type="button"
               onClick={() => setMuscle(m)}
+              aria-pressed={muscle === m}
               className={cx('h-9 shrink-0 rounded-full px-3 text-sm font-medium', muscle === m ? 'bg-accent text-accent-ink' : 'bg-surface2 text-muted')}
             >
               {m === 'all' ? 'Tất cả' : MUSCLE_LABELS[m]}

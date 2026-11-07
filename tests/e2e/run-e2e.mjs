@@ -280,7 +280,7 @@ try {
 
   await check('Điều hướng gọn: 4 mục + Thêm', async () => {
     await page.goto(BASE);
-    const nav = page.locator('nav[aria-label="Điều hướng chính"]').last();
+    const nav = page.locator('nav[aria-label="Điều hướng nhanh"]');
     for (const n of ['Hôm nay', 'Tập', 'Cơ thể', 'Ăn uống', 'Thêm']) await nav.getByRole('link', { name: n, exact: true }).waitFor();
     await nav.getByRole('link', { name: 'Thêm', exact: true }).click();
     await page.getByRole('link', { name: /Thư viện bài tập/ }).waitFor();
