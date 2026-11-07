@@ -3,7 +3,9 @@ import { BookOpen, ChevronRight, Save, ShieldCheck } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { getThemePref, setThemePref, type ThemePref } from '../../lib/theme';
 import type { Profile, Settings } from '../../db/types';
-import { Button, Card, Field, NumberInput, PageHeader, Segmented, Spinner, Toggle } from '../../components/ui';
+import { Button, Card, Field, NumberInput, PageHeader, Segmented, Spinner, Toggle, cx } from '../../components/ui';
+import { STANDARD_PLATES_KG } from '../../domain/plates';
+import { fmt1 } from '../../lib/format';
 import { useFeedback } from '../../components/feedback';
 import { useProfile, useSettings } from '../../app/useAppData';
 import { loadSchemas, saveProfile, saveSettings } from '../../db/repo';
@@ -235,6 +237,51 @@ function TrainingForm({ settings }: { settings: Settings }) {
               </div>
             )}
           </div>
+        </div>
+        <div className="rounded-xl bg-surface2 p-3">
+          <div className="mb-1 text-sm font-semibold">Tạ đòn &amp; đĩa (máy tính đĩa tạ)</div>
+          <p className="mb-3 text-xs text-muted">Dùng để tính mỗi bên gắn đĩa gì và làm tròn gợi ý tăng tạ về mức gắn được.</p>
+          <Field name="barbell.barWeightKg" label="Đòn (kg)" className="mb-3 max-w-[10rem]">
+            {(id) => (
+              <NumberInput
+                id={id}
+                value={s.barbell.barWeightKg}
+                onChange={(v) => setS((x) => ({ ...x, barbell: { ...x.barbell, barWeightKg: v ?? (null as unknown as number) } }))}
+              />
+            )}
+          </Field>
+          <div className="mb-1 text-sm font-medium text-muted" id="plates-label">
+            Đĩa đang có (kg)
+          </div>
+          <div className="flex flex-wrap gap-2" role="group" aria-labelledby="plates-label">
+            {STANDARD_PLATES_KG.map((p) => {
+              const on = s.barbell.platesKg.includes(p);
+              return (
+                <button
+                  key={p}
+                  type="button"
+                  aria-pressed={on}
+                  aria-label={`Đĩa ${fmt1(p)} kg`}
+                  onClick={() => {
+                    fe.clear('barbell.platesKg');
+                    setS((x) => {
+                      const cur = x.barbell.platesKg;
+                      const next = on ? cur.filter((y) => y !== p) : [...cur, p].sort((a, b) => b - a);
+                      return { ...x, barbell: { ...x.barbell, platesKg: next } };
+                    });
+                  }}
+                  className={cx('h-11 min-w-[44px] rounded-full px-3 text-sm font-semibold tabular', on ? 'bg-accent text-accent-ink' : 'bg-surface text-muted ring-1 ring-line')}
+                >
+                  {fmt1(p)}
+                </button>
+              );
+            })}
+          </div>
+          {fe.errors['barbell.platesKg'] && (
+            <div role="alert" className="mt-1 text-xs font-medium text-danger">
+              {fe.errors['barbell.platesKg']}
+            </div>
+          )}
         </div>
         <Button variant="primary" block icon={<Save size={18} />} onClick={() => void save()}>
           Lưu cài đặt tập luyện

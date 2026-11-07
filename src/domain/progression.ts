@@ -1,5 +1,6 @@
 import type { BodyRegion, ExerciseTarget, ProgressionSettings, SetEntry } from '../db/types';
 import { isWorkingSet } from './sets';
+import { roundToLoadable } from './plates';
 
 export type Suggestion =
   | { kind: 'increase'; fromKg: number; toKg: number; reason: string; rirMissing: boolean }
@@ -31,6 +32,8 @@ export function suggestProgression(params: {
   region: BodyRegion;
   isBodyweight: boolean;
   settings: ProgressionSettings;
+  /** v1.8: bài tạ đòn => làm tròn mức gợi ý về mức gắn được với đòn + đĩa đang có. */
+  barbell?: { barWeightKg: number; platesKg: number[] } | null;
 }): Suggestion {
   const { target, region, isBodyweight, settings } = params;
   if (!target) return { kind: 'insufficient', reason: 'Bài tập chưa có mục tiêu số hiệp/số lần trong giáo án.' };
@@ -79,6 +82,9 @@ export function suggestProgression(params: {
     if (toKg <= topKg) toKg = roundTo(topKg + Math.max(settings.roundToKg, 0.5), settings.roundToKg || 0.5);
   } else {
     toKg = roundTo(topKg + fixedStep, 0.25);
+  }
+  if (params.barbell && params.barbell.platesKg.length > 0) {
+    toKg = roundToLoadable(toKg, topKg, params.barbell.barWeightKg, params.barbell.platesKg);
   }
   return {
     kind: 'increase',

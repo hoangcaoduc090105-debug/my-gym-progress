@@ -413,3 +413,21 @@ describe('superset (v1.8.0)', () => {
     expect(again.exercises.slice(0, 2).map((e) => e.groupId)).toEqual(['grp-1', 'grp-1']);
   });
 });
+
+describe('cài đặt đĩa tạ (v1.8.0)', () => {
+  it('bản ghi settings cũ (không có barbell) được điền mặc định khi đọc; lưu lại hợp lệ', async () => {
+    const cur = (await db.settings.get('app'))!;
+    const { barbell: _b, ...old } = cur as typeof cur & { barbell?: unknown };
+    await db.settings.put(old as typeof cur);
+    const s = await repo.getSettings();
+    expect(s.barbell).toEqual({ barWeightKg: 20, platesKg: [25, 20, 15, 10, 5, 2.5, 1.25] });
+    expect(s.progression.minRIR).toBe(cur.progression.minRIR);
+    const { id: _i, updatedAt: _u, ...rest } = s;
+    await repo.saveSettings({ ...rest, barbell: { barWeightKg: 15, platesKg: [20, 10, 5] } });
+    expect((await repo.getSettings()).barbell).toEqual({ barWeightKg: 15, platesKg: [20, 10, 5] });
+  });
+  it('từ chối danh sách đĩa rỗng', async () => {
+    const { id: _i, updatedAt: _u, ...rest } = await repo.getSettings();
+    await expect(repo.saveSettings({ ...rest, barbell: { barWeightKg: 20, platesKg: [] } })).rejects.toBeInstanceOf(AppError);
+  });
+});

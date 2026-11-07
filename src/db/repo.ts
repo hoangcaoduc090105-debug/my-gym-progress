@@ -1,7 +1,7 @@
 import Dexie from 'dexie';
 import type { z } from 'zod';
 import { db } from './db';
-import { defaultSettings } from './defaults';
+import { withSettingsDefaults } from './defaults';
 import { AppError } from './errors';
 import type * as SchemasModule from './schemas';
 import type {
@@ -64,11 +64,8 @@ export async function saveProfile(input: ProfileInput): Promise<Profile> {
 }
 
 export async function getSettings(): Promise<Settings> {
-  const s = await db.settings.get('app');
-  const d = defaultSettings(nowISO());
-  if (!s) return d;
-  // Gộp với mặc định để bản cũ thiếu trường mới vẫn chạy.
-  return { ...d, ...s, progression: { ...d.progression, ...s.progression } };
+  // Gộp với mặc định để bản cũ thiếu trường mới (vd. barbell v1.8) vẫn chạy.
+  return withSettingsDefaults(await db.settings.get('app'), nowISO());
 }
 
 export async function saveSettings(s: Omit<Settings, 'id' | 'updatedAt'>): Promise<Settings> {

@@ -304,6 +304,25 @@ try {
     await cancelCurrent();
   });
 
+  await check('Máy tính đĩa tạ trên bài tạ đòn: thấy "Mỗi bên"', async () => {
+    await page.goto(BASE + '#/lich-tap');
+    const dayC = page.locator('li, div').filter({ hasText: /^Buổi C/ }).filter({ has: page.getByRole('button', { name: 'Tập', exact: true }) }).last();
+    await dayC.getByRole('button', { name: 'Tập', exact: true }).click();
+    await page.getByRole('heading', { name: 'Đang tập' }).waitFor();
+    const bbCard = page.locator('section').filter({ has: page.getByRole('button', { name: 'Đĩa tạ hiệp 1' }) }).first();
+    await bbCard.getByRole('button', { name: 'Đĩa tạ hiệp 1' }).click();
+    const dlg = page.getByRole('dialog', { name: 'Đĩa tạ' });
+    await dlg.getByLabel('Tổng tạ (kg, gồm đòn)').fill('100');
+    await dlg.getByText('Mỗi bên', { exact: true }).waitFor();
+    await dlg.getByText(/Mỗi bên: 25 \+ 15/).waitFor();
+    await dlg.getByLabel('Tổng tạ (kg, gồm đòn)').fill('61');
+    await dlg.getByRole('button', { name: 'Gần nhất: 60 kg' }).waitFor();
+    await shot('15-plates');
+    await dlg.getByRole('button', { name: 'Gần nhất: 60 kg' }).click();
+    assert.equal(await bbCard.getByLabel('Mức tạ hiệp 1').inputValue(), '60');
+    await cancelCurrent();
+  });
+
   await check('Tạo giáo án mới, đổi tên; rời trang khi chưa lưu thì hỏi', async () => {
     await page.goto(BASE + '#/lich-tap?tab=programs');
     await page.getByRole('button', { name: 'Tạo giáo án mới' }).click();

@@ -79,6 +79,13 @@ export const settingsSchema = z.object({
   measurementReminderDays: z.number().int().min(1).max(90),
   timerSound: z.boolean(),
   timerVibrate: z.boolean(),
+  // Tùy chọn: bản sao lưu cũ không có — khi đọc sẽ điền mặc định.
+  barbell: z
+    .object({
+      barWeightKg: z.number().finite().min(0).max(100),
+      platesKg: z.array(z.number().finite().positive().max(100)).min(1, 'Chọn ít nhất 1 loại đĩa').max(20),
+    })
+    .optional(),
   updatedAt: timestamp,
 });
 

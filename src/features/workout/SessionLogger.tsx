@@ -1,7 +1,7 @@
 import { Suspense, lazy, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { ArrowDown, ArrowLeftRight, ArrowUp, BookOpen, Check, ClipboardCopy, Info, Minus, Plus, Timer, Trash2, TrendingUp } from 'lucide-react';
+import { ArrowDown, ArrowLeftRight, ArrowUp, BookOpen, Disc, Check, ClipboardCopy, Info, Minus, Plus, Timer, Trash2, TrendingUp } from 'lucide-react';
 import { db } from '../../db/db';
 import { MUSCLE_LABELS, type Exercise, type SessionExercise, type SetEntry, type Settings } from '../../db/types';
 import { Badge, Button, Card, IconButton, Modal, NumberInput, PageHeader, Spinner, cx } from '../../components/ui';
@@ -20,6 +20,7 @@ import { useRestTimerActions } from './RestTimer';
 import { ExercisePicker } from './ExercisePicker';
 import { useSessionWriter, type SaveState } from './useSessionWriter';
 const ExerciseHistoryList = lazy(() => import('../library/ExerciseHistory'));
+const PlateCalculator = lazy(() => import('./PlateCalculator'));
 const SwapExerciseDialog = lazy(() => import('./SwapExerciseDialog'));
 const ExerciseTechnique = lazy(() => import('../library/ExerciseTechnique').then((m) => ({ default: m.ExerciseTechnique })));
 
@@ -399,8 +400,18 @@ function ExerciseBlock(props: {
   const { se, ex, hint, settings, onChange } = props;
   const t = se.target;
   const sg = ex
-    ? suggestProgression({ target: t, lastSets: hint?.sets ?? [], region: ex.region, isBodyweight: ex.isBodyweight, settings: settings.progression })
+    ? suggestProgression({
+        target: t,
+        lastSets: hint?.sets ?? [],
+        region: ex.region,
+        isBodyweight: ex.isBodyweight,
+        settings: settings.progression,
+        barbell: ex.equipment === 'barbell' ? settings.barbell : null,
+      })
     : null;
+  const isBarbell = ex?.equipment === 'barbell';
+  const cols = isBarbell ? 'grid-cols-[32px_1fr_44px_1fr_60px_48px]' : 'grid-cols-[36px_1fr_1fr_64px_48px]';
+  const [plateFor, setPlateFor] = useState<number | null>(null);
   const [howOpen, setHowOpen] = useState(false);
   const [histOpen, setHistOpen] = useState(false);
   const setField = (i: number, patch: Partial<SetEntry>) => onChange((e) => ({ ...e, sets: e.sets.map((x, k) => (k === i ? { ...x, ...patch } : x)) }));
@@ -468,9 +479,9 @@ function ExerciseBlock(props: {
       )}
       {sg && <SuggestionBanner sg={sg} />}
 
-      <div className="grid grid-cols-[36px_1fr_1fr_64px_48px] items-center gap-1.5 text-center text-xs text-muted">
+      <div className={cx('grid items-center gap-1.5 text-center text-xs text-muted', cols)}>
         <div>Hiệp</div>
-        <div>kg</div>
+        <div className={isBarbell ? 'col-span-2' : undefined}>kg</div>
         <div>Lần</div>
         <div>RIR</div>
         <div>✓</div>
@@ -482,7 +493,7 @@ function ExerciseBlock(props: {
           return (
             <div
               key={set.id}
-              className={cx('grid grid-cols-[36px_1fr_1fr_64px_48px] items-center gap-1.5 rounded-xl', set.done && 'bg-accent/10')}
+              className={cx('grid items-center gap-1.5 rounded-xl', cols, set.done && 'bg-accent/10')}
               data-testid="set-row"
             >
               <button
@@ -503,6 +514,17 @@ function ExerciseBlock(props: {
                 onChange={(v) => setField(i, { weightKg: v })}
                 className="px-1 text-center"
               />
+              {isBarbell && (
+                <button
+                  type="button"
+                  aria-label={`Đĩa tạ hiệp ${i + 1}`}
+                  title="Tính đĩa mỗi bên"
+                  onClick={() => setPlateFor(i)}
+                  className="flex h-11 w-11 items-center justify-center rounded-lg bg-surface2 text-muted hover:text-text"
+                >
+                  <Disc size={18} />
+                </button>
+              )}
               <NumberInput
                 aria-label={`Số lần hiệp ${i + 1}`}
                 value={set.reps}
@@ -566,6 +588,18 @@ function ExerciseBlock(props: {
         onChange={(e) => { const v = e.target.value; props.onChangeText((x) => ({ ...x, note: v })); }}
         onBlur={props.onBlurText}
       />
+      {plateFor != null && (
+        <Suspense fallback={null}>
+          <PlateCalculator
+            open
+            onClose={() => setPlateFor(null)}
+            initialKg={se.sets[plateFor]?.weightKg ?? hintFor(hint, plateFor)?.weightKg ?? (sg?.kind === 'increase' ? sg.toKg : null)}
+            barWeightKg={settings.barbell.barWeightKg}
+            platesKg={settings.barbell.platesKg}
+            onFill={(kg) => setField(plateFor, { weightKg: kg })}
+          />
+        </Suspense>
+      )}
       {histOpen && (
         <Modal open onClose={() => setHistOpen(false)} title={`3 buổi gần nhất: ${ex?.nameVi ?? ''}`} wide>
           <Suspense fallback={<Spinner />}>
