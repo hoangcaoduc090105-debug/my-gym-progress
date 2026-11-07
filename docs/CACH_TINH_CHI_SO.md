@@ -13,6 +13,7 @@ Mọi phép tính nằm trong `src/domain/` và có kiểm thử trong `tests/un
 | Thay đổi cân nặng/tuần | Trung bình 7 ngày gần nhất trừ trung bình 7 ngày trước đó | ≥ 2 lần cân trong mỗi cửa sổ 7 ngày |
 | Xu hướng cân nặng, vòng eo | Hồi quy tuyến tính, quy đổi ra đơn vị/tuần | ≥ 3 lần đo trải dài ≥ 14 ngày |
 | Protein | Σ protein × số khẩu phần, so với mục tiêu tối thiểu | — |
+| Chấm điểm bữa ăn | Protein mục tiêu/bữa = protein tối thiểu/ngày ÷ số bữa (mặc định 4; 105 g → 26 g). ≥ 100% = Phù hợp, 60–99% = Hơi thiếu đạm, < 60% = Thiếu đạm. Calories chỉ đánh giá khi người dùng tự đặt mục tiêu. Gợi ý bù đạm chỉ đưa món cần ≤ 2 phần. Khoảng 0,4 g/kg/bữa chia đều ~4 bữa (Schoenfeld & Aragon, 2018) | Có ít nhất 1 món trong bữa |
 | Gợi ý protein | 1,6–2,0 g/kg/ngày, làm tròn 5 g. Lợi ích tăng cơ chững lại quanh ~1,6 g/kg/ngày (Morton et al., 2018) | — |
 
 **Không tính**: tỷ lệ mỡ cơ thể (không suy đoán từ cân nặng hay ảnh) và mục tiêu calories (cần tuổi, mức vận động và dữ liệu tiêu hao thực tế, nên người dùng tự nhập nếu muốn).
@@ -31,6 +32,10 @@ Haff, G. G., & Triplett, N. T. (Eds.). (2016). *Essentials of strength training 
 
 Morton, R. W., Murphy, K. T., McKellar, S. R., Schoenfeld, B. J., Henselmans, M., Helms, E., Aragon, A. A., Devries, M. C., Banfield, L., Krieger, J. W., & Phillips, S. M. (2018). A systematic review, meta-analysis and meta-regression of the effect of protein supplementation on resistance training-induced gains in muscle mass and strength in healthy adults. *British Journal of Sports Medicine, 52*(6), 376–384. https://doi.org/10.1136/bjsports-2017-097608
 
+Schoenfeld, B. J., & Aragon, A. A. (2018). How much protein can the body use in a single meal for muscle-building? Implications for daily protein distribution. *Journal of the International Society of Sports Nutrition, 15*, Article 10. https://doi.org/10.1186/s12970-018-0215-1
+
 Schoenfeld, B. J., Ogborn, D., & Krieger, J. W. (2017). Dose-response relationship between weekly resistance training volume and increases in muscle mass: A systematic review and meta-analysis. *Journal of Sports Sciences, 35*(11), 1073–1082. https://doi.org/10.1080/02640414.2016.1210197
 
 Zourdos, M. C., Klemp, A., Dolan, C., Quiles, J. M., Schau, K. A., Jo, E., Helms, E., Esgro, B., Duncan, S., Garcia Merino, S., & Blanco, R. (2016). Novel resistance training–specific rating of perceived exertion scale measuring repetitions in reserve. *Journal of Strength and Conditioning Research, 30*(1), 267–275. https://doi.org/10.1519/JSC.0000000000001049
+
+U.S. Department of Agriculture, Agricultural Research Service. (2019). *FoodData Central* [Data set]. https://fdc.nal.usda.gov/

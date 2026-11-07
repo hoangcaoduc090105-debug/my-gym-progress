@@ -12,7 +12,8 @@ export const APP_GUIDE: GuideStep[] = [
     title: 'Lần đầu mở ứng dụng',
     body: [
       'Nhập chiều cao và cân nặng hiện tại, rồi bấm "Bắt đầu".',
-      'Ứng dụng tự gợi ý mục tiêu protein mỗi ngày; bạn sửa được bất kỳ lúc nào trong Cài đặt.',
+      'Ứng dụng tự gợi ý mục tiêu protein mỗi ngày; bạn sửa được bất kỳ lúc nào trong Thêm → Cài đặt.',
+      'Thanh dưới cùng có 5 nút: Hôm nay · Tập · Cơ thể · Ăn uống · Thêm (thư viện bài tập, phân tích, hướng dẫn, cài đặt).',
       'Mọi dữ liệu chỉ lưu trên điện thoại của bạn, không gửi đi đâu.',
     ],
   },
@@ -27,9 +28,9 @@ export const APP_GUIDE: GuideStep[] = [
   {
     title: 'Bắt đầu một buổi tập',
     body: [
-      'Ở Tổng quan hoặc Lịch tập, bấm "Bắt đầu" ở thẻ Buổi tập kế tiếp. App tự xoay vòng Buổi A → B → C.',
+      'Ở trang Hôm nay, bấm "Bắt đầu" trên thẻ xanh Buổi tập kế tiếp. App tự xoay vòng Buổi A → B → C.',
       'Không bắt buộc tập vào thứ cố định. Nên nghỉ ít nhất 1 ngày giữa 2 buổi.',
-      'Muốn tự chọn bài: Lịch tập → "Buổi tự do".',
+      'Muốn tự chọn bài: Tập → "Buổi tự do".',
     ],
   },
   {
@@ -38,7 +39,7 @@ export const APP_GUIDE: GuideStep[] = [
       'Mỗi dòng là 1 hiệp: nhập số kg, số lần, RIR (số lần còn có thể làm thêm), rồi bấm ✓.',
       'Ô trống có chữ mờ là số liệu buổi trước — bấm ✓ luôn nếu bạn làm đúng như vậy.',
       'Bấm ✓ thì đồng hồ nghỉ tự chạy ở cuối màn hình (có nút +15 giây, −15 giây, bỏ qua).',
-      'Bấm biểu tượng quyển sách 📖 cạnh tên bài để xem kỹ thuật ngay trong lúc tập.',
+      'Bấm biểu tượng quyển sách 📖 cạnh tên bài để xem bản đồ cơ, 3 bước làm đúng, 3 lỗi cần tránh và nút mở video mẫu trên YouTube.',
       'Chạm vào số thứ tự hiệp để đổi thành hiệp khởi động (K); hiệp K không tính vào thống kê.',
       'Dòng xanh "Gợi ý: … kg" xuất hiện khi bạn đủ điều kiện tăng tạ. Đây chỉ là gợi ý, giáo án không tự đổi.',
     ],
@@ -48,23 +49,25 @@ export const APP_GUIDE: GuideStep[] = [
     body: [
       'Bấm "Hoàn thành" ở cuối trang. Chỉ các hiệp đã ✓ được lưu vào lịch sử.',
       'Thoát app giữa chừng không sao: mọi thứ được lưu tự động, mở lại sẽ thấy nút "Tiếp tục".',
-      'Lỡ tay hủy hoặc xóa: vào Cài đặt → Thùng rác để khôi phục.',
+      'Lỡ tay hủy hoặc xóa: vào Thêm → Cài đặt → Thùng rác để khôi phục.',
     ],
   },
   {
     title: 'Ghi cân nặng và số đo',
     body: [
-      'Tiến độ cơ thể → "Ghi số đo". Chỉ cần nhập chỉ số bạn có.',
+      'Cơ thể → "Ghi số đo". Chỉ cần nhập chỉ số bạn có.',
       'Nên cân 2–3 lần mỗi tuần, buổi sáng sau khi vệ sinh, trước khi ăn.',
-      'Đo vòng mỗi 2 tuần, cùng vị trí thước dây. App sẽ nhắc bạn ở trang Tổng quan.',
+      'Đo vòng mỗi 2 tuần, cùng vị trí thước dây. App sẽ nhắc bạn ở trang Hôm nay.',
       'Ảnh tiến độ: tab Ảnh → chọn góc chụp → "Chọn / chụp ảnh". Dùng nút "So sánh" để xem 2 ảnh cạnh nhau.',
     ],
   },
   {
-    title: 'Ghi dinh dưỡng',
+    title: 'Ghi bữa ăn và kiểm tra bữa đó có phù hợp không',
     body: [
-      'Lần đầu: Dinh dưỡng → tab Thực phẩm → "Thêm thực phẩm", nhập số liệu theo nhãn bao bì.',
-      'Hằng ngày: tab Nhật ký ngày → "Thêm món" ở từng bữa → chọn món → nhập số khẩu phần.',
+      'Lần đầu: Ăn uống → tab Món của tôi → bấm "Thêm nhanh 6 món cơ bản" hoặc "Thêm thực phẩm" theo nhãn bao bì.',
+      'Hằng ngày: tab Hôm nay → "Thêm món" ở từng bữa → nhập số khẩu phần → chạm vào món.',
+      'Ngay dưới mỗi bữa, app chấm: Phù hợp / Hơi thiếu đạm / Thiếu đạm, và gợi ý món để bù (chạm là thêm luôn).',
+      'Muốn app đánh giá cả calories: đặt mục tiêu calories trong Thêm → Cài đặt.',
       'Thanh protein cho biết bạn đã đạt bao nhiêu so với mục tiêu ngày.',
       'Thực phẩm ăn thường xuyên: bấm ngôi sao ⭐ để đưa lên đầu danh sách.',
       'Thực đơn: tạo sẵn "Ngày tập", rồi thêm cả thực đơn bằng 1 lần bấm.',
@@ -73,7 +76,7 @@ export const APP_GUIDE: GuideStep[] = [
   {
     title: 'Xem tiến bộ',
     body: [
-      'Phân tích: số buổi mỗi tuần, số hiệp theo nhóm cơ, tổng khối lượng, sức mạnh từng bài, kỷ lục cá nhân.',
+      'Thêm → Phân tích: số buổi mỗi tuần, số hiệp theo nhóm cơ, tổng khối lượng, sức mạnh từng bài, kỷ lục cá nhân.',
       'Mỗi chỉ số có nút "Cách tính" giải thích ý nghĩa.',
       'Khi dữ liệu còn ít, app hiện "Chưa đủ dữ liệu" thay vì đưa kết luận sai.',
     ],
@@ -81,8 +84,8 @@ export const APP_GUIDE: GuideStep[] = [
   {
     title: 'Sao lưu dữ liệu — làm mỗi tuần',
     body: [
-      'Cài đặt → "Xuất toàn bộ dữ liệu (JSON)" → lưu tệp vào Google Drive hoặc iCloud.',
-      'Đổi điện thoại: cài app ở máy mới → Cài đặt → "Nhập dữ liệu JSON" → chọn tệp đã lưu.',
+      'Thêm → Cài đặt → "Xuất toàn bộ dữ liệu (JSON)" → lưu tệp vào Google Drive hoặc iCloud.',
+      'Đổi điện thoại: cài app ở máy mới → Thêm → Cài đặt → "Nhập dữ liệu JSON" → chọn tệp đã lưu.',
       'Xóa dữ liệu trình duyệt mà không có tệp sao lưu sẽ mất toàn bộ nhật ký.',
     ],
   },
@@ -177,7 +180,7 @@ export const TRAINING_RULES: TrainingRule[] = [
     title: 'Phục hồi',
     body: [
       'Ngủ đủ 7–9 tiếng mỗi đêm.',
-      'Ăn đủ protein mỗi ngày (theo dõi trong mục Dinh dưỡng) và chia đều cho các bữa.',
+      'Ăn đủ protein mỗi ngày (theo dõi trong mục Ăn uống) và chia đều cho các bữa.',
       'Cơ phát triển trong lúc nghỉ, không phải lúc tập — đừng bỏ ngày nghỉ.',
     ],
     cite: 'Lợi ích tăng cơ của protein chững lại quanh mức khoảng 1,6 g/kg/ngày (Morton et al., 2018).',
@@ -189,5 +192,7 @@ export const GUIDE_REFERENCES = [
   'Cheung, K., Hume, P. A., & Maxwell, L. (2003). Delayed onset muscle soreness: Treatment strategies and performance factors. Sports Medicine, 33(2), 145–164. https://doi.org/10.2165/00007256-200333020-00005',
   'Haff, G. G., & Triplett, N. T. (Eds.). (2016). Essentials of strength training and conditioning (4th ed.). Human Kinetics.',
   'Morton, R. W., Murphy, K. T., McKellar, S. R., Schoenfeld, B. J., Henselmans, M., Helms, E., Aragon, A. A., Devries, M. C., Banfield, L., Krieger, J. W., & Phillips, S. M. (2018). A systematic review, meta-analysis and meta-regression of the effect of protein supplementation on resistance training-induced gains in muscle mass and strength in healthy adults. British Journal of Sports Medicine, 52(6), 376–384. https://doi.org/10.1136/bjsports-2017-097608',
+  'Schoenfeld, B. J., & Aragon, A. A. (2018). How much protein can the body use in a single meal for muscle-building? Implications for daily protein distribution. Journal of the International Society of Sports Nutrition, 15, Article 10. https://doi.org/10.1186/s12970-018-0215-1',
+  'U.S. Department of Agriculture, Agricultural Research Service. (2019). FoodData Central [Data set]. https://fdc.nal.usda.gov/',
   'Zourdos, M. C., Klemp, A., Dolan, C., Quiles, J. M., Schau, K. A., Jo, E., Helms, E., Esgro, B., Duncan, S., Garcia Merino, S., & Blanco, R. (2016). Novel resistance training–specific rating of perceived exertion scale measuring repetitions in reserve. Journal of Strength and Conditioning Research, 30(1), 267–275. https://doi.org/10.1519/JSC.0000000000001049',
 ];

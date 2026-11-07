@@ -123,6 +123,10 @@ function ProfileForm({ profile }: { profile: Profile }) {
             </Button>
           </div>
         )}
+        <Field label="Số bữa mỗi ngày" hint={`Kể cả bữa phụ. Đạm mục tiêu mỗi bữa ≈ ${Math.round(p.proteinTargetMinG / (p.mealsPerDay ?? 4))} g`}>
+          {(id) => <NumberInput id={id} value={p.mealsPerDay ?? 4} onChange={(v) => set('mealsPerDay', v == null ? null : Math.round(v))} />}
+        </Field>
+        <div />
         <Field label="Mục tiêu calories (kcal)" className="col-span-2" hint="Không bắt buộc. App không tự tính calories vì thiếu dữ liệu tiêu hao năng lượng thực tế.">
           {(id) => <NumberInput id={id} value={p.calorieTarget ?? null} onChange={(v) => set('calorieTarget', v)} placeholder="Để trống nếu chưa xác định" />}
         </Field>

@@ -28,7 +28,7 @@ export default function BodyPage() {
   return (
     <div>
       <PageHeader
-        title="Tiến độ cơ thể"
+        title="Cơ thể"
         subtitle="Cân nặng, số đo vòng và ảnh tiến độ"
         action={
           <Button

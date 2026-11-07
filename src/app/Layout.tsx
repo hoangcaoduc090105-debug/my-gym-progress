@@ -1,19 +1,25 @@
 import { NavLink, Outlet, useLocation, Link } from 'react-router-dom';
-import { BarChart3, BookOpen, CalendarDays, Dumbbell, LayoutDashboard, Ruler, Settings, Utensils, Play } from 'lucide-react';
+import { BarChart3, BookOpen, CircleHelp, Dumbbell, Grid2x2, Home, Ruler, Settings, Utensils, Play } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { cx } from '../components/ui';
 import { RestTimerBar } from '../features/workout/RestTimer';
 import { db } from '../db/db';
 
+/** Điều hướng chính: 4 mục dùng hằng ngày + "Thêm" chứa các mục ít dùng. */
 export const NAV = [
-  { to: '/', label: 'Tổng quan', short: 'Tổng quan', icon: LayoutDashboard, end: true },
-  { to: '/lich-tap', label: 'Lịch tập', short: 'Lịch tập', icon: CalendarDays },
-  { to: '/thu-vien', label: 'Thư viện bài tập', short: 'Thư viện', icon: BookOpen },
-  { to: '/co-the', label: 'Tiến độ cơ thể', short: 'Cơ thể', icon: Ruler },
-  { to: '/dinh-duong', label: 'Dinh dưỡng', short: 'Dinh dưỡng', icon: Utensils },
-  { to: '/phan-tich', label: 'Phân tích', short: 'Phân tích', icon: BarChart3 },
-  { to: '/cai-dat', label: 'Cài đặt', short: 'Cài đặt', icon: Settings },
+  { to: '/', label: 'Hôm nay', short: 'Hôm nay', icon: Home, end: true },
+  { to: '/lich-tap', label: 'Tập', short: 'Tập', icon: Dumbbell },
+  { to: '/co-the', label: 'Cơ thể', short: 'Cơ thể', icon: Ruler },
+  { to: '/dinh-duong', label: 'Ăn uống', short: 'Ăn uống', icon: Utensils },
 ] as const;
+
+export const MORE = [
+  { to: '/thu-vien', label: 'Thư viện bài tập', desc: 'Cách tập đúng từng động tác, bản đồ cơ', icon: BookOpen },
+  { to: '/phan-tich', label: 'Phân tích', desc: 'Biểu đồ sức mạnh, kỷ lục, số hiệp theo nhóm cơ', icon: BarChart3 },
+  { to: '/huong-dan', label: 'Hướng dẫn', desc: 'Cách dùng app và nguyên tắc tập cho người mới', icon: CircleHelp },
+  { to: '/cai-dat', label: 'Cài đặt', desc: 'Hồ sơ, mục tiêu, giao diện, sao lưu dữ liệu', icon: Settings },
+] as const;
+const MORE_PATHS = ['/them', ...MORE.map((m) => m.to)];
 
 function ActiveWorkoutBanner() {
   const loc = useLocation();
@@ -35,6 +41,7 @@ function ActiveWorkoutBanner() {
 }
 
 export function Layout() {
+  const loc = useLocation();
   return (
     <div className="min-h-dvh md:flex">
       <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col border-r border-line bg-surface/60 p-4 md:flex">
@@ -61,6 +68,19 @@ export function Layout() {
               {label}
             </NavLink>
           ))}
+          <div className="mb-1 mt-5 px-3 text-xs font-semibold uppercase tracking-wide text-muted">Khác</div>
+          {MORE.map(({ to, label, icon: Icon }) => (
+            <NavLink
+              key={to}
+              to={to}
+              className={({ isActive }) =>
+                cx('flex h-11 items-center gap-3 rounded-xl px-3 text-sm font-medium', isActive ? 'bg-accent/15 text-accent' : 'text-muted hover:bg-surface2 hover:text-text')
+              }
+            >
+              <Icon size={19} />
+              {label}
+            </NavLink>
+          ))}
         </nav>
       </aside>
 
@@ -73,19 +93,28 @@ export function Layout() {
 
       <nav
         aria-label="Điều hướng chính"
-        className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-7 border-t border-line bg-bg/95 pb-safe backdrop-blur md:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-line bg-surface/95 pb-safe backdrop-blur md:hidden"
       >
         {NAV.map(({ to, short, icon: Icon, ...r }) => (
           <NavLink
             key={to}
             to={to}
             end={'end' in r}
-            className={({ isActive }) => cx('flex h-16 min-w-0 flex-col items-center justify-center gap-1 overflow-hidden text-[10px] font-medium leading-none tracking-tighter', isActive ? 'text-accent' : 'text-muted')}
+            className={({ isActive }) => cx('flex h-16 min-w-0 flex-col items-center justify-center gap-1 text-[11px] font-medium leading-none', isActive ? 'text-accent' : 'text-muted')}
           >
-            <Icon size={21} />
+            <Icon size={22} />
             <span className="whitespace-nowrap">{short}</span>
           </NavLink>
         ))}
+        <NavLink
+          to="/them"
+          className={() =>
+            cx('flex h-16 flex-col items-center justify-center gap-1 text-[11px] font-medium leading-none', MORE_PATHS.some((p) => loc.pathname.startsWith(p)) ? 'text-accent' : 'text-muted')
+          }
+        >
+          <Grid2x2 size={22} />
+          <span>Thêm</span>
+        </NavLink>
       </nav>
     </div>
   );

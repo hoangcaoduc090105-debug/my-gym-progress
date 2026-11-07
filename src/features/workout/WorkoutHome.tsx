@@ -25,7 +25,7 @@ export function WorkoutHome() {
   if (!data) return <Spinner />;
   return (
     <div>
-      <PageHeader title="Lịch tập" subtitle="Giáo án, lịch theo ngày và nhật ký buổi tập" />
+      <PageHeader title="Tập" subtitle="Bắt đầu buổi tập, lịch và giáo án" />
       <Tabs
         value={tab}
         onChange={(t) => setParams({ tab: t }, { replace: true })}

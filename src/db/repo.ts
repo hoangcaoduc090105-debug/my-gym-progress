@@ -367,6 +367,18 @@ export async function deleteFood(id: string): Promise<void> {
   await db.foods.delete(id);
 }
 
+/** Nạp bộ thực phẩm cơ bản (bỏ qua món trùng tên đã có). */
+export async function addStarterFoods(list: Omit<FoodInput, 'isFavorite'>[]): Promise<number> {
+  const existing = new Set((await db.foods.toArray()).map((f) => f.name.trim().toLowerCase()));
+  let n = 0;
+  for (const f of list) {
+    if (existing.has(f.name.trim().toLowerCase())) continue;
+    await saveFood({ ...f, isFavorite: true });
+    n++;
+  }
+  return n;
+}
+
 export async function toggleFavoriteFood(id: string): Promise<void> {
   const f = await db.foods.get(id);
   if (f) await db.foods.put({ ...f, isFavorite: !f.isFavorite, updatedAt: nowISO() });

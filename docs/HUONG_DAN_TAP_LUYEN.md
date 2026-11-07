@@ -74,7 +74,7 @@
 ### 11. Phục hồi
 
 - Ngủ đủ 7–9 tiếng mỗi đêm.
-- Ăn đủ protein mỗi ngày (theo dõi trong mục Dinh dưỡng) và chia đều cho các bữa.
+- Ăn đủ protein mỗi ngày (theo dõi trong mục Ăn uống) và chia đều cho các bữa.
 - Cơ phát triển trong lúc nghỉ, không phải lúc tập — đừng bỏ ngày nghỉ.
 
 *Lợi ích tăng cơ của protein chững lại quanh mức khoảng 1,6 g/kg/ngày (Morton et al., 2018).*
@@ -140,6 +140,8 @@ Kỹ thuật tổng hợp theo Haff và Triplett (2016).
 
 **Cảm nhận cơ ở đâu:** Đùi trước và mông. Lưng dưới không được đau.
 
+**Xem video mẫu:** https://www.youtube.com/results?search_query=Goblet%20Squat%20proper%20form
+
 **Mẹo cho người mới**
 - Tuần đầu: tập không tạ, ngồi xuống chạm nhẹ ghế rồi đứng lên, 2 hiệp × 10 lần.
 - Gót bị nhấc lên: giảm độ sâu hoặc kê gót bằng đĩa tạ mỏng.
@@ -171,6 +173,8 @@ Kỹ thuật tổng hợp theo Haff và Triplett (2016).
 
 **Cảm nhận cơ ở đâu:** Ngực là chính; tay sau và vai trước hỗ trợ.
 
+**Xem video mẫu:** https://www.youtube.com/results?search_query=Dumbbell%20Bench%20Press%20proper%20form
+
 **Mẹo cho người mới**
 - Kết thúc hiệp: đưa tạ về ngực, co gối, đặt tạ lên đùi rồi ngồi dậy. Không thả tạ sang hai bên.
 - Khuỷu tay chếch khoảng 45–70° so với thân, không mở ngang 90°.
@@ -200,6 +204,8 @@ Kỹ thuật tổng hợp theo Haff và Triplett (2016).
 **Hít thở:** Thở ra khi kéo về bụng, hít vào khi duỗi tay về trước.
 
 **Cảm nhận cơ ở đâu:** Giữa lưng và hai bên lưng (cơ xô); tay trước hỗ trợ.
+
+**Xem video mẫu:** https://www.youtube.com/results?search_query=Seated%20Cable%20Row%20proper%20form
 
 **Mẹo cho người mới**
 - Nghĩ là "kéo bằng khuỷu tay", không phải kéo bằng bàn tay.
@@ -231,6 +237,8 @@ Kỹ thuật tổng hợp theo Haff và Triplett (2016).
 
 **Cảm nhận cơ ở đâu:** Căng ở đùi sau khi hạ xuống, mông siết khi đứng lên. Không được mỏi hay đau lưng dưới.
 
+**Xem video mẫu:** https://www.youtube.com/results?search_query=Dumbbell%20Romanian%20Deadlift%20proper%20form
+
 **Mẹo cho người mới**
 - Tưởng tượng dùng mông đẩy để đóng cánh cửa xe phía sau lưng.
 - Chỉ hạ tới khi đùi sau căng — với người mới thường ở khoảng ngang gối đến giữa ống chân. Không cần chạm sàn.
@@ -258,6 +266,8 @@ Kỹ thuật tổng hợp theo Haff và Triplett (2016).
 **Hít thở:** Thở ra khi nâng, hít vào khi hạ.
 
 **Cảm nhận cơ ở đâu:** Vai giữa (phần ngoài của vai). Cổ và cơ thang mỏi nhiều là dấu hiệu đang nhún vai.
+
+**Xem video mẫu:** https://www.youtube.com/results?search_query=Dumbbell%20Lateral%20Raise%20proper%20form
 
 **Mẹo cho người mới**
 - Bài này cần tạ nhẹ: kỹ thuật quan trọng hơn mức tạ.
@@ -289,6 +299,8 @@ Kỹ thuật tổng hợp theo Haff và Triplett (2016).
 
 **Cảm nhận cơ ở đâu:** Bụng gồng liên tục suốt bài.
 
+**Xem video mẫu:** https://www.youtube.com/results?search_query=Dead%20Bug%20proper%20form
+
 **Mẹo cho người mới**
 - Lưng dưới bật khỏi sàn là đang duỗi quá xa — thu ngắn biên độ lại.
 - Làm chậm, mỗi lần khoảng 3–4 giây.
@@ -317,6 +329,8 @@ Kỹ thuật tổng hợp theo Haff và Triplett (2016).
 **Hít thở:** Hít vào khi hạ bàn đạp, thở ra khi đẩy lên.
 
 **Cảm nhận cơ ở đâu:** Đùi trước và mông.
+
+**Xem video mẫu:** https://www.youtube.com/results?search_query=Leg%20Press%20proper%20form
 
 **Mẹo cho người mới**
 - Đẩy bàn đạp lên rồi mới mở khóa an toàn; khóa lại trước khi rời máy.
@@ -349,6 +363,8 @@ Kỹ thuật tổng hợp theo Haff và Triplett (2016).
 
 **Cảm nhận cơ ở đâu:** Vai trước và vai giữa; tay sau hỗ trợ.
 
+**Xem video mẫu:** https://www.youtube.com/results?search_query=Seated%20Dumbbell%20Shoulder%20Press%20proper%20form
+
 **Mẹo cho người mới**
 - Không ưỡn lưng để đẩy. Phải ưỡn mới đẩy được thì giảm tạ.
 - Hạ tới khi tạ ngang tai hoặc ngang cằm.
@@ -379,6 +395,8 @@ Kỹ thuật tổng hợp theo Haff và Triplett (2016).
 
 **Cảm nhận cơ ở đâu:** Hai bên lưng (cơ xô), lan xuống dưới nách; tay trước hỗ trợ.
 
+**Xem video mẫu:** https://www.youtube.com/results?search_query=Lat%20Pulldown%20proper%20form
+
 **Mẹo cho người mới**
 - Bắt đầu mỗi lần bằng việc kéo vai xuống, sau đó mới gập khuỷu.
 - Tưởng tượng nhét khuỷu tay vào túi quần sau.
@@ -408,6 +426,8 @@ Kỹ thuật tổng hợp theo Haff và Triplett (2016).
 
 **Cảm nhận cơ ở đâu:** Đùi sau.
 
+**Xem video mẫu:** https://www.youtube.com/results?search_query=Lying%20Leg%20Curl%20proper%20form
+
 **Mẹo cho người mới**
 - Ép hông xuống đệm suốt bài.
 - Dừng 1 giây ở đỉnh, hạ chậm 2–3 giây.
@@ -434,6 +454,8 @@ Kỹ thuật tổng hợp theo Haff và Triplett (2016).
 **Hít thở:** Thở ra mạnh khi cuộn xuống, hít vào khi trở về.
 
 **Cảm nhận cơ ở đâu:** Bụng — không phải tay hay hông.
+
+**Xem video mẫu:** https://www.youtube.com/results?search_query=Cable%20Crunch%20proper%20form
 
 **Mẹo cho người mới**
 - Cuộn tròn cột sống, mắt nhìn về phía rốn.
@@ -463,6 +485,8 @@ Kỹ thuật tổng hợp theo Haff và Triplett (2016).
 
 **Cảm nhận cơ ở đâu:** Bắp chân.
 
+**Xem video mẫu:** https://www.youtube.com/results?search_query=Standing%20Calf%20Raise%20proper%20form
+
 **Mẹo cho người mới**
 - Biên độ đầy đủ quan trọng hơn mức tạ: hạ gót sâu, nhón thật cao.
 - Dừng 1–2 giây ở dưới để không nảy.
@@ -491,6 +515,8 @@ Kỹ thuật tổng hợp theo Haff và Triplett (2016).
 **Hít thở:** Hít vào khi hạ xuống, thở ra khi đứng lên.
 
 **Cảm nhận cơ ở đâu:** Đùi trước và mông của chân trước.
+
+**Xem video mẫu:** https://www.youtube.com/results?search_query=Bulgarian%20Split%20Squat%20proper%20form
 
 **Mẹo cho người mới**
 - Bài khó giữ thăng bằng — 1–2 tuần đầu tập không tạ.
@@ -523,6 +549,8 @@ Kỹ thuật tổng hợp theo Haff và Triplett (2016).
 
 **Cảm nhận cơ ở đâu:** Ngực trên; vai trước và tay sau hỗ trợ.
 
+**Xem video mẫu:** https://www.youtube.com/results?search_query=Incline%20Dumbbell%20Press%20proper%20form
+
 **Mẹo cho người mới**
 - Ghế càng dốc thì vai làm càng nhiều — khoảng 30° là đủ.
 - Hạ có kiểm soát 2–3 giây.
@@ -551,6 +579,8 @@ Kỹ thuật tổng hợp theo Haff và Triplett (2016).
 **Hít thở:** Thở ra khi kéo lên, hít vào khi hạ.
 
 **Cảm nhận cơ ở đâu:** Lưng cùng bên (cơ xô), phía dưới bả vai.
+
+**Xem video mẫu:** https://www.youtube.com/results?search_query=One-arm%20Dumbbell%20Row%20proper%20form
 
 **Mẹo cho người mới**
 - Kéo tạ theo đường cung về phía hông, như đang tra kiếm vào bao.
@@ -583,6 +613,8 @@ Kỹ thuật tổng hợp theo Haff và Triplett (2016).
 
 **Cảm nhận cơ ở đâu:** Mông là chính; đùi sau hỗ trợ.
 
+**Xem video mẫu:** https://www.youtube.com/results?search_query=Hip%20Thrust%20proper%20form
+
 **Mẹo cho người mới**
 - Mới tập: một tạ đơn đặt trên hông, hoặc chỉ dùng trọng lượng cơ thể.
 - Cằm hơi cúi, mắt nhìn về trước giúp không ưỡn lưng.
@@ -610,6 +642,8 @@ Kỹ thuật tổng hợp theo Haff và Triplett (2016).
 **Hít thở:** Thở ra khi cuốn lên, hít vào khi hạ.
 
 **Cảm nhận cơ ở đâu:** Bắp tay trước.
+
+**Xem video mẫu:** https://www.youtube.com/results?search_query=Dumbbell%20Curl%20proper%20form
 
 **Mẹo cho người mới**
 - Khuỷu tay đứng yên như một cái bản lề.
@@ -639,6 +673,8 @@ Kỹ thuật tổng hợp theo Haff và Triplett (2016).
 
 **Cảm nhận cơ ở đâu:** Mặt sau cánh tay.
 
+**Xem video mẫu:** https://www.youtube.com/results?search_query=Triceps%20Pushdown%20proper%20form
+
 **Mẹo cho người mới**
 - Chỉ cẳng tay di chuyển; cánh tay trên đứng yên.
 - Duỗi hết tay ở dưới, dừng 1 giây.
@@ -666,6 +702,8 @@ Kỹ thuật tổng hợp theo Haff và Triplett (2016).
 
 **Cảm nhận cơ ở đâu:** Bắp chân (phần cơ phía dưới).
 
+**Xem video mẫu:** https://www.youtube.com/results?search_query=Seated%20Calf%20Raise%20proper%20form
+
 **Mẹo cho người mới**
 - Hạ gót sâu, nhón cao, dừng 1–2 giây ở mỗi đầu.
 
@@ -681,4 +719,6 @@ Kỹ thuật tổng hợp theo Haff và Triplett (2016).
 - Cheung, K., Hume, P. A., & Maxwell, L. (2003). Delayed onset muscle soreness: Treatment strategies and performance factors. Sports Medicine, 33(2), 145–164. https://doi.org/10.2165/00007256-200333020-00005
 - Haff, G. G., & Triplett, N. T. (Eds.). (2016). Essentials of strength training and conditioning (4th ed.). Human Kinetics.
 - Morton, R. W., Murphy, K. T., McKellar, S. R., Schoenfeld, B. J., Henselmans, M., Helms, E., Aragon, A. A., Devries, M. C., Banfield, L., Krieger, J. W., & Phillips, S. M. (2018). A systematic review, meta-analysis and meta-regression of the effect of protein supplementation on resistance training-induced gains in muscle mass and strength in healthy adults. British Journal of Sports Medicine, 52(6), 376–384. https://doi.org/10.1136/bjsports-2017-097608
+- Schoenfeld, B. J., & Aragon, A. A. (2018). How much protein can the body use in a single meal for muscle-building? Implications for daily protein distribution. Journal of the International Society of Sports Nutrition, 15, Article 10. https://doi.org/10.1186/s12970-018-0215-1
+- U.S. Department of Agriculture, Agricultural Research Service. (2019). FoodData Central [Data set]. https://fdc.nal.usda.gov/
 - Zourdos, M. C., Klemp, A., Dolan, C., Quiles, J. M., Schau, K. A., Jo, E., Helms, E., Esgro, B., Duncan, S., Garcia Merino, S., & Blanco, R. (2016). Novel resistance training–specific rating of perceived exertion scale measuring repetitions in reserve. Journal of Strength and Conditioning Research, 30(1), 267–275. https://doi.org/10.1519/JSC.0000000000001049

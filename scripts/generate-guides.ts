@@ -13,7 +13,7 @@ const refs = (list: string[]) => list.map((r) => `- ${r.replace(/(\d+\(\d+\)|\d+
 // ---------- Hướng dẫn sử dụng ----------
 let a = `# Hướng dẫn sử dụng My Gym Progress
 
-> Bản đơn giản, đi theo từng bước. Nội dung này cũng có trong app: **Tổng quan → nút "Hướng dẫn"**.
+> Bản đơn giản, đi theo từng bước. Nội dung này cũng có trong app: **Hôm nay → nút "Hướng dẫn"**.
 
 **Địa chỉ ứng dụng:** https://hoangcaoduc090105-debug.github.io/my-gym-progress/
 
@@ -30,18 +30,20 @@ a += `## Giải thích nhanh các nút trên màn hình tập
 | **Lần** | Số lần lặp. Bài giữ tư thế (plank) ghi **số giây** |
 | **RIR** | Số lần **còn có thể làm thêm** khi dừng. 0 = hết sức, 2 = còn dư 2 lần |
 | **✓** | Đánh dấu hiệp đã xong; đồng hồ nghỉ tự chạy |
-| **📖** | Xem cách tập đúng của bài |
+| **📖** | Bản đồ cơ, 3 bước làm đúng, 3 lỗi cần tránh, nút xem video YouTube |
 | **Chép lần trước** | Điền nhanh số liệu buổi trước |
 
 ## Câu hỏi thường gặp
 
 **Tôi lỡ đóng app khi đang tập?** Mở lại sẽ thấy thẻ "Buổi tập đang diễn ra" → bấm **Tiếp tục**. Không mất dữ liệu.
 
-**Tôi muốn ghi buổi tập của hôm qua?** Lịch tập → tab **Lịch** → chọn ngày → **Ghi buổi tự do**. Hoặc đổi ngày ở đầu màn hình tập.
+**Tôi muốn ghi buổi tập của hôm qua?** Tập → tab **Lịch** → chọn ngày → **Ghi buổi tự do**. Hoặc đổi ngày ở đầu màn hình tập.
 
-**Tôi muốn đổi bài tập trong giáo án?** Lịch tập → tab **Giáo án** → **Sửa** → bỏ bài cũ, **Thêm bài tập** mới → **Lưu**.
+**Tôi muốn đổi bài tập trong giáo án?** Tập → tab **Giáo án** → **Sửa** → bỏ bài cũ, **Thêm bài tập** mới → **Lưu**.
 
-**Màn hình quá sáng khi tập buổi tối?** Cài đặt → **Giao diện** → chọn **Tối**.
+**Màn hình quá sáng khi tập buổi tối?** Thêm → Cài đặt → **Giao diện** → chọn **Tối**.
+
+**Gửi ảnh bữa ăn để tính calo được không?** Không. Nhận diện ảnh cần AI trả phí và gửi ảnh ra ngoài, lại sai số lớn. Thay vào đó, bạn chọn món + số khẩu phần và app tự chấm bữa đó đủ đạm chưa.
 
 **Có cần mạng không?** Chỉ cần ở lần mở đầu tiên. Sau đó dùng offline hoàn toàn.
 
@@ -99,6 +101,8 @@ ${e.instructions.map((x, i) => `${i + 1}. ${x}`).join('\n')}
 **Hít thở:** ${e.breathing ?? GENERIC_BREATHING}
 
 **Cảm nhận cơ ở đâu:** ${e.feel ?? MUSCLE_LABELS[e.primaryMuscle]}
+
+**Xem video mẫu:** https://www.youtube.com/results?search_query=${encodeURIComponent(e.nameEn + ' proper form')}
 
 **Mẹo cho người mới**
 ${(e.tips ?? []).map((x) => `- ${x}`).join('\n')}

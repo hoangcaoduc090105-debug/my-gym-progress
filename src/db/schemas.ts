@@ -25,6 +25,7 @@ export const profileSchema = z
     calorieTarget: z.number().finite().min(800).max(8000).nullable().optional(),
     carbTargetG: z.number().finite().min(0).max(1500).nullable().optional(),
     fatTargetG: z.number().finite().min(0).max(500).nullable().optional(),
+    mealsPerDay: z.number().int().min(1).max(8).nullable().optional(),
     createdAt: timestamp,
     updatedAt: timestamp,
   })

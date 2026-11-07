@@ -67,7 +67,7 @@ try {
     assert.equal(await page.getByLabel('Tối thiểu (g)').inputValue(), '105');
     assert.equal(await page.getByLabel('Tối đa (g)').inputValue(), '130');
     await page.getByRole('button', { name: 'Bắt đầu' }).click();
-    await page.getByRole('heading', { name: 'Tổng quan' }).waitFor();
+    await page.getByRole('heading', { name: 'Hôm nay' }).waitFor();
     await page.getByText('Buổi A', { exact: true }).first().waitFor();
     await noOverflow();
     await shot('02-dashboard');
@@ -90,8 +90,12 @@ try {
     await noOverflow();
     await shot('03-logger');
     await page.getByRole('button', { name: 'Xem kỹ thuật' }).first().click();
-    await page.getByRole('dialog').getByText('1. Chuẩn bị tư thế').waitFor();
-    await page.getByRole('dialog').getByText('Hít thở').waitFor();
+    await page.getByRole('dialog').getByRole('img', { name: 'Nhìn trước' }).waitFor();
+    await page.getByRole('dialog').getByText('Làm nhanh 3 bước').waitFor();
+    const yt = await page.getByRole('dialog').getByRole('link', { name: /Xem video mẫu trên YouTube/ }).getAttribute('href');
+    assert.ok(yt.startsWith('https://www.youtube.com/results?search_query=Goblet'));
+    await page.getByRole('dialog').getByRole('button', { name: 'Hướng dẫn chi tiết' }).click();
+    await page.getByRole('dialog').getByText('Chuẩn bị tư thế').waitFor();
     await shot('03b-technique');
     await page.getByRole('dialog').getByRole('button', { name: 'Đóng' }).click();
   });
@@ -142,6 +146,17 @@ try {
     await page.getByText('/ 105–130 g').waitFor();
     await page.getByText('Còn 74 g').waitFor();
     await page.getByText('Ước tính').first().waitFor();
+    // Chấm điểm bữa: 31 g ≥ 26 g/bữa → Phù hợp
+    await page.getByTestId('meal-verdict').getByText('Bữa này: Phù hợp').waitFor();
+    // Nạp món cơ bản rồi thêm 1 quả trứng vào bữa trưa → bữa thiếu đạm + có gợi ý bù
+    await page.getByRole('tab', { name: 'Món của tôi' }).click();
+    await page.getByRole('button', { name: /Thêm nhanh 6 món cơ bản/ }).click();
+    await page.getByText('Trứng gà luộc').waitFor();
+    await page.getByRole('tab', { name: 'Hôm nay' }).click();
+    await page.getByRole('button', { name: 'Thêm món' }).nth(1).click();
+    await page.getByRole('button', { name: /Trứng gà luộc/ }).click();
+    await page.getByText('Bữa này: Thiếu đạm').waitFor();
+    await page.getByRole('button', { name: /Ức gà bỏ da/ }).first().waitFor();
     await noOverflow();
     await shot('05-nutrition');
   });
@@ -155,8 +170,12 @@ try {
     await shot('08-guide');
     await page.getByRole('tab', { name: 'Từng động tác' }).click();
     await page.getByRole('link', { name: /Squat tạ ấm/ }).click();
+    await page.getByRole('img', { name: 'Nhìn sau' }).waitFor();
+    await page.getByText('Làm nhanh 3 bước').waitFor();
+    await page.getByRole('button', { name: 'Hướng dẫn chi tiết' }).click();
     await page.getByText('Mẹo cho người mới').waitFor();
     await noOverflow();
+    await shot('08b-exercise');
   });
 
   await check('Phân tích: biểu đồ và kỷ lục hiển thị', async () => {
@@ -178,7 +197,7 @@ try {
     assert.equal(b.app, 'my-gym-progress');
     assert.equal(b.data.sessions.length, 1);
     assert.equal(b.data.bodyMetrics.length, 2);
-    assert.equal(b.data.foodLogs.length, 1);
+    assert.equal(b.data.foodLogs.length, 2);
     assert.equal(b.data.profile[0].heightCm, 174);
   });
 
@@ -214,7 +233,7 @@ try {
     await page.waitForTimeout(1500);
     await context.setOffline(true);
     await page.reload();
-    await page.getByRole('heading', { name: 'Tổng quan' }).waitFor({ timeout: 10000 });
+    await page.getByRole('heading', { name: 'Hôm nay' }).waitFor({ timeout: 10000 });
     await page.getByText('65,4').first().waitFor();
     await page.goto(BASE + '#/thu-vien');
     await page.getByText('Đẩy ngực tạ đơn').first().waitFor();
@@ -226,7 +245,7 @@ try {
     await page.getByRole('tab', { name: /Tối/ }).click();
     assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), 'dark');
     await page.goto(BASE);
-    await page.getByRole('heading', { name: 'Tổng quan' }).waitFor();
+    await page.getByRole('heading', { name: 'Hôm nay' }).waitFor();
     await shot('09-dashboard-dark');
     await page.reload();
     assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), 'dark');
@@ -235,10 +254,20 @@ try {
     assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), 'light');
   });
 
+  await check('Điều hướng gọn: 4 mục + Thêm', async () => {
+    await page.goto(BASE);
+    const nav = page.locator('nav[aria-label="Điều hướng chính"]').last();
+    for (const n of ['Hôm nay', 'Tập', 'Cơ thể', 'Ăn uống', 'Thêm']) await nav.getByRole('link', { name: n, exact: true }).waitFor();
+    await nav.getByRole('link', { name: 'Thêm', exact: true }).click();
+    await page.getByRole('link', { name: /Thư viện bài tập/ }).waitFor();
+    await page.getByRole('link', { name: /Phân tích/ }).waitFor();
+    await shot('10-more');
+  });
+
   await check('Desktop: thanh điều hướng bên, không tràn', async () => {
     await page.setViewportSize({ width: 1280, height: 860 });
     await page.goto(BASE);
-    await page.getByRole('heading', { name: 'Tổng quan' }).waitFor();
+    await page.getByRole('heading', { name: 'Hôm nay' }).waitFor();
     await noOverflow();
     await shot('07-desktop');
   });

@@ -7,11 +7,14 @@ import { MEAL_LABELS, MEAL_SLOTS, type Food, type FoodLog, type MealPlan, type M
 import { Badge, Button, Card, EmptyState, Explain, Field, IconButton, Modal, NumberInput, PageHeader, Spinner, Tabs, Toggle, cx } from '../../components/ui';
 import { useFeedback } from '../../components/feedback';
 import { useProfile } from '../../app/useAppData';
-import { addFoodLog, applyMealPlan, deleteFood, deleteFoodLog, deleteMealPlan, saveFood, saveMealPlan, toggleFavoriteFood, updateFoodLogServings } from '../../db/repo';
+import { addFoodLog, addStarterFoods, applyMealPlan, deleteFood, deleteFoodLog, deleteMealPlan, saveFood, saveMealPlan, toggleFavoriteFood, updateFoodLogServings } from '../../db/repo';
 import { kcalFromMacros, proteinProgress, scale, sumLogs } from '../../domain/nutrition';
 import { addDays, formatDate, todayISO } from '../../lib/date';
 import { fmt0, fmt1 } from '../../lib/format';
 import { normalizeVi } from '../workout/ExercisePicker';
+import { checkMeal, proteinPerMeal, suggestProteinFill, type MealVerdict } from '../../domain/mealCheck';
+import { STARTER_FOODS } from '../../data/starterFoods';
+import { CheckCircle2, AlertTriangle, CircleDashed } from 'lucide-react';
 
 type Tab = 'day' | 'foods' | 'plans';
 
@@ -20,13 +23,13 @@ export function NutritionPage() {
   const tab = (params.get('tab') as Tab) || 'day';
   return (
     <div>
-      <PageHeader title="Dinh dưỡng" subtitle="Nhập thủ công — không gọi dịch vụ bên ngoài" />
+      <PageHeader title="Ăn uống" subtitle="Ghi món theo bữa — app tự chấm bữa đó đã đủ đạm chưa" />
       <Tabs
         value={tab}
         onChange={(t) => setParams({ tab: t }, { replace: true })}
         tabs={[
-          { value: 'day', label: 'Nhật ký ngày' },
-          { value: 'foods', label: 'Thực phẩm' },
+          { value: 'day', label: 'Hôm nay' },
+          { value: 'foods', label: 'Món của tôi' },
           { value: 'plans', label: 'Thực đơn' },
         ]}
       />
@@ -37,7 +40,11 @@ export function NutritionPage() {
   );
 }
 
-const EstimateBadge = () => <Badge tone="warn">Ước tính</Badge>;
+const EstimateBadge = () => (
+  <Badge tone="warn" className="shrink-0">
+    Ước tính
+  </Badge>
+);
 
 function ProgressBar({ value, max, tone = 'accent' }: { value: number; max: number; tone?: 'accent' | 'info' }) {
   const pct = max > 0 ? Math.min(100, (value / max) * 100) : 0;
@@ -56,9 +63,11 @@ function DayLog() {
   const [planOpen, setPlanOpen] = useState(false);
   const logs = useLiveQuery(() => db.foodLogs.where('date').equals(date).toArray(), [date]);
   const plans = useLiveQuery(() => db.mealPlans.toArray(), []);
+  const foods = useFoods();
   const { toast } = useFeedback();
   if (!logs || !profile) return <Spinner />;
   const t = sumLogs(logs);
+  const perMeal = proteinPerMeal(profile.proteinTargetMinG, profile.mealsPerDay ?? 4);
   const pp = proteinProgress(t.proteinG, profile.proteinTargetMinG, profile.proteinTargetMaxG);
 
   return (
@@ -112,6 +121,11 @@ function DayLog() {
           </p>
         )}
         <Explain>
+          <p>
+            <strong>Chấm điểm từng bữa</strong>: protein mục tiêu mỗi bữa = {pp.min} g ÷ {profile.mealsPerDay ?? 4} bữa = {perMeal} g. Chia đều đạm cho khoảng 4 bữa, mỗi bữa
+            ~0,4 g/kg, là cách phân bổ được khuyến nghị cho tăng cơ (Schoenfeld & Aragon, 2018). Đạt ≥ 100% là "Đủ đạm", 60–99% là "Hơi thiếu", dưới 60% là "Thiếu đạm".
+            Calories chỉ được đánh giá khi bạn tự đặt mục tiêu calories trong Cài đặt.
+          </p>
           <p>Tổng = Σ (giá trị dinh dưỡng mỗi khẩu phần × số khẩu phần). Giá trị lấy từ bản ghi bạn nhập vào lúc ghi nhật ký.</p>
           <p>
             Mục tiêu protein do bạn đặt trong Cài đặt (gợi ý 1,6–2,0 g/kg/ngày). Ứng dụng không tự tính mục tiêu calories vì cần tuổi, mức vận động và dữ liệu chi tiêu năng lượng — bạn có thể tự nhập.
@@ -152,6 +166,16 @@ function DayLog() {
             <Button size="sm" className="mt-2" variant="ghost" icon={<Plus size={16} />} onClick={() => setAdding(meal)}>
               Thêm món
             </Button>
+            {items.length > 0 && (
+              <MealVerdictBox
+                check={checkMeal({ meal: mt, dayTotals: t, proteinTarget: perMeal, dailyKcalTarget: profile.calorieTarget })}
+                suggestions={suggestProteinFill(
+                  Math.max(0, perMeal - mt.proteinG),
+                  (foods ?? []).map((f) => ({ id: f.id, name: f.name, proteinG: f.proteinG, servingLabel: f.servingLabel, isFavorite: f.isFavorite })),
+                )}
+                onAdd={(foodId, servings) => void addFoodLog({ date, meal, foodId, servings }).then(() => toast('Đã thêm món')).catch(toastError)}
+              />
+            )}
           </Card>
         );
       })}
@@ -183,14 +207,81 @@ function DayLog() {
   );
 }
 
+const VERDICT: Record<MealVerdict, { label: string; tone: 'ok' | 'warn' | 'danger' | 'muted' }> = {
+  good: { label: 'Phù hợp', tone: 'ok' },
+  'low-protein': { label: 'Hơi thiếu đạm', tone: 'warn' },
+  'very-low-protein': { label: 'Thiếu đạm', tone: 'danger' },
+  'over-kcal': { label: 'Đủ đạm · vượt calo ngày', tone: 'warn' },
+  empty: { label: 'Chưa có món', tone: 'muted' },
+};
+
+function MealVerdictBox({
+  check,
+  suggestions,
+  onAdd,
+}: {
+  check: ReturnType<typeof checkMeal>;
+  suggestions: ReturnType<typeof suggestProteinFill>;
+  onAdd: (foodId: string, servings: number) => void;
+}) {
+  const v = VERDICT[check.verdict];
+  const Icon = check.verdict === 'good' ? CheckCircle2 : check.verdict === 'empty' ? CircleDashed : AlertTriangle;
+  const toneCls = { ok: 'border-ok/40 bg-ok/10 text-ok', warn: 'border-warn/40 bg-warn/10 text-warn', danger: 'border-danger/40 bg-danger/10 text-danger', muted: 'border-line bg-surface2 text-muted' }[v.tone];
+  return (
+    <div className={cx('mt-3 rounded-xl border p-3', toneCls)} data-testid="meal-verdict">
+      <div className="flex items-center gap-2 text-sm font-semibold">
+        <Icon size={18} /> Bữa này: {v.label}
+        <span className="ml-auto text-xs font-medium tabular">{check.proteinPct}% đạm</span>
+      </div>
+      <ul className="mt-1.5 space-y-0.5 text-xs text-text">
+        {check.messages.map((m) => (
+          <li key={m}>• {m}</li>
+        ))}
+      </ul>
+      {check.proteinGap > 0 && suggestions.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {suggestions.map((sg) => (
+            <button
+              key={sg.foodId}
+              type="button"
+              onClick={() => onAdd(sg.foodId, sg.servings)}
+              className="rounded-full bg-surface px-3 py-1.5 text-xs font-medium text-text shadow-card"
+            >
+              + {sg.servings} × {sg.name} (+{fmt1(sg.proteinG)} g đạm)
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function StarterFoodsButton() {
+  const { toast, toastError } = useFeedback();
+  return (
+    <Button
+      block
+      variant="outline"
+      onClick={() =>
+        void addStarterFoods(STARTER_FOODS)
+          .then((n) => toast(n ? `Đã thêm ${n} món cơ bản (đánh dấu Ước tính)` : 'Các món cơ bản đã có sẵn'))
+          .catch(toastError)
+      }
+    >
+      Thêm nhanh {STARTER_FOODS.length} món cơ bản (ức gà, trứng, cơm…)
+    </Button>
+  );
+}
+
 function LogRow({ l, onDelete }: { l: FoodLog; onDelete: () => void }) {
   const s = scale(l.food, l.servings);
   const { toastError } = useFeedback();
   return (
     <li className="flex items-center gap-2 rounded-xl bg-surface2 p-2">
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-1.5 truncate text-sm font-medium">
-          {l.food.name} {!l.food.isVerified && <EstimateBadge />}
+        <div className="flex min-w-0 items-center gap-1.5 text-sm font-medium">
+          <span className="truncate">{l.food.name}</span>
+          {!l.food.isVerified && <EstimateBadge />}
         </div>
         <div className="text-xs text-muted tabular">
           {fmt1(s.proteinG)} g P · {fmt1(s.carbG)} g C · {fmt1(s.fatG)} g F · {fmt0(s.kcal)} kcal
@@ -263,6 +354,7 @@ function AddFoodModal({ meal, date, onClose }: { meal: MealSlot | null; date: st
             ))}
             {list.length === 0 && <li className="py-4 text-center text-sm text-muted">Chưa có thực phẩm phù hợp.</li>}
           </ul>
+          {(foods ?? []).length === 0 && <StarterFoodsButton />}
           <Button block variant="outline" icon={<Plus size={16} />} onClick={() => setCreating(true)}>
             Tạo thực phẩm mới
           </Button>
@@ -378,7 +470,10 @@ function FoodsTab() {
         Thêm thực phẩm
       </Button>
       {foods.length === 0 ? (
-        <EmptyState title="Chưa có thực phẩm">Ứng dụng không nạp sẵn số liệu dinh dưỡng để tránh số liệu chưa kiểm chứng. Hãy nhập theo nhãn bao bì hoặc nguồn tin cậy.</EmptyState>
+        <>
+          <EmptyState title="Chưa có món nào">Thêm món theo nhãn bao bì, hoặc nạp nhanh vài món cơ bản có số liệu tham khảo (đánh dấu Ước tính).</EmptyState>
+          <StarterFoodsButton />
+        </>
       ) : (
         <Card>
           <ul className="divide-y divide-line/60">
@@ -418,6 +513,7 @@ function FoodsTab() {
           </ul>
         </Card>
       )}
+      {foods.length > 0 && STARTER_FOODS.some((sf) => !foods.some((f) => f.name.trim().toLowerCase() === sf.name.trim().toLowerCase())) && <StarterFoodsButton />}
       <FoodFormModal open={open} initial={editing} onClose={() => setOpen(false)} />
     </div>
   );

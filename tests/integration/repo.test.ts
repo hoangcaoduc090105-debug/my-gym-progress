@@ -209,6 +209,13 @@ describe('nutrition', () => {
     await repo.deleteFoodLog(l.id);
     expect(await db.foodLogs.count()).toBe(1);
   });
+  it('nạp bộ thực phẩm cơ bản: đánh dấu ước tính, không nhân đôi', async () => {
+    const { STARTER_FOODS } = await import('../../src/data/starterFoods');
+    expect(await repo.addStarterFoods(STARTER_FOODS)).toBe(STARTER_FOODS.length);
+    expect(await repo.addStarterFoods(STARTER_FOODS)).toBe(0);
+    const all = await db.foods.toArray();
+    expect(all.every((f) => !f.isVerified && !!f.source)).toBe(true);
+  });
   it('từ chối giá trị dinh dưỡng âm', async () => {
     await expect(
       repo.saveFood({ name: 'x', servingLabel: '1', kcal: -5, proteinG: 0, carbG: 0, fatG: 0, isVerified: false, isFavorite: false }),

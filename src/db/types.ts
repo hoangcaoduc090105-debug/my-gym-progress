@@ -54,6 +54,8 @@ export interface Profile {
   calorieTarget?: number | null;
   carbTargetG?: number | null;
   fatTargetG?: number | null;
+  /** Số bữa mỗi ngày (kể cả bữa phụ) — dùng để chia mục tiêu protein cho từng bữa. Mặc định 4. */
+  mealsPerDay?: number | null;
   createdAt: string;
   updatedAt: string;
 }
