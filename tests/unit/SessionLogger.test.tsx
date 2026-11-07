@@ -30,9 +30,14 @@ vi.mock('../../src/features/workout/RestTimer', async (importOriginal) => {
   };
 });
 const sleep = (ms: number) => act(() => new Promise((r) => setTimeout(r, ms)));
+/** Test trước unmount => useSessionWriter ghi nốt (bất đồng bộ). Chờ xong rồi mới reset để không sinh buổi dở "ma". */
+const settleThenReset = async () => {
+  await sleep(300);
+  await resetDb();
+};
 
 async function renderLogger() {
-  await resetDb();
+  await settleThenReset();
   const p = (await repo.getActiveProgram())!;
   const s = await repo.startSession({ programId: p.id, programDayId: 'day-a' });
   render(
@@ -137,7 +142,7 @@ describe('SessionLogger — superset (v1.8.0)', () => {
   afterEach(() => saveSpy.mockReset());
 
   it('✓ bài A1 => KHÔNG bấm giờ nghỉ; ✓ bài A2 => bấm giờ 1 lần với restSec lớn nhất nhóm', async () => {
-    await resetDb();
+    await settleThenReset();
     const p = (await repo.getActiveProgram())!;
     const g = structuredClone(p);
     const [e1, e2] = g.days[0]!.exercises;
@@ -188,7 +193,7 @@ describe('SessionLogger — superset (v1.8.0)', () => {
 describe('SessionLogger — đơn vị lb (v1.8.0)', () => {
   afterEach(() => saveSpy.mockReset());
   it('hiển thị "lb"; nhập 225 lb lưu 102,06 kg; ô không sửa thì kg gốc không trôi', async () => {
-    await resetDb();
+    await settleThenReset();
     const st = await repo.getSettings();
     const { id: _i, updatedAt: _u, ...rest } = st;
     await repo.saveSettings({ ...rest, weightUnit: 'lb' });

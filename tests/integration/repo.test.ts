@@ -472,3 +472,47 @@ describe('deload (v1.8.0)', () => {
     expect(r.exercise.sets[0]!.weightKg).toBe(20);
   });
 });
+
+describe('nhập CSV Strong/Hevy (v1.8.0)', () => {
+  it('nhập fixture Hevy 2 lần ⇒ lần 2 ghi 0 buổi; tạo bài mới + lưu bảng ghép tên', async () => {
+    const { readFileSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const { parseCsv } = await import('../../src/backup/csvParse');
+    const { parseHevy, matchExercises, distinctNames, buildSessions, normalizeName } = await import('../../src/backup/workoutImport');
+    const { importWorkouts, readCsvNameMap } = await import('../../src/db/importWorkouts');
+    const ws = parseHevy(parseCsv(readFileSync(join(__dirname, '../fixtures/hevy.csv'), 'utf8')));
+    const all = await db.exercises.toArray();
+    const run = async () => {
+      const m = matchExercises(distinctNames(ws), all, await readCsvNameMap());
+      const nameToId = new Map<string, string>();
+      const newExercises = [];
+      for (const [name, id] of m) {
+        if (id) nameToId.set(name, id);
+        else {
+          const ex = { id: 'ex-csv-squat', nameVi: name, nameEn: name, primaryMuscle: 'quads' as const, secondaryMuscles: [], equipment: 'barbell' as const, region: 'lower' as const, isBodyweight: false, instructions: [], commonMistakes: [], alternativeIds: [], isCustom: true, createdAt: '2026-01-10T00:00:00.000Z', updatedAt: '2026-01-10T00:00:00.000Z' };
+          newExercises.push(ex);
+          nameToId.set(name, ex.id);
+        }
+      }
+      let k = 0;
+      const sessions = buildSessions(ws, nameToId, (p) => `${p}-imp-${Date.now()}-${++k}`, '2026-01-10T00:00:00.000Z');
+      return importWorkouts({ sessions, newExercises, nameMap: Object.fromEntries([...nameToId].map(([n, id]) => [normalizeName(n), id])) });
+    };
+    expect(await run()).toEqual({ written: 2, skipped: 0 });
+    expect(await run()).toEqual({ written: 0, skipped: 2 });
+    expect(await db.sessions.where('status').equals('completed').count()).toBe(2);
+    expect((await db.exercises.get('ex-csv-squat'))!.isCustom).toBe(true);
+    expect((await readCsvNameMap())['squat (barbell)']).toBe('ex-csv-squat');
+    const leg = (await db.sessions.toArray()).find((s) => s.dayName === 'Leg Day')!;
+    expect(leg.exercises.filter((e) => e.groupId).length).toBe(2);
+  });
+  it('bài chưa ghép ⇒ báo lỗi, không ghi gì', async () => {
+    const { importWorkouts } = await import('../../src/db/importWorkouts');
+    const s = await repo.startSession({});
+    await db.sessions.delete(s.id);
+    await expect(
+      importWorkouts({ sessions: [{ ...s, status: 'completed', exercises: [{ id: 'se1', exerciseId: 'khong-co', target: null, note: '', sets: [] }] }], newExercises: [], nameMap: {} }),
+    ).rejects.toThrow(/chưa được ghép/);
+    expect(await db.sessions.count()).toBe(0);
+  });
+});

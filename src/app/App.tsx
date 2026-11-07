@@ -31,6 +31,8 @@ const SettingsPage = lazy(() => import('../features/settings/SettingsPage').then
 // Trang ghi buổi tập (kèm thay bài, lịch sử, đĩa tạ…) => chunk riêng; được precache nên vẫn mở offline.
 const SessionLogger = lazy(() => import('../features/workout/SessionLogger').then((m) => ({ default: m.SessionLogger })));
 const SessionDetail = lazy(() => import('../features/workout/SessionDetail').then((m) => ({ default: m.SessionDetail })));
+// Nhập CSV từ Strong/Hevy — trang riêng, chunk riêng.
+const CsvImportPage = lazy(() => import('../features/settings/CsvImportPage'));
 const AnalyticsPage = lazy(() => import('../features/analytics/AnalyticsPage'));
 
 function Shell() {
@@ -61,6 +63,7 @@ function Shell() {
               <Route path="dinh-duong" element={<NutritionPage />} />
               <Route path="phan-tich" element={<AnalyticsPage />} />
               <Route path="cai-dat" element={<SettingsPage />} />
+              <Route path="cai-dat/nhap-csv" element={<CsvImportPage />} />
               <Route path="huong-dan" element={<GuidePage />} />
               <Route path="them" element={<MorePage />} />
               <Route path="chao-mung" element={<Navigate to="/" replace />} />

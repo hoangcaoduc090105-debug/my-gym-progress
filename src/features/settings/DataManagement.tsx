@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Download, FileJson, FileSpreadsheet, ShieldCheck, Upload } from 'lucide-react';
@@ -152,6 +153,12 @@ export function DataManagement() {
         <Button block icon={<Upload size={18} />} disabled={busy} onClick={() => fileRef.current?.click()}>
           Nhập dữ liệu JSON
         </Button>
+        <Link
+          to="/cai-dat/nhap-csv"
+          className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-line bg-surface text-sm font-semibold hover:bg-surface2"
+        >
+          <FileSpreadsheet size={18} /> Nhập lịch sử từ Strong / Hevy (CSV)
+        </Link>
         <div className="grid grid-cols-2 gap-2">
           <Button icon={<FileSpreadsheet size={18} />} onClick={() => void exportCsv('workouts')}>
             CSV lịch sử tập

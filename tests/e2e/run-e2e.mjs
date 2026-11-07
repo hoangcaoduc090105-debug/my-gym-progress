@@ -444,6 +444,27 @@ try {
     await page.getByText('2 hiệp').first().waitFor();
   });
 
+  await check('Nhập CSV Hevy: ghép 1 tên, nhập, thấy buổi trong Lịch sử', async () => {
+    await page.goto(BASE + '#/cai-dat');
+    await page.getByRole('link', { name: /Nhập lịch sử từ Strong \/ Hevy/ }).click();
+    await page.getByRole('heading', { name: 'Nhập từ Strong / Hevy' }).waitFor();
+    await page.getByTestId('csv-input').setInputFiles(join(process.cwd(), 'tests/fixtures/hevy.csv'));
+    await page.getByTestId('csv-preview').waitFor();
+    assert.equal(await page.getByTestId('csv-unmatched').count(), 1);
+    await page.getByTestId('csv-unmatched').getByText('Squat (Barbell)').waitFor();
+    await page.getByRole('button', { name: 'Chọn bài cho Squat (Barbell)' }).click();
+    const dlg = page.getByRole('dialog');
+    await dlg.getByLabel('Tìm bài tập').fill('barbell back squat');
+    await dlg.getByRole('listitem').getByRole('button').first().click();
+    await dlg.waitFor({ state: 'detached' });
+    await shot('18-csv-import');
+    await page.getByRole('button', { name: 'Nhập 2 buổi' }).click();
+    await page.getByText('Đã nhập 2 buổi').waitFor();
+    await page.getByRole('link', { name: 'Xem trong Lịch sử →' }).click();
+    await page.getByText('Leg Day', { exact: true }).first().waitFor();
+    await page.getByText('Upper', { exact: true }).first().waitFor();
+  });
+
   await check('Nhập "1.200" vào mục tiêu calories → lưu → hiển thị 1.200 kcal', async () => {
     await page.goto(BASE + '#/cai-dat');
     await page.getByLabel('Mục tiêu calories (kcal)').fill('1.200');
