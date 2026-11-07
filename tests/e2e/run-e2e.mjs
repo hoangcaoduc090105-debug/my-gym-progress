@@ -147,6 +147,11 @@ try {
     await page.getByRole('button', { name: 'Hoàn thành', exact: true }).click();
     await page.getByRole('dialog').getByRole('button', { name: 'Hoàn thành', exact: true }).click();
     await page.getByText('Đã lưu buổi tập!').waitFor();
+    // v1.9: thẻ so sánh (lần đầu => câu "Lần đầu tập buổi này") và nút lưu ảnh PNG
+    await page.getByText('Lần đầu tập buổi này', { exact: false }).waitFor();
+    const [png] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Lưu ảnh tóm tắt' }).click()]);
+    assert.ok(png.suggestedFilename().endsWith('.png'), 'tệp ảnh .png');
+    await shot('05b-summary');
     await page.goto(BASE + '#/lich-tap?tab=history');
     await page.getByText('2 hiệp').first().waitFor();
     await page.goto(BASE + '#/lich-tap');
