@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { BookOpen, ChevronRight, Save, ShieldCheck } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { getThemePref, setThemePref, type ThemePref } from '../../lib/theme';
 import type { Profile, Settings } from '../../db/types';
 import { Button, Card, Field, NumberInput, PageHeader, Segmented, Spinner, Toggle } from '../../components/ui';
@@ -17,6 +17,12 @@ import { REFERENCES, USAGE_NOTES } from './References';
 
 export function SettingsPage() {
   const profile = useProfile();
+  const { hash } = useLocation();
+  const ready = !!profile;
+  useEffect(() => {
+    // /cai-dat#sao-luu (từ thẻ nhắc sao lưu) => cuộn tới mục Sao lưu.
+    if (ready && hash) document.getElementById(hash.slice(1))?.scrollIntoView({ block: 'start' });
+  }, [hash, ready]);
   const settings = useSettings();
   const loaded = useLiveQuery(() => db.settings.get('app').then((s) => s ?? null), []);
   if (!profile || loaded === undefined) return <Spinner />;

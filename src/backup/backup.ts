@@ -15,7 +15,11 @@ import {
   sessionSchema,
   settingsSchema,
 } from '../db/schemas';
-import type { ProgressPhoto } from '../db/types';
+import type { Exercise, Program, ProgressPhoto, ScheduledWorkout, WorkoutSession } from '../db/types';
+import { BUILTIN_EXERCISES } from '../data/exercises';
+import { createDefaultProgram } from '../data/defaultProgram';
+import { ensureSeed } from '../db/seed';
+import { notifyStorageChanged } from '../lib/storage';
 import { nowISO } from '../lib/date';
 import { arrayBufferToBase64, base64ToArrayBuffer } from './base64';
 
@@ -103,6 +107,41 @@ export async function exportAll(opts: { includePhotos: boolean; appVersion: stri
   };
 }
 
+/**
+ * Xuất sao lưu thành Blob ghép từ nhiều phần (JSON từng bảng; mỗi ảnh base64 là một phần riêng),
+ * KHÔNG bao giờ dựng một chuỗi JSON khổng lồ trong bộ nhớ. Nội dung tệp giống hệt JSON.stringify(exportAll()).
+ */
+export async function exportAllToBlob(opts: { includePhotos: boolean; appVersion: string }): Promise<Blob> {
+  const parts: BlobPart[] = [];
+  const head = JSON.stringify({ app: BACKUP_APP_ID, formatVersion: BACKUP_FORMAT_VERSION, exportedAt: nowISO(), appVersion: opts.appVersion, includesPhotos: opts.includePhotos });
+  parts.push(head.slice(0, -1), ',"data":{');
+  await db.transaction('r', [...USER_TABLES.map((t) => db.table(t)), db.photoBlobs], async () => {
+    for (const [ti, t] of USER_TABLES.entries()) {
+      parts.push(`${ti ? ',' : ''}${JSON.stringify(t)}:[`);
+      if (t === 'photos') {
+        if (opts.includePhotos) {
+          const metas = (await db.photos.toArray()) as ProgressPhoto[];
+          let first = true;
+          for (const p of metas) {
+            const blob = await db.photoBlobs.get(p.id);
+            if (!blob) continue;
+            // {...meta,"dataBase64":"<base64>"} — base64 là một phần riêng (Blob con), không nối chuỗi.
+            const metaJson = JSON.stringify({ ...photoMeta(p), dataBase64: '' });
+            parts.push(`${first ? '' : ','}${metaJson.slice(0, -2)}`, new Blob([arrayBufferToBase64(blob.data)]), '"}');
+            first = false;
+          }
+        }
+      } else {
+        const rows = await db.table(t).toArray();
+        rows.forEach((row, i) => parts.push(`${i ? ',' : ''}${JSON.stringify(row)}`));
+      }
+      parts.push(']');
+    }
+  });
+  parts.push('}}');
+  return new Blob(parts, { type: 'application/json' });
+}
+
 export interface ValidationResult {
   ok: boolean;
   errors: string[];
@@ -163,6 +202,7 @@ export function validateBackup(raw: unknown): ValidationResult {
       }
     });
   }
+  if (!errors.length) errors.push(...crossCheck(cleaned));
   if (errors.length >= MAX_ERRORS) errors.push('… còn lỗi khác, đã dừng kiểm tra.');
   return errors.length ? { ok: false, errors, counts } : {
         ok: true,
@@ -177,6 +217,33 @@ export function validateBackup(raw: unknown): ValidationResult {
           data: cleaned,
         },
       };
+}
+
+/** Kiểm tra tổng thể sau khi từng dòng đã hợp lệ: ảnh giải mã được, ràng buộc giữa các bảng. */
+function crossCheck(d: BackupData): string[] {
+  const errs: string[] = [];
+  (d.photos as { dataBase64: string }[]).forEach((p, i) => {
+    try {
+      if (base64ToArrayBuffer(p.dataBase64).byteLength === 0) throw new Error('rỗng');
+    } catch {
+      errs.push(`Ảnh thứ ${i + 1} hỏng (dữ liệu base64 không giải mã được).`);
+    }
+  });
+  const programs = d.programs as Program[];
+  const active = programs.filter((p) => p.isActive);
+  if (active.length > 1) errs.push(`Tệp có ${active.length} giáo án đang dùng (isActive) — chỉ được tối đa 1.`);
+  const drafts = (d.sessions as WorkoutSession[]).filter((s) => s.status === 'draft' && !s.deletedAt);
+  if (drafts.length > 1) errs.push(`Tệp có ${drafts.length} buổi tập dở chưa xóa — chỉ được tối đa 1.`);
+  // Tham chiếu: bài tập phải có trong tệp hoặc thư viện gốc; giáo án của lịch hẹn phải có trong tệp hoặc giáo án mặc định.
+  const exIds = new Set<string>([...BUILTIN_EXERCISES.map((e) => e.id), ...(d.exercises as Exercise[]).map((e) => e.id)]);
+  const progIds = new Set<string>([createDefaultProgram('').id, ...programs.map((p) => p.id)]);
+  const missingEx = new Set<string>();
+  for (const p of programs) for (const day of p.days) for (const pe of day.exercises) if (!exIds.has(pe.exerciseId)) missingEx.add(pe.exerciseId);
+  for (const s of d.sessions as WorkoutSession[]) for (const se of s.exercises) if (!exIds.has(se.exerciseId)) missingEx.add(se.exerciseId);
+  if (missingEx.size) errs.push(`Tham chiếu tới bài tập không tồn tại: ${[...missingEx].slice(0, 5).join(', ')}${missingEx.size > 5 ? '…' : ''}.`);
+  const missingProg = new Set((d.schedule as ScheduledWorkout[]).map((x) => x.programId).filter((id) => !progIds.has(id)));
+  if (missingProg.size) errs.push(`Lịch hẹn tham chiếu tới giáo án không tồn tại: ${[...missingProg].slice(0, 5).join(', ')}.`);
+  return errs;
 }
 
 export function parseBackupText(text: string): ValidationResult {
@@ -196,11 +263,18 @@ export type ImportMode = 'replace' | 'merge';
  * - replace: xóa dữ liệu hiện tại rồi ghi dữ liệu từ tệp.
  * - merge: giữ dữ liệu hiện tại; bản ghi trùng id sẽ được thay bằng bản trong tệp.
  */
-export async function importBackup(backup: BackupFile, mode: ImportMode): Promise<Record<UserTable, number>> {
+export interface ImportResult {
+  written: Record<UserTable, number>;
+  /** Thông báo cho người dùng (ví dụ buổi dở trong tệp bị đưa vào thùng rác). */
+  notices: string[];
+}
+
+export async function importBackup(backup: BackupFile, mode: ImportMode): Promise<ImportResult> {
   const check = validateBackup(backup);
   if (!check.ok || !check.backup) throw new AppError('Dữ liệu nhập không hợp lệ', check.errors);
   backup = check.backup;
   const written = {} as Record<UserTable, number>;
+  const notices: string[] = [];
   await db.transaction('rw', [...USER_TABLES.map((t) => db.table(t)), db.photoBlobs], async () => {
     for (const t of USER_TABLES) {
       const rows = (backup.data[t] ?? []) as Record<string, unknown>[];
@@ -224,7 +298,21 @@ export async function importBackup(backup: BackupFile, mode: ImportMode): Promis
         written[t] = rows.length;
         continue;
       }
-      const prepared = rows;
+      let prepared = rows;
+      if (t === 'sessions' && mode === 'merge') {
+        // Gộp: nếu máy đang có buổi dở khác thì buổi dở trong tệp vào thùng rác (chỉ giữ 1 buổi dở).
+        const current = await db.sessions.where('status').equals('draft').filter((x) => !x.deletedAt).first();
+        if (current) {
+          prepared = rows.map((r) => {
+            const x = r as unknown as WorkoutSession;
+            if (x.status === 'draft' && !x.deletedAt && x.id !== current.id) {
+              notices.push(`Buổi tập dở "${x.dayName}" trong tệp được đưa vào Thùng rác vì máy đang có buổi dở khác.`);
+              return { ...r, deletedAt: nowISO() };
+            }
+            return r;
+          });
+        }
+      }
       if (t === 'programs' && mode === 'merge' && prepared.some((p) => (p as { isActive?: boolean }).isActive)) {
         const current = await db.programs.toArray();
         for (const p of current) if (p.isActive) await db.programs.put({ ...p, isActive: false });
@@ -233,7 +321,13 @@ export async function importBackup(backup: BackupFile, mode: ImportMode): Promis
       written[t] = prepared.length;
     }
   });
-  return written;
+  if (mode === 'replace') {
+    // Tệp cũ có thể mang thư viện gốc phiên bản cũ: nạp lại thư viện bài tập gốc (không đụng bài tự tạo).
+    await db.meta.put({ key: 'seedVersion', value: 0 });
+    await ensureSeed();
+  }
+  notifyStorageChanged();
+  return { written, notices };
 }
 
 export async function countExisting(): Promise<Record<UserTable, number>> {

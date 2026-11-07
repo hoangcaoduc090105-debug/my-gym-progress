@@ -1,6 +1,8 @@
 import { db } from '../../src/db/db';
 import * as repo from '../../src/db/repo';
-import { countConflicts, exportAll, importBackup, parseBackupText, validateBackup } from '../../src/backup/backup';
+import { countConflicts, exportAll, exportAllToBlob, importBackup, parseBackupText, validateBackup } from '../../src/backup/backup';
+import { BUILTIN_EXERCISES } from '../../src/data/exercises';
+import { createDefaultProgram } from '../../src/data/defaultProgram';
 import { resetDb } from './helpers';
 
 beforeEach(resetDb);
@@ -141,5 +143,86 @@ describe('export / import', () => {
     });
     await importBackup(r.backup!, 'merge');
     expect(await db.bodyMetrics.get('a')).not.toHaveProperty('evil');
+  });
+});
+
+/** jsdom chưa có Blob.text() — đọc bằng FileReader. */
+const readBlob = (b: Blob) =>
+  new Promise<string>((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(String(r.result));
+    r.onerror = () => rej(r.error);
+    r.readAsText(b);
+  });
+
+describe('sao lưu lớn & kiểm tra chặt (v1.7.0)', () => {
+  const file = (data: Record<string, unknown[]>) => ({ app: 'my-gym-progress', formatVersion: 1, exportedAt: 'x', appVersion: 't', includesPhotos: true, data });
+  const draft = (id: string) => ({
+    id, date: '2026-11-07', programId: null, programDayId: null, dayName: `Dở ${id}`, status: 'draft', startedAt: 'x', finishedAt: null,
+    notes: '', exercises: [], scheduleId: null, deletedAt: null, updatedAt: 'x',
+  });
+
+  it('exportAllToBlob: nội dung giống hệt exportAll (kể cả ảnh base64)', async () => {
+    await seedUserData();
+    const blob = await exportAllToBlob({ includePhotos: true, appVersion: 't' });
+    const text = await readBlob(blob);
+    const fromBlob = JSON.parse(text);
+    const plain = JSON.parse(JSON.stringify(await exportAll({ includePhotos: true, appVersion: 't' })));
+    delete fromBlob.exportedAt;
+    delete plain.exportedAt;
+    expect(fromBlob).toEqual(plain);
+    expect(fromBlob.data.photos[0].dataBase64).toBe(btoa(String.fromCharCode(9, 8, 7, 6)));
+    expect(validateBackup(JSON.parse(text)).ok).toBe(true);
+  });
+
+  it('ảnh base64 hỏng bị từ chối ở bước validate, không ghi gì vào DB', async () => {
+    const before = await db.photos.count();
+    const bad = file({ photos: [{ id: 'p1', date: '2026-11-01', pose: 'front', mimeType: 'image/jpeg', deletedAt: null, createdAt: 'x', dataBase64: '@@@không phải base64@@@' }] });
+    const v = validateBackup(bad);
+    expect(v.ok).toBe(false);
+    expect(v.errors.join()).toMatch(/Ảnh thứ 1 hỏng/);
+    await expect(importBackup(bad as never, 'replace')).rejects.toThrow(/không hợp lệ/);
+    expect(await db.photos.count()).toBe(before);
+    expect(await db.photoBlobs.count()).toBe(0);
+  });
+
+  it('tệp có 2 giáo án đang dùng bị từ chối', () => {
+    const a = createDefaultProgram('x');
+    const b = { ...a, id: 'prog-2', name: 'Khác' };
+    const v = validateBackup(file({ programs: [a, b] }));
+    expect(v.ok).toBe(false);
+    expect(v.errors.join()).toMatch(/2 giáo án đang dùng/);
+  });
+
+  it('tệp có 2 buổi dở chưa xóa bị từ chối', () => {
+    const v = validateBackup(file({ sessions: [draft('d1'), draft('d2')] }));
+    expect(v.errors.join()).toMatch(/2 buổi tập dở/);
+  });
+
+  it('tham chiếu tới bài tập không tồn tại bị từ chối', () => {
+    const p = createDefaultProgram('x');
+    p.days[0]!.exercises[0]!.exerciseId = 'bai-khong-co';
+    expect(validateBackup(file({ programs: [p] })).errors.join()).toMatch(/bài-khong-co|bai-khong-co/);
+  });
+
+  it('merge khi máy đang có buổi dở khác: DB chỉ còn 1 buổi dở chưa xóa, có thông báo', async () => {
+    const mine = await repo.startSession({});
+    const r = await importBackup(validateBackup(file({ sessions: [draft('tu-tep')] })).backup!, 'merge');
+    const drafts = await db.sessions.where('status').equals('draft').filter((x) => !x.deletedAt).toArray();
+    expect(drafts.map((x) => x.id)).toEqual([mine.id]);
+    expect((await db.sessions.get('tu-tep'))?.deletedAt).toBeTruthy();
+    expect(r.notices.join()).toMatch(/Thùng rác/);
+  });
+
+  it('replace: nạp lại thư viện gốc => số bài = bài gốc + bài tự tạo trong tệp', async () => {
+    const custom = {
+      id: 'ex_custom', nameVi: 'Bài riêng', nameEn: '', primaryMuscle: 'abs', secondaryMuscles: [], equipment: 'other', region: 'core',
+      isBodyweight: true, instructions: [], commonMistakes: [], alternativeIds: [], isCustom: true, createdAt: 'x', updatedAt: 'x',
+    };
+    // Tệp cũ chỉ chứa bài tự tạo + 1 bài gốc phiên bản cũ (thiếu hướng dẫn chi tiết)
+    const oldBuiltin = { ...BUILTIN_EXERCISES[0]!, setup: undefined, tips: undefined };
+    await importBackup(validateBackup(file({ exercises: [custom, oldBuiltin] })).backup!, 'replace');
+    expect(await db.exercises.count()).toBe(BUILTIN_EXERCISES.length + 1);
+    expect((await db.exercises.get(BUILTIN_EXERCISES[0]!.id))?.setup?.length).toBeGreaterThan(0);
   });
 });

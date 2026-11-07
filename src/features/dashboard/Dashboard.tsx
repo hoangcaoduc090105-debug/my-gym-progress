@@ -1,6 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Link, useNavigate } from 'react-router-dom';
-import { BarChart3, Bell, BookOpen, ChevronRight, Play, Plus, Utensils } from 'lucide-react';
+import { BarChart3, Bell, BookOpen, ChevronRight, DatabaseBackup, Play, Plus, Utensils } from 'lucide-react';
+import { backupReminder, readLastBackup } from '../../domain/backupReminder';
 import { db } from '../../db/db';
 import { Button, Card, PageHeader, Spinner } from '../../components/ui';
 import { useFeedback } from '../../components/feedback';
@@ -45,6 +46,7 @@ export function Dashboard() {
   const needMeasure = sinceMeasure == null || sinceMeasure >= settings.measurementReminderDays;
   const draft = data.sessions.find((s) => s.status === 'draft' && !s.deletedAt);
   const pct = Math.min(100, protein.pctOfMin);
+  const remind = backupReminder(readLastBackup(), completed.length);
 
   async function startNext() {
     if (!next) return;
@@ -150,6 +152,17 @@ export function Dashboard() {
           </span>
         </div>
       </Link>
+
+      {remind.show && (
+        <Link to="/cai-dat#sao-luu" className="flex items-center gap-3 rounded-2xl border border-brand2/40 bg-brand2/5 p-3 text-sm" data-testid="backup-reminder">
+          <DatabaseBackup size={18} className="shrink-0 text-brand2-text" />
+          <span className="flex-1">
+            <span className="font-semibold">{remind.days == null ? 'Bạn chưa sao lưu dữ liệu lần nào' : `Đã ${remind.days} ngày chưa sao lưu`}</span>
+            <span className="block text-xs text-muted">Dữ liệu chỉ nằm trên máy này — bấm để xuất bản sao lưu.</span>
+          </span>
+          <ChevronRight size={18} className="text-muted" />
+        </Link>
+      )}
 
       {needMeasure && (
         <Card className="border-warn/40">

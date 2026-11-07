@@ -1,6 +1,6 @@
-/** Tải tệp xuống thiết bị — tạo hoàn toàn cục bộ, không gửi đi đâu. */
-export function downloadText(filename: string, content: string, mime: string): void {
-  const blob = new Blob([content], { type: mime });
+/** Tải tệp xuống thiết bị — tạo hoàn toàn cục bộ, không gửi đi đâu. Nhận chuỗi hoặc Blob (sao lưu lớn). */
+export function downloadText(filename: string, content: string | Blob, mime: string): void {
+  const blob = typeof content === 'string' ? new Blob([content], { type: mime }) : content;
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;

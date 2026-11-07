@@ -1,13 +1,13 @@
-import { useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Download, FileJson, FileSpreadsheet, ShieldCheck, Upload } from 'lucide-react';
 import { db, USER_TABLES } from '../../db/db';
 import { Badge, Button, Card, Modal, Segmented, Toggle } from '../../components/ui';
 import { useFeedback } from '../../components/feedback';
-import { countConflicts, countExisting, exportAll, importBackup, parseBackupText, TABLE_LABELS, type BackupFile, type ImportMode } from '../../backup/backup';
+import { countConflicts, countExisting, exportAllToBlob, importBackup, parseBackupText, TABLE_LABELS, type BackupFile, type ImportMode } from '../../backup/backup';
 import { bodyMetricsToCsv, workoutsToCsv } from '../../backup/csv';
 import { downloadText, stampedName } from '../../lib/download';
-import { formatBytes, storageInfo } from '../../lib/storage';
+import { checkFreeSpace, formatBytes, onStorageChanged, storageInfo } from '../../lib/storage';
 import { useSettings } from '../../app/useAppData';
 
 const MAX_IMPORT_BYTES = 200 * 1024 * 1024;
@@ -21,20 +21,27 @@ export function DataManagement() {
   const [errors, setErrors] = useState<string[] | null>(null);
   const [mode, setMode] = useState<ImportMode>('merge');
   const fileRef = useRef<HTMLInputElement>(null);
-  const info = useLiveQuery(() => storageInfo(), []);
+  // storageInfo không phụ thuộc bảng nào => useState + làm mới sau xuất/nhập/xóa ảnh/xóa thùng rác.
+  const [info, setInfo] = useState<Awaited<ReturnType<typeof storageInfo>> | null>(null);
+  const refreshInfo = useCallback(() => void storageInfo().then(setInfo), []);
+  useEffect(() => {
+    refreshInfo();
+    return onStorageChanged(refreshInfo);
+  }, [refreshInfo]);
   const photoCount = useLiveQuery(() => db.photos.count(), []);
 
   async function doExport(withPhotos: boolean) {
     setBusy(true);
     try {
-      const b = await exportAll({ includePhotos: withPhotos, appVersion: __APP_VERSION__ });
-      downloadText(stampedName('my-gym-progress', 'json'), JSON.stringify(b), 'application/json');
+      const blob = await exportAllToBlob({ includePhotos: withPhotos, appVersion: __APP_VERSION__ });
+      downloadText(stampedName('my-gym-progress', 'json'), blob, 'application/json');
       toast('Đã xuất bản sao lưu JSON');
       try {
         localStorage.setItem('mgp.lastBackup', new Date().toISOString());
       } catch {
         /* bỏ qua */
       }
+      refreshInfo();
     } catch (e) {
       toastError(e);
     } finally {
@@ -47,6 +54,8 @@ export function DataManagement() {
     if (!f) return;
     setErrors(null);
     if (f.size > MAX_IMPORT_BYTES) return setErrors([`Tệp quá lớn (${formatBytes(f.size)}). Giới hạn ${formatBytes(MAX_IMPORT_BYTES)}.`]);
+    const space = await checkFreeSpace(f.size);
+    if (space) return setErrors([space]);
     setBusy(true);
     try {
       const r = parseBackupText(await f.text());
@@ -83,9 +92,10 @@ export function DataManagement() {
     if (!ok) return;
     setBusy(true);
     try {
-      const written = await importBackup(preview.backup, mode);
+      const { written, notices } = await importBackup(preview.backup, mode);
       const total = Object.values(written).reduce((a, b) => a + b, 0);
       toast(`Đã nhập ${total} bản ghi`);
+      for (const n of notices) toast(n, 'info');
       setPreview(null);
     } catch (e) {
       toastError(e);
@@ -116,7 +126,7 @@ export function DataManagement() {
   }
 
   return (
-    <Card title="Sao lưu & khôi phục" id="du-lieu">
+    <Card title="Sao lưu & khôi phục" id="sao-luu">
       <div className="mb-3 flex gap-2 rounded-xl bg-surface2 p-3 text-xs text-muted">
         <ShieldCheck size={18} className="shrink-0 text-ok" />
         <div>

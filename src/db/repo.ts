@@ -37,6 +37,7 @@ import { nowISO, todayISO } from '../lib/date';
 import { uid } from '../lib/id';
 import { isWorkingSet } from '../domain/sets';
 import { isArrayBuffer } from '../lib/image';
+import { notifyStorageChanged } from '../lib/storage';
 
 function validate<T>(schema: z.ZodType<T>, value: unknown, what: string): T {
   const r = schema.safeParse(value);
@@ -338,6 +339,7 @@ export async function restoreSession(id: string): Promise<void> {
 
 export async function purgeSession(id: string): Promise<void> {
   await db.sessions.delete(id);
+  notifyStorageChanged();
 }
 
 // ---------------- SỐ ĐO CƠ THỂ ----------------
@@ -366,6 +368,7 @@ export async function restoreBodyMetric(id: string): Promise<void> {
 }
 export async function purgeBodyMetric(id: string): Promise<void> {
   await db.bodyMetrics.delete(id);
+  notifyStorageChanged();
 }
 
 // ---------------- ẢNH TIẾN ĐỘ ----------------
@@ -383,6 +386,7 @@ export async function addPhoto(
     await db.photos.add(p);
     await db.photoBlobs.add({ id: p.id, data });
   });
+  notifyStorageChanged();
   return p;
 }
 
@@ -401,6 +405,7 @@ export async function purgePhoto(id: string): Promise<void> {
     await db.photos.delete(id);
     await db.photoBlobs.delete(id);
   });
+  notifyStorageChanged();
 }
 
 // ---------------- DINH DƯỠNG ----------------
