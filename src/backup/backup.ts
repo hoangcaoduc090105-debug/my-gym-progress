@@ -69,6 +69,23 @@ export interface BackupFile {
   appVersion: string;
   includesPhotos: boolean;
   data: BackupData;
+  /** v1.9 (định dạng 2, tùy chọn): dữ liệu phụ không thuộc bảng người dùng — hiện chỉ có bảng ghép tên CSV. */
+  extras?: BackupExtras;
+}
+
+export interface BackupExtras {
+  /** meta.csvNameMap: tên bài trong tệp Strong/Hevy (đã chuẩn hóa) → exerciseId. */
+  csvNameMap?: Record<string, string>;
+}
+
+export const CSV_NAME_MAP_META_KEY = 'csvNameMap';
+const extrasSchema = z.object({ csvNameMap: z.record(z.string().min(1).max(200), z.string().min(1).max(100)).optional() }).strict();
+
+/** Đọc phần extras từ meta (chỉ các khóa an toàn, bỏ qua nếu rỗng). */
+async function readExtras(): Promise<BackupExtras | undefined> {
+  const m = await db.meta.get(CSV_NAME_MAP_META_KEY);
+  const map = m && typeof m.value === 'object' && m.value && !Array.isArray(m.value) ? (m.value as Record<string, string>) : null;
+  return map && Object.keys(map).length ? { csvNameMap: map } : undefined;
 }
 
 /** Chỉ các trường siêu dữ liệu của ảnh (đúng định dạng tệp sao lưu v1.6). */
@@ -80,7 +97,9 @@ export function photoMeta(p: ProgressPhoto): Record<string, unknown> {
 
 export async function exportAll(opts: { includePhotos: boolean; appVersion: string }): Promise<BackupFile> {
   const data = {} as BackupData;
-  await db.transaction('r', [...USER_TABLES.map((t) => db.table(t)), db.photoBlobs], async () => {
+  let extras: BackupExtras | undefined;
+  await db.transaction('r', [...USER_TABLES.map((t) => db.table(t)), db.photoBlobs, db.meta], async () => {
+    extras = await readExtras();
     for (const t of USER_TABLES) {
       if (t === 'photos') {
         if (!opts.includePhotos) {
@@ -108,6 +127,7 @@ export async function exportAll(opts: { includePhotos: boolean; appVersion: stri
     appVersion: opts.appVersion,
     includesPhotos: opts.includePhotos,
     data,
+    ...(extras ? { extras } : {}),
   };
 }
 
@@ -119,7 +139,9 @@ export async function exportAllToBlob(opts: { includePhotos: boolean; appVersion
   const parts: BlobPart[] = [];
   const head = JSON.stringify({ app: BACKUP_APP_ID, formatVersion: BACKUP_FORMAT_VERSION, exportedAt: nowISO(), appVersion: opts.appVersion, includesPhotos: opts.includePhotos });
   parts.push(head.slice(0, -1), ',"data":{');
-  await db.transaction('r', [...USER_TABLES.map((t) => db.table(t)), db.photoBlobs], async () => {
+  let extras: BackupExtras | undefined;
+  await db.transaction('r', [...USER_TABLES.map((t) => db.table(t)), db.photoBlobs, db.meta], async () => {
+    extras = await readExtras();
     for (const [ti, t] of USER_TABLES.entries()) {
       parts.push(`${ti ? ',' : ''}${JSON.stringify(t)}:[`);
       if (t === 'photos') {
@@ -142,7 +164,7 @@ export async function exportAllToBlob(opts: { includePhotos: boolean; appVersion
       parts.push(']');
     }
   });
-  parts.push('}}');
+  parts.push('}', extras ? `,"extras":${JSON.stringify(extras)}` : '', '}');
   return new Blob(parts, { type: 'application/json' });
 }
 
@@ -207,6 +229,12 @@ export function validateBackup(raw: unknown): ValidationResult {
     });
   }
   if (!errors.length) errors.push(...crossCheck(cleaned));
+  let extras: BackupExtras | undefined;
+  if (r.extras !== undefined) {
+    const ex = extrasSchema.safeParse(r.extras);
+    if (ex.success) extras = ex.data.csvNameMap && Object.keys(ex.data.csvNameMap).length ? { csvNameMap: ex.data.csvNameMap } : undefined;
+    else errors.push(...formatZodError(ex.error, 'extras → ').slice(0, 3));
+  }
   if (errors.length >= MAX_ERRORS) errors.push('… còn lỗi khác, đã dừng kiểm tra.');
   return errors.length ? { ok: false, errors, counts } : {
         ok: true,
@@ -219,6 +247,7 @@ export function validateBackup(raw: unknown): ValidationResult {
           appVersion: typeof r.appVersion === 'string' ? r.appVersion : '',
           includesPhotos: r.includesPhotos === true || (cleaned.photos?.length ?? 0) > 0,
           data: cleaned,
+          ...(extras ? { extras } : {}),
         },
       };
 }
@@ -279,7 +308,14 @@ export async function importBackup(backup: BackupFile, mode: ImportMode): Promis
   backup = check.backup;
   const written = {} as Record<UserTable, number>;
   const notices: string[] = [];
-  await db.transaction('rw', [...USER_TABLES.map((t) => db.table(t)), db.photoBlobs], async () => {
+  await db.transaction('rw', [...USER_TABLES.map((t) => db.table(t)), db.photoBlobs, db.meta], async () => {
+    // extras.csvNameMap (v1.9): thay thế toàn bộ khi replace, gộp (tệp đè) khi merge.
+    const incoming = backup.extras?.csvNameMap;
+    if (incoming) {
+      const prev = mode === 'merge' ? await db.meta.get(CSV_NAME_MAP_META_KEY) : undefined;
+      const base = prev && typeof prev.value === 'object' && prev.value ? (prev.value as Record<string, string>) : {};
+      await db.meta.put({ key: CSV_NAME_MAP_META_KEY, value: { ...base, ...incoming } });
+    }
     for (const t of USER_TABLES) {
       const rows = (backup.data[t] ?? []) as Record<string, unknown>[];
       const table = db.table(t);

@@ -263,3 +263,41 @@ describe('định dạng 2 (v1.8.0)', () => {
     expect(await db.sessions.count()).toBe(1);
   });
 });
+
+describe('extras.csvNameMap (v1.9)', () => {
+  const map = { 'bench press barbell': 'bb-bench-press', 'leg press': 'leg-press' };
+
+  it('xuất kèm bảng ghép tên khi có; không có thì không xuất trường extras', async () => {
+    await seedUserData();
+    expect((await exportAll({ includePhotos: false, appVersion: 't' })).extras).toBeUndefined();
+    await db.meta.put({ key: 'csvNameMap', value: map });
+    const b = await exportAll({ includePhotos: false, appVersion: 't' });
+    expect(b.extras).toEqual({ csvNameMap: map });
+    const text = await readBlob(await exportAllToBlob({ includePhotos: false, appVersion: 't' }));
+    expect(JSON.parse(text).extras).toEqual({ csvNameMap: map });
+  });
+
+  it('nhập replace => thay toàn bộ; nhập merge => gộp, tệp đè', async () => {
+    await seedUserData();
+    await db.meta.put({ key: 'csvNameMap', value: map });
+    const b = await exportAll({ includePhotos: false, appVersion: 't' });
+    await db.meta.put({ key: 'csvNameMap', value: { 'leg press': 'hack-squat', 'squat': 'back-squat' } });
+    await importBackup(validateBackup(JSON.parse(JSON.stringify(b))).backup!, 'merge');
+    expect((await db.meta.get('csvNameMap'))?.value).toEqual({ 'leg press': 'leg-press', squat: 'back-squat', 'bench press barbell': 'bb-bench-press' });
+    await db.meta.put({ key: 'csvNameMap', value: { squat: 'back-squat' } });
+    await importBackup(validateBackup(JSON.parse(JSON.stringify(b))).backup!, 'replace');
+    expect((await db.meta.get('csvNameMap'))?.value).toEqual(map);
+  });
+
+  it('extras sai kiểu bị từ chối; tệp định dạng 1 không có extras vẫn nhập được', async () => {
+    await seedUserData();
+    const b = await exportAll({ includePhotos: false, appVersion: 't' });
+    const bad = { ...JSON.parse(JSON.stringify(b)), extras: { csvNameMap: { x: 5 } } };
+    const v = validateBackup(bad);
+    expect(v.ok).toBe(false);
+    expect(v.errors.join(' ')).toContain('extras');
+    const old = { ...JSON.parse(JSON.stringify(b)), formatVersion: 1 };
+    delete old.extras;
+    expect(validateBackup(old).ok).toBe(true);
+  });
+});

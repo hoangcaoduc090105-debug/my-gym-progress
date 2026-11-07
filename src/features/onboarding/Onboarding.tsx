@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Dumbbell, ShieldCheck } from 'lucide-react';
-import { Button, Card, Field, NumberInput } from '../../components/ui';
+import { Button, Card, Field, NumberInput, Segmented } from '../../components/ui';
 import { useFeedback } from '../../components/feedback';
-import { saveBodyMetric, saveProfile } from '../../db/repo';
+import { getSettings, saveBodyMetric, saveProfile, saveSettings } from '../../db/repo';
+import { fromDisplay, type WeightUnit } from '../../lib/units';
 import { suggestProteinRange } from '../../domain/nutrition';
 import { nowISO, todayISO } from '../../lib/date';
 import { FieldErrorsContext, useFieldErrors } from '../../lib/formErrors';
@@ -16,13 +17,16 @@ export function Onboarding() {
   const [sex, setSex] = useState<'male' | 'female' | 'other'>('male');
   const [height, setHeight] = useState<number | null>(null);
   const [weight, setWeight] = useState<number | null>(null);
+  // v1.9: cân nặng nhập theo kg hoặc lb; lưu luôn là kg và ghi đơn vị đã chọn vào Cài đặt.
+  const [unit, setUnit] = useState<WeightUnit>('kg');
+  const weightKg = weight == null ? null : fromDisplay(weight, unit);
   const [age, setAge] = useState<number | null>(null);
   const [goals, setGoals] = useState('Tăng cơ, tăng sức mạnh: vai rộng, ngực dày, lưng chữ V, tay phát triển, cơ bụng rõ nét.');
   const [pMin, setPMin] = useState<number | null>(null);
   const [pMax, setPMax] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const suggestion = weight ? suggestProteinRange(weight) : null;
+  const suggestion = weightKg ? suggestProteinRange(weightKg) : null;
   const effMin = pMin ?? suggestion?.min ?? null;
   const effMax = pMax ?? suggestion?.max ?? null;
 
@@ -37,13 +41,18 @@ export function Onboarding() {
       id: 'me', sex, heightCm: height, age: age ?? null, goals, proteinTargetMinG: effMin, proteinTargetMaxG: effMax,
       activityLevel: null, calorieTarget: null, createdAt: now, updatedAt: now,
     });
-    const w = weight == null ? null : S.bodyMetricSchema.safeParse({ id: 'x', date: todayISO(), weightKg: weight, createdAt: now, updatedAt: now });
+    const w = weightKg == null ? null : S.bodyMetricSchema.safeParse({ id: 'x', date: todayISO(), weightKg, createdAt: now, updatedAt: now });
     const issues = [...(p.success ? [] : p.error.issues), ...(w && !w.success ? w.error.issues : [])];
     if (issues.length) return fe.setFromZod({ issues });
     setBusy(true);
     try {
       await saveProfile({ sex, heightCm: height!, age: age ?? null, goals, proteinTargetMinG: effMin!, proteinTargetMaxG: effMax!, activityLevel: null, calorieTarget: null });
-      if (weight) await saveBodyMetric({ date: todayISO(), weightKg: weight });
+      if (weightKg) await saveBodyMetric({ date: todayISO(), weightKg });
+      if (unit === 'lb') {
+        const { id: _id, updatedAt: _u, ...cur } = await getSettings();
+        void _id, _u;
+        await saveSettings({ ...cur, weightUnit: 'lb' });
+      }
       toast('Đã lưu hồ sơ. Chúc bạn tập tốt!');
       nav('/', { replace: true });
     } catch (err) {
@@ -84,7 +93,21 @@ export function Onboarding() {
               )}
             </Field>
             <Field name="heightCm" label="Chiều cao (cm) *">{(id) => <NumberInput id={id} value={height} onChange={setHeight} placeholder="vd. 170" />}</Field>
-            <Field name="weightKg" label="Cân nặng hiện tại (kg)">{(id) => <NumberInput id={id} value={weight} onChange={setWeight} placeholder="vd. 70" />}</Field>
+            <Field name="weightKg" label={`Cân nặng hiện tại (${unit})`}>
+              {(id) => (
+                <div className="flex gap-2">
+                  <NumberInput id={id} value={weight} onChange={setWeight} placeholder={unit === 'kg' ? 'vd. 70' : 'vd. 155'} className="min-w-0 flex-1" />
+                  <Segmented
+                    value={unit}
+                    onChange={setUnit}
+                    options={[
+                      { value: 'kg', label: 'kg' },
+                      { value: 'lb', label: 'lb' },
+                    ]}
+                  />
+                </div>
+              )}
+            </Field>
             <Field name="age" label="Tuổi (không bắt buộc)" className="col-span-2" hint="Chỉ dùng khi bạn muốn tự đặt mục tiêu calories. App không tự tính calories.">
               {(id) => <NumberInput id={id} value={age} onChange={setAge} placeholder="—" />}
             </Field>

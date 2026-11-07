@@ -31,3 +31,24 @@ export async function ensureThumbnails(make: (data: ArrayBuffer, mime: string) =
     await new Promise((r) => setTimeout(r, 50));
   }
 }
+
+/** Khóa meta đánh dấu đã sửa lỗi gõ trong mô tả giáo án mặc định (dữ liệu seed cũ). */
+export const TYPO_FIX_KEY = 'fix.typo.czhinh';
+
+/**
+ * v1.9: bản seed cũ ghi "CZhỉnh sửa tự do" vào mô tả giáo án mặc định của người dùng. Sửa một lần
+ * (chỉ khi mô tả còn chứa đúng chuỗi lỗi), ghi dấu vào meta để không quét lại. Trả về số giáo án đã sửa.
+ */
+export async function fixKnownTypos(): Promise<number> {
+  if (await db.meta.get(TYPO_FIX_KEY)) return 0;
+  let fixed = 0;
+  await db.transaction('rw', db.programs, db.meta, async () => {
+    const list = await db.programs.filter((p) => !!p.description && p.description.includes('CZhỉnh')).toArray();
+    for (const p of list) {
+      await db.programs.update(p.id, { description: p.description!.replace(/CZhỉnh/g, 'Chỉnh') });
+      fixed++;
+    }
+    await db.meta.put({ key: TYPO_FIX_KEY, value: true });
+  });
+  return fixed;
+}

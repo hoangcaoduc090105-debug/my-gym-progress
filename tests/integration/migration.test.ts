@@ -72,3 +72,21 @@ describe('ensureThumbnails', () => {
     expect(await db.photos.filter((p) => !p.thumb).count()).toBe(1);
   });
 });
+
+describe('fixKnownTypos (v1.9)', () => {
+  it('sửa "CZhỉnh" trong mô tả giáo án một lần; mô tả khác giữ nguyên; lần sau không quét lại', async () => {
+    const { db } = await import('../../src/db/db');
+    const { fixKnownTypos, TYPO_FIX_KEY } = await import('../../src/db/migrations');
+    const { resetDb } = await import('./helpers');
+    await resetDb();
+    const p = (await db.programs.toArray())[0]!;
+    await db.programs.update(p.id, { description: 'Vòng A → B → C. CZhỉnh sửa tự do.' });
+    await db.programs.add({ ...p, id: 'p2', isActive: false, description: 'Mô tả bình thường.' });
+    expect(await fixKnownTypos()).toBe(1);
+    expect((await db.programs.get(p.id))!.description).toBe('Vòng A → B → C. Chỉnh sửa tự do.');
+    expect((await db.programs.get('p2'))!.description).toBe('Mô tả bình thường.');
+    expect((await db.meta.get(TYPO_FIX_KEY))?.value).toBe(true);
+    await db.programs.update(p.id, { description: 'CZhỉnh lại' });
+    expect(await fixKnownTypos()).toBe(0);
+  });
+});

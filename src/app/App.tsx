@@ -87,7 +87,7 @@ export function App() {
       .then(() => {
         setReady(true);
         // Bước nền: tạo ảnh thu nhỏ còn thiếu (ảnh cũ/ảnh nhập) — không chặn giao diện.
-        setTimeout(() => void import('../db/migrations').then((m) => m.ensureThumbnails()).catch(() => undefined), 1500);
+        setTimeout(() => void import('../db/migrations').then(async (m) => { await m.fixKnownTypos(); await m.ensureThumbnails(); }).catch(() => undefined), 1500);
         // Tải sẵn schema kiểm tra dữ liệu để lần ghi đầu tiên không phải chờ.
         void loadSchemas();
       })
