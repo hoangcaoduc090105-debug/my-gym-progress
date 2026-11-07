@@ -211,6 +211,17 @@ try {
     await shot('06-analytics');
   });
 
+  await check('Chi tiết bài: tab Lịch sử có buổi đã tập', async () => {
+    await page.goto(BASE + '#/thu-vien/goblet-squat');
+    await page.getByRole('tab', { name: 'Lịch sử' }).click();
+    await page.getByTestId('history-row').first().waitFor();
+    assert.ok((await page.getByTestId('history-row').count()) >= 1);
+    assert.match(await page.getByTestId('history-row').first().innerText(), /16×12 · 16×11/);
+    await page.getByRole('button', { name: 'Tất cả', exact: true }).click();
+    await page.getByTestId('history-row').first().waitFor();
+    await shot('13-exercise-history');
+  });
+
   let backupPath = '';
   await check('Xuất JSON chứa buổi tập, số đo, nhật ký ăn', async () => {
     await page.goto(BASE + '#/cai-dat');

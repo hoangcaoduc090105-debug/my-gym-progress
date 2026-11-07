@@ -333,3 +333,67 @@ describe('Thay bài cho cả giáo án (v1.8.0)', () => {
     expect(saved.exercises[0]!.sets[0]!.replacedFrom).toBe('goblet-squat');
   });
 });
+
+describe('sessionsWithExercise — phân trang (v1.8.0)', () => {
+  const mk = (i: number, exerciseId = 'goblet-squat', extra: Partial<import('../../src/db/types').WorkoutSession> = {}) => {
+    const d = new Date(Date.UTC(2026, 0, 1 + i));
+    const date = d.toISOString().slice(0, 10);
+    return {
+      id: `hs-${String(i).padStart(3, '0')}`,
+      date,
+      programId: null,
+      programDayId: null,
+      dayName: `Buổi ${i}`,
+      status: 'completed' as const,
+      startedAt: `${date}T10:00:00.000Z`,
+      finishedAt: `${date}T11:00:00.000Z`,
+      notes: '',
+      exercises: [{ id: `se-${i}`, exerciseId, target: null, note: '', sets: [{ id: `st-${i}`, weightKg: 20 + i, reps: 10, rir: 2, isWarmup: false, done: true }] }],
+      updatedAt: `${date}T11:00:00.000Z`,
+      ...extra,
+    };
+  };
+
+  it('25 buổi: trang 20 + trang 5, không trùng, mới nhất trước; bỏ buổi không có bài / đã xóa', async () => {
+    const { sessionsWithExercise } = await import('../../src/db/history');
+    await db.sessions.bulkAdd([
+      ...Array.from({ length: 25 }, (_, i) => mk(i)),
+      mk(100, 'leg-press'),
+      mk(101, 'goblet-squat', { deletedAt: '2026-06-01T00:00:00.000Z' }),
+      mk(102, 'goblet-squat', { status: 'draft' }),
+    ]);
+    const p1 = await sessionsWithExercise('goblet-squat', { limit: 20 });
+    expect(p1.sessions).toHaveLength(20);
+    expect(p1.sessions[0]!.id).toBe('hs-024');
+    expect(p1.next).not.toBeNull();
+    const p2 = await sessionsWithExercise('goblet-squat', { limit: 20, before: p1.next! });
+    expect(p2.sessions).toHaveLength(5);
+    expect(p2.next).toBeNull();
+    const ids = [...p1.sessions, ...p2.sessions].map((s) => s.id);
+    expect(new Set(ids).size).toBe(25);
+    expect(ids).toEqual(Array.from({ length: 25 }, (_, i) => `hs-${String(24 - i).padStart(3, '0')}`));
+  });
+
+  it('nhiều buổi cùng ngày: con trỏ không bỏ sót / không lặp; since lọc theo ngày', async () => {
+    const { sessionsWithExercise } = await import('../../src/db/history');
+    await db.sessions.bulkAdd(Array.from({ length: 5 }, (_, i) => ({ ...mk(i), date: '2026-02-01' })));
+    await db.sessions.bulkAdd([mk(60)]);
+    const all: string[] = [];
+    let next: string | undefined;
+    do {
+      const r = await sessionsWithExercise('goblet-squat', { limit: 2, before: next });
+      all.push(...r.sessions.map((s) => s.id));
+      next = r.next ?? undefined;
+    } while (next);
+    expect(all).toHaveLength(6);
+    expect(new Set(all).size).toBe(6);
+    const since = await sessionsWithExercise('goblet-squat', { limit: 20, since: '2026-02-02' });
+    expect(since.sessions.map((s) => s.id)).toEqual(['hs-060']);
+  });
+
+  it('prSessionIdsFor: chỉ buổi có kỷ lục của bài', async () => {
+    const { prSessionIdsFor } = await import('../../src/db/history');
+    await db.sessions.bulkAdd([mk(0), mk(1), mk(2)]);
+    expect([...(await prSessionIdsFor('goblet-squat', 'epley'))].sort()).toEqual(['hs-001', 'hs-002']);
+  });
+});

@@ -1,10 +1,12 @@
+import { Suspense, lazy, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Pencil, Trash2, Trophy } from 'lucide-react';
 import { ExerciseTechnique } from './ExerciseTechnique';
 import { db } from '../../db/db';
 import { EQUIPMENT_LABELS, MUSCLE_LABELS } from '../../db/types';
-import { Badge, Button, Card, PageHeader, Spinner } from '../../components/ui';
+import { Badge, Button, Card, PageHeader, Spinner, Tabs } from '../../components/ui';
+const ExerciseHistoryList = lazy(() => import('./ExerciseHistory'));
 import { useFeedback } from '../../components/feedback';
 import { useSettings } from '../../app/useAppData';
 import { deleteCustomExercise } from '../../db/repo';
@@ -18,6 +20,7 @@ export function ExerciseDetail() {
   const nav = useNavigate();
   const settings = useSettings();
   const { confirm, toast, toastError } = useFeedback();
+  const [tab, setTab] = useState<'overview' | 'history'>('overview');
   const data = useLiveQuery(async () => {
     const ex = await db.exercises.get(id);
     const alts = ex ? (await db.exercises.bulkGet(ex.alternativeIds)).filter((x) => !!x) : [];
@@ -41,6 +44,23 @@ export function ExerciseDetail() {
         <Badge tone="info">{EQUIPMENT_LABELS[ex.equipment]}</Badge>
         {ex.isCustom && <Badge tone="info">Tự tạo</Badge>}
       </div>
+
+      <Tabs
+        value={tab}
+        onChange={setTab}
+        tabs={[
+          { value: 'overview', label: 'Tổng quan' },
+          { value: 'history', label: 'Lịch sử' },
+        ]}
+      />
+      {tab === 'history' ? (
+        <Card>
+          <Suspense fallback={<Spinner />}>
+            <ExerciseHistoryList exerciseId={ex.id} formula={settings.oneRmFormula} />
+          </Suspense>
+        </Card>
+      ) : (
+      <>
 
       <Card title="Hướng dẫn kỹ thuật">
         <ExerciseTechnique ex={ex} />
@@ -103,6 +123,9 @@ export function ExerciseDetail() {
           </div>
         )}
       </Card>
+
+      </>
+      )}
 
       {ex.source && <p className="text-xs text-muted">Nguồn tham khảo kỹ thuật: {ex.source}. Hướng dẫn mang tính tham khảo, không thay thế huấn luyện viên.</p>}
 

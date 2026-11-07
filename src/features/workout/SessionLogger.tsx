@@ -18,6 +18,7 @@ import { persistAfterFirstWorkout } from '../../db/persistence';
 import { useRestTimerActions } from './RestTimer';
 import { ExercisePicker } from './ExercisePicker';
 import { useSessionWriter, type SaveState } from './useSessionWriter';
+const ExerciseHistoryList = lazy(() => import('../library/ExerciseHistory'));
 const SwapExerciseDialog = lazy(() => import('./SwapExerciseDialog'));
 const ExerciseTechnique = lazy(() => import('../library/ExerciseTechnique').then((m) => ({ default: m.ExerciseTechnique })));
 
@@ -232,6 +233,7 @@ export function SessionLogger() {
       {s.exercises.map((se, i) => (
         <ExerciseBlock
           key={se.id}
+          sessionId={s.id}
           se={se}
           ex={exMap.get(se.exerciseId)}
           hint={hints?.[se.exerciseId]}
@@ -363,6 +365,7 @@ function SuggestionBanner({ sg }: { sg: Suggestion }) {
 }
 
 function ExerciseBlock(props: {
+  sessionId: string;
   se: SessionExercise;
   ex: Exercise | undefined;
   hint: Hint | undefined;
@@ -384,6 +387,7 @@ function ExerciseBlock(props: {
     ? suggestProgression({ target: t, lastSets: hint?.sets ?? [], region: ex.region, isBodyweight: ex.isBodyweight, settings: settings.progression })
     : null;
   const [howOpen, setHowOpen] = useState(false);
+  const [histOpen, setHistOpen] = useState(false);
   const setField = (i: number, patch: Partial<SetEntry>) => onChange((e) => ({ ...e, sets: e.sets.map((x, k) => (k === i ? { ...x, ...patch } : x)) }));
   let workIdx = 0;
 
@@ -424,15 +428,23 @@ function ExerciseBlock(props: {
       </div>
 
       {hint && (
-        <div className="mb-2 text-xs text-muted">
-          Lần trước ({formatShort(hint.date)}):{' '}
-          <span className="tabular text-text">
-            {hint.sets
-              .filter(isWorkingSet)
-              .map((x) => `${fmt1(x.weightKg ?? 0)}×${x.reps}`)
-              .join(', ')}
+        <button
+          type="button"
+          onClick={() => setHistOpen(true)}
+          aria-label="Xem 3 buổi gần nhất của bài này"
+          className="mb-2 flex min-h-[44px] w-full items-center gap-1 rounded-lg text-left text-xs text-muted hover:bg-surface2"
+        >
+          <span className="min-w-0 flex-1">
+            Lần trước ({formatShort(hint.date)}):{' '}
+            <span className="tabular text-text">
+              {hint.sets
+                .filter(isWorkingSet)
+                .map((x) => `${fmt1(x.weightKg ?? 0)}×${x.reps}`)
+                .join(', ')}
+            </span>
           </span>
-        </div>
+          <span className="shrink-0 text-info underline">3 buổi</span>
+        </button>
       )}
       {sg && <SuggestionBanner sg={sg} />}
 
@@ -534,6 +546,21 @@ function ExerciseBlock(props: {
         onChange={(e) => { const v = e.target.value; props.onChangeText((x) => ({ ...x, note: v })); }}
         onBlur={props.onBlurText}
       />
+      {histOpen && (
+        <Modal open onClose={() => setHistOpen(false)} title={`3 buổi gần nhất: ${ex?.nameVi ?? ''}`} wide>
+          <Suspense fallback={<Spinner />}>
+            <ExerciseHistoryList
+              exerciseId={se.exerciseId}
+              formula={settings.oneRmFormula}
+              pageSize={3}
+              filters={false}
+              paged={false}
+              excludeSessionId={props.sessionId}
+              onNavigate={() => setHistOpen(false)}
+            />
+          </Suspense>
+        </Modal>
+      )}
       {ex && (
         <Modal open={howOpen} onClose={() => setHowOpen(false)} title={`Kỹ thuật: ${ex.nameVi}`} wide>
           <Suspense fallback={<Spinner />}>
