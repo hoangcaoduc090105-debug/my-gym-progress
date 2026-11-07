@@ -187,7 +187,7 @@ function TrainingForm({ settings }: { settings: Settings }) {
           </Field>
           <Field label="Công thức 1RM">
             {(id) => (
-              <select id={id} value={s.oneRmFormula} onChange={(e) => setS((x) => ({ ...x, oneRmFormula: e.target.value as Settings['oneRmFormula'] }))}>
+              <select id={id} value={s.oneRmFormula} onChange={(e) => { const v = e.target.value; setS((x) => ({ ...x, oneRmFormula: v as Settings['oneRmFormula'] })); }}>
                 <option value="epley">Epley</option>
                 <option value="brzycki">Brzycki</option>
               </select>

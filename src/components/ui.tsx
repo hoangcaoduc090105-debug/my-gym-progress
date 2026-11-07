@@ -166,9 +166,18 @@ export function Field({
   if (err && isValidElement(child)) {
     child = cloneElement(child as React.ReactElement<Record<string, unknown>>, { 'aria-invalid': true, 'aria-describedby': errId });
   }
-  const onEdit = name != null && ctx && err ? () => ctx.clear(name) : undefined;
+  // Xóa lỗi khi người dùng sửa ô. Gắn ở pha BUBBLE và luôn gắn (không bật/tắt theo lỗi):
+  // handler ở pha capture chạy trong listener capture của React; với thao tác gõ thật, trình duyệt chạy
+  // microtask trước listener bubble → React render lại ô controlled với giá trị cũ, onChange của ô không
+  // bao giờ chạy và ký tự đầu bị nuốt (lỗi v1.7.0). Ở pha bubble, onChange của ô chạy TRƯỚC (ô là đích),
+  // cùng một lượt cập nhật với việc xóa lỗi.
+  const errRef = useRef(err);
+  errRef.current = err;
+  const onEdit = () => {
+    if (name != null && ctx && errRef.current) ctx.clear(name);
+  };
   return (
-    <div className={cx('flex flex-col gap-1', className)} onChangeCapture={onEdit} onInputCapture={onEdit}>
+    <div className={cx('flex flex-col gap-1', className)} onChange={onEdit} onInput={onEdit}>
       <label htmlFor={id} className="text-sm font-medium text-muted">
         {label}
       </label>

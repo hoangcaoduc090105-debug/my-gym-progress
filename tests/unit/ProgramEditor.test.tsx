@@ -72,3 +72,43 @@ describe('ProgramEditor — thay đổi chưa lưu', () => {
     await waitFor(() => expect(screen.getByLabelText('Tên giáo án')).toHaveValue('Tên trong nháp'));
   });
 });
+
+/* v1.7.1 — ô "Tên giáo án" đang báo lỗi không được nuốt ký tự đầu (xem giải thích ở formErrorsForm.test.tsx). */
+describe('ProgramEditor — ô tên đang lỗi nhận đúng ký tự đầu tiên', () => {
+  const setNative = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
+  const tick = () => new Promise((r) => setTimeout(r, 0));
+  async function userInput(el: HTMLInputElement, value: string) {
+    setNative.call(el, value);
+    el.dispatchEvent(new Event('input', { bubbles: false }));
+    await tick();
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    await tick();
+  }
+  let prevAct: unknown;
+  beforeEach(() => {
+    localStorage.clear();
+    prevAct = (globalThis as { IS_REACT_ACT_ENVIRONMENT?: unknown }).IS_REACT_ACT_ENVIRONMENT;
+  });
+  afterEach(() => {
+    (globalThis as { IS_REACT_ACT_ENVIRONMENT?: unknown }).IS_REACT_ACT_ENVIRONMENT = prevAct;
+  });
+
+  it('xóa tên → Lưu → gõ "X" → ô có "X", lỗi biến mất; dán chuỗi cũng đủ', async () => {
+    await renderEditor();
+    (globalThis as { IS_REACT_ACT_ENVIRONMENT?: unknown }).IS_REACT_ACT_ENVIRONMENT = false;
+    const input = screen.getByLabelText<HTMLInputElement>('Tên giáo án');
+    await userInput(input, '');
+    fireEvent.click(screen.getByRole('button', { name: 'Lưu' }));
+    await screen.findByText('Cần tên giáo án');
+    await waitFor(() => expect(document.activeElement).toBe(input));
+    await userInput(input, 'X');
+    expect(input.value).toBe('X');
+    expect(screen.queryByText('Cần tên giáo án')).toBeNull();
+    // Dán vào ô đang lỗi lần nữa
+    await userInput(input, '');
+    fireEvent.click(screen.getByRole('button', { name: 'Lưu' }));
+    await screen.findByText('Cần tên giáo án');
+    await userInput(input, 'Giáo án dán');
+    expect(input.value).toBe('Giáo án dán');
+  });
+});

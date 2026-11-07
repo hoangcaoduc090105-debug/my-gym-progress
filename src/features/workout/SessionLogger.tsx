@@ -168,7 +168,7 @@ export function SessionLogger() {
               className="h-8 px-2 text-sm"
               value={s.date}
               max={todayISO()}
-              onChange={(e) => e.target.value && commit((c) => ({ ...c, date: e.target.value }))}
+              onChange={(e) => { const v = e.target.value; if (v) commit((c) => ({ ...c, date: v })); }}
             />
             {isDraft && <span>{elapsedMin} phút</span>}
             <SaveStatus state={saveState} onRetry={() => void retry()} />
@@ -184,7 +184,7 @@ export function SessionLogger() {
         aria-label="Tên buổi"
         className="w-full font-semibold"
         value={s.dayName}
-        onChange={(e) => commitText((c) => ({ ...c, dayName: e.target.value }))}
+        onChange={(e) => { const v = e.target.value; commitText((c) => ({ ...c, dayName: v })); }}
         onBlur={() => void flush()}
       />
       {anyHints && isDraft && (
@@ -240,7 +240,7 @@ export function SessionLogger() {
           rows={2}
           placeholder="Năng lượng, giấc ngủ, cảm nhận chung…"
           value={s.notes}
-          onChange={(e) => commitText((c) => ({ ...c, notes: e.target.value }))}
+          onChange={(e) => { const v = e.target.value; commitText((c) => ({ ...c, notes: v })); }}
           onBlur={() => void flush()}
         />
       </Card>
@@ -479,7 +479,7 @@ function ExerciseBlock(props: {
         rows={1}
         placeholder="Cảm nhận: kỹ thuật, đau mỏi, độ khó…"
         value={se.note}
-        onChange={(e) => props.onChangeText((x) => ({ ...x, note: e.target.value }))}
+        onChange={(e) => { const v = e.target.value; props.onChangeText((x) => ({ ...x, note: v })); }}
         onBlur={props.onBlurText}
       />
       {ex && (

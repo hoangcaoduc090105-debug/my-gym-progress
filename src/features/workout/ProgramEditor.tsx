@@ -194,8 +194,8 @@ export function ProgramEditor() {
       />
       <Card>
         <div className="space-y-3">
-          <Field name="name" label="Tên giáo án">{(fid) => <input id={fid} value={p.name} onChange={(e) => update((x) => ({ ...x, name: e.target.value }))} />}</Field>
-          <Field name="description" label="Mô tả">{(fid) => <textarea id={fid} rows={2} value={p.description ?? ''} onChange={(e) => update((x) => ({ ...x, description: e.target.value }))} />}</Field>
+          <Field name="name" label="Tên giáo án">{(fid) => <input id={fid} value={p.name} onChange={(e) => { const v = e.target.value; update((x) => ({ ...x, name: v })); }} />}</Field>
+          <Field name="description" label="Mô tả">{(fid) => <textarea id={fid} rows={2} value={p.description ?? ''} onChange={(e) => { const v = e.target.value; update((x) => ({ ...x, description: v })); }} />}</Field>
           <Toggle label="Đặt làm giáo án đang dùng" checked={p.isActive} onChange={(v) => update((x) => ({ ...x, isActive: v }))} />
         </div>
       </Card>
@@ -204,7 +204,7 @@ export function ProgramEditor() {
         <Card key={d.id}>
           <div className="mb-3 flex items-start gap-1">
             <Field name={`days.${di}.name`} label="Tên buổi" className="flex-1 [&>label]:sr-only">
-              {(fid) => <input id={fid} className="w-full font-semibold" value={d.name} onChange={(e) => updDay(d.id, (x) => ({ ...x, name: e.target.value }))} />}
+              {(fid) => <input id={fid} className="w-full font-semibold" value={d.name} onChange={(e) => { const v = e.target.value; updDay(d.id, (x) => ({ ...x, name: v })); }} />}
             </Field>
             <IconButton label="Đưa buổi lên" disabled={di === 0} onClick={() => update((x) => ({ ...x, days: move(x.days, di, -1) }))}>
               <ArrowUp size={18} />

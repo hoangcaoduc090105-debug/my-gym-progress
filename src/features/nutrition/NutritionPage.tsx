@@ -447,9 +447,9 @@ function FoodFormModal({ open, initial, onClose, defaultName = '' }: { open: boo
     >
       <FieldErrorsContext.Provider value={fe}>
       <div className="space-y-3" ref={fe.containerRef as React.RefObject<HTMLDivElement>}>
-        <Field name="name" label="Tên *">{(id) => <input id={id} className="w-full" value={f.name} onChange={(e) => setF((x) => ({ ...x, name: e.target.value }))} />}</Field>
+        <Field name="name" label="Tên *">{(id) => <input id={id} className="w-full" value={f.name} onChange={(e) => { const v = e.target.value; setF((x) => ({ ...x, name: v })); }} />}</Field>
         <div className="grid grid-cols-2 gap-3">
-          <Field name="servingLabel" label="Khẩu phần (mô tả) *">{(id) => <input id={id} className="w-full" value={f.servingLabel} onChange={(e) => setF((x) => ({ ...x, servingLabel: e.target.value }))} placeholder="100 g / 1 quả" />}</Field>
+          <Field name="servingLabel" label="Khẩu phần (mô tả) *">{(id) => <input id={id} className="w-full" value={f.servingLabel} onChange={(e) => { const v = e.target.value; setF((x) => ({ ...x, servingLabel: v })); }} placeholder="100 g / 1 quả" />}</Field>
           {num('servingGrams', 'Khối lượng (g)')}
           {num('proteinG', 'Protein (g)')}
           {num('carbG', 'Carb (g)')}
@@ -458,7 +458,7 @@ function FoodFormModal({ open, initial, onClose, defaultName = '' }: { open: boo
         </div>
         <p className="text-xs text-muted">Để trống calories thì app dùng ước tính từ macro: 4 kcal/g protein, 4 kcal/g carb, 9 kcal/g fat.</p>
         <Field name="source" label="Nguồn số liệu" hint="vd. nhãn bao bì, Bảng thành phần thực phẩm Việt Nam (Viện Dinh dưỡng)">
-          {(id) => <input id={id} className="w-full" value={f.source} onChange={(e) => setF((x) => ({ ...x, source: e.target.value }))} />}
+          {(id) => <input id={id} className="w-full" value={f.source} onChange={(e) => { const v = e.target.value; setF((x) => ({ ...x, source: v })); }} />}
         </Field>
         <Toggle
           label="Đã xác minh"
@@ -673,14 +673,14 @@ function PlanEditor({ plan, foods, onClose }: { plan: MealPlan | 'new' | null; f
         <Field label="Tên thực đơn">{(id) => <input id={id} className="w-full" value={name} onChange={(e) => setName(e.target.value)} />}</Field>
         {items.map((it, i) => (
           <div key={i} className="grid grid-cols-[1fr_88px_64px_40px] items-center gap-1.5">
-            <select aria-label="Món" value={it.foodId} onChange={(e) => setItems((x) => x.map((y, k) => (k === i ? { ...y, foodId: e.target.value } : y)))}>
+            <select aria-label="Món" value={it.foodId} onChange={(e) => { const v = e.target.value; setItems((x) => x.map((y, k) => (k === i ? { ...y, foodId: v } : y))); }}>
               {foods.map((f) => (
                 <option key={f.id} value={f.id}>
                   {f.name}
                 </option>
               ))}
             </select>
-            <select aria-label="Bữa" value={it.meal} onChange={(e) => setItems((x) => x.map((y, k) => (k === i ? { ...y, meal: e.target.value as MealSlot } : y)))} className="px-1">
+            <select aria-label="Bữa" value={it.meal} onChange={(e) => { const v = e.target.value; setItems((x) => x.map((y, k) => (k === i ? { ...y, meal: v as MealSlot } : y))); }} className="px-1">
               {MEAL_SLOTS.map((m) => (
                 <option key={m} value={m}>
                   {MEAL_LABELS[m].replace('Bữa ', '')}

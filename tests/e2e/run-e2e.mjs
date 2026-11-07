@@ -298,6 +298,22 @@ try {
     assert.equal(await page.getByText('Giáo án thử E2E').count(), 0);
   });
 
+  await check('Ô đang báo lỗi nhận đúng ký tự đầu tiên (v1.7.1)', async () => {
+    await page.goto(BASE + '#/lich-tap/giao-an/program-default-fullbody');
+    const name = page.getByLabel('Tên giáo án');
+    await name.fill('');
+    await page.getByRole('button', { name: 'Lưu', exact: true }).click();
+    await page.getByText('Cần tên giáo án').waitFor();
+    assert.equal(await page.evaluate(() => document.activeElement?.getAttribute('aria-invalid')), 'true');
+    await page.keyboard.type('X');
+    assert.equal(await name.inputValue(), 'X');
+    assert.equal(await page.getByText('Cần tên giáo án').count(), 0);
+    // Rời trang không lưu: bỏ thay đổi và bản nháp
+    await page.getByRole('button', { name: 'Quay lại' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Rời trang' }).click();
+    await page.getByRole('heading', { name: 'Sửa giáo án' }).waitFor({ state: 'detached' });
+  });
+
   await check('Đặt lịch một buổi tập', async () => {
     await page.goto(BASE + '#/lich-tap?tab=calendar');
     await page.getByRole('button', { name: 'Đặt lịch', exact: true }).click();

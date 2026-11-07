@@ -169,7 +169,7 @@ export function ExerciseForm() {
               <select
                 id={f}
                 value=""
-                onChange={(e) => e.target.value && setAlts((a) => (a.includes(e.target.value) ? a : [...a, e.target.value]))}
+                onChange={(e) => { const v = e.target.value; if (v) setAlts((a) => (a.includes(v) ? a : [...a, v])); }}
               >
                 <option value="">+ Chọn bài thay thế…</option>
                 {all
