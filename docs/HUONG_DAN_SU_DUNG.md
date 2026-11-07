@@ -84,7 +84,7 @@ Tập → Giáo án → Sửa → bấm **Ghép với bài dưới** để 2 bà
 Bài dùng tạ đòn có nút **đĩa** cạnh ô mức tạ. Nhập tổng tạ, app vẽ mỗi bên cần gắn đĩa gì. Nếu không gắn đúng được bằng đĩa bạn có, app gợi ý **"Gần nhất: … kg"**, chạm để điền. Đặt trọng lượng đòn và các loại đĩa phòng tập có trong Cài đặt → Tập luyện.
 
 ### Dùng đơn vị pound (lb)
-Cài đặt → Tập luyện → **Đơn vị khối lượng → lb** → Lưu. Mọi chỗ hiện tạ và cân nặng sẽ đổi sang lb, ô nhập cũng nhận lb. Dữ liệu vẫn lưu bằng kg nên đổi qua lại không làm sai số liệu. Số đo vòng vẫn là cm.
+Cài đặt → Tập luyện → **Đơn vị khối lượng → lb** → Lưu. Mọi chỗ hiện tạ và cân nặng sẽ đổi sang lb, ô nhập cũng nhận lb. Dữ liệu vẫn lưu bằng kg nên đổi qua lại không làm sai số liệu. Số đo vòng vẫn là cm. Gợi ý tăng tạ khi dùng lb được làm tròn theo bước 2,5 lb (tạ đơn, máy) hoặc theo đĩa thật (tạ đòn), nên không ra số lẻ như 137,8 lb. Số thập phân trong ô nhập hiện bằng dấu phẩy (88,2) như mọi nơi khác trong app; gõ dấu chấm hay dấu phẩy đều được.
 
 ### Buổi nhẹ (deload) và cảnh báo chững
 Khi mệt hoặc sau nhiều tuần tập nặng, bật **Buổi nhẹ (deload)** trước khi bắt đầu. App gợi ý khoảng 60% mức tạ buổi trước, bớt 1 hiệp, và không tính buổi này vào kỷ lục hay gợi ý tăng tạ. Nếu một bài 4 buổi liền không tiến bộ, app hiện **"4 buổi chưa tiến bộ"** để bạn cân nhắc giảm tạ hoặc nghỉ thêm. Danh sách đầy đủ có ở thẻ **Bài đang chững** trong Phân tích.

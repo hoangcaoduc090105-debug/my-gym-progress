@@ -1,6 +1,7 @@
 import type { BodyRegion, ExerciseTarget, ProgressionSettings, SetEntry } from '../db/types';
 import { isWorkingSet } from './sets';
 import { roundToLoadable } from './plates';
+import { KG_PER_LB } from '../lib/units';
 
 export type Suggestion =
   | { kind: 'increase'; fromKg: number; toKg: number; reason: string; rirMissing: boolean }
@@ -22,6 +23,19 @@ function roundTo(n: number, step: number): number {
   return Math.round(Math.round(n / step) * step * 100) / 100;
 }
 
+/** Bước tạ đơn/máy phổ biến khi dùng lb. */
+export const LB_STEP = 2.5;
+
+/**
+ * Làm tròn mức gợi ý (kg) về bội số LB_STEP lb gần nhất, nhưng luôn > `aboveKg` để vẫn là một bước tăng.
+ * Trả kg (làm tròn 0,01) để lưu trữ vẫn là kg.
+ */
+export function roundUpToLbStep(kgWanted: number, aboveKg: number): number {
+  let lb = roundTo(kgWanted / KG_PER_LB, LB_STEP);
+  while (lb * KG_PER_LB <= aboveKg + 1e-9) lb = roundTo(lb + LB_STEP, LB_STEP);
+  return Math.round(lb * KG_PER_LB * 100) / 100;
+}
+
 /**
  * Double progression: khi MỌI hiệp làm việc ở mức tạ cao nhất đạt số lần tối đa của khoảng mục tiêu
  * VÀ RIR (nếu có ghi) ≥ ngưỡng => gợi ý tăng tạ. Chỉ là gợi ý, không sửa giáo án.
@@ -36,6 +50,8 @@ export function suggestProgression(params: {
   barbell?: { barWeightKg: number; platesKg: number[] } | null;
   /** v1.8: định dạng khối lượng trong câu gợi ý (đơn vị kg/lb). Mặc định "60 kg". */
   fmtWeightU?: (kg: number) => string;
+  /** v1.8.2: đơn vị hiển thị. 'lb' và không phải tạ đòn => mức gợi ý làm tròn theo bước 2,5 lb (tạ đơn/máy ở Mỹ). */
+  unit?: 'kg' | 'lb';
 }): Suggestion {
   const { target, region, isBodyweight, settings } = params;
   const W = params.fmtWeightU ?? ((k: number) => `${k} kg`);
@@ -88,6 +104,8 @@ export function suggestProgression(params: {
   }
   if (params.barbell && params.barbell.platesKg.length > 0) {
     toKg = roundToLoadable(toKg, topKg, params.barbell.barWeightKg, params.barbell.platesKg);
+  } else if (params.unit === 'lb') {
+    toKg = roundUpToLbStep(toKg, topKg);
   }
   return {
     kind: 'increase',

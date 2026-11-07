@@ -428,6 +428,7 @@ function ExerciseBlock(props: {
         settings: settings.progression,
         barbell: ex.equipment === 'barbell' ? settings.barbell : null,
         fmtWeightU: units.fmtU,
+        unit: units.unit,
       })
     : null;
   const isBarbell = ex?.equipment === 'barbell';
