@@ -1,6 +1,6 @@
 /**
  * Tạo tệp iCalendar (RFC 5545) — thuần, không thư viện.
- * - TEXT escape: "\\" → "\\\\", ";" → "\;", "," → "\\,", xuống dòng → "\\n".
+ * - TEXT escape: "\\" → "\\\\", ";" → "\\;", "," → "\\,", xuống dòng → "\\n".
  * - Gấp dòng: mỗi dòng tối đa 75 OCTET (UTF-8), dòng tiếp bắt đầu bằng CRLF + 1 khoảng trắng; không cắt giữa ký tự nhiều byte.
  * - Kết thúc dòng CRLF.
  */
@@ -18,7 +18,7 @@ export interface IcsEvent {
 }
 
 export function escapeIcsText(s: string): string {
-  return s.replace(/\\/g, '\\\\').replace(/;/g, '\;').replace(/,/g, '\\,').replace(/\r\n|\n|\r/g, '\\n');
+  return s.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r\n|\n|\r/g, '\\n');
 }
 
 const enc = new TextEncoder();

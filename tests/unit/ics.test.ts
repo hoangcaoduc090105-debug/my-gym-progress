@@ -4,7 +4,17 @@ const unfold = (s: string) => s.replace(/\r\n /g, '');
 
 describe('ics (RFC 5545)', () => {
   it('escape dấu phẩy, chấm phẩy, gạch chéo, xuống dòng', () => {
-    expect(escapeIcsText('a,b;c\\d\ne\r\nf')).toBe('a\\,b\;c\\\\d\\ne\\nf');
+    expect(escapeIcsText('a,b;c\\d\ne\r\nf')).toBe('a\\,b\\;c\\\\d\\ne\\nf');
+  });
+  it('dấu chấm phẩy thành "\\;" (RFC 5545 §3.3.11)', () => {
+    const r = escapeIcsText('x;y');
+    expect(r).toBe('x\\;y');
+    expect(r).toHaveLength(4);
+    expect(r[1]).toBe('\\');
+    const ics = buildIcs([{ uid: 'c@x', date: '2026-11-09', startTime: '18:00', durationMin: 60, summary: 'Buổi A; nặng', description: 'Squat; Bench' }]);
+    const summary = ics.replace(/\r\n /g, '').split('\r\n').find((l) => l.startsWith('SUMMARY:'))!;
+    expect(summary).toBe('SUMMARY:Buổi A\\; nặng');
+    expect(ics.replace(/\r\n /g, '')).toContain('DESCRIPTION:Squat\\; Bench');
   });
   it('gấp dòng ≤ 75 octet (UTF-8), không cắt giữa ký tự tiếng Việt', () => {
     const long = 'DESCRIPTION:' + 'Squat tạ ấm, đẩy ngực tạ đơn, kéo cáp ngồi; '.repeat(5);
