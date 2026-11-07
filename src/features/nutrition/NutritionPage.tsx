@@ -7,11 +7,12 @@ import { MEAL_LABELS, MEAL_SLOTS, type Food, type FoodLog, type MealPlan, type M
 import { Badge, Button, Card, EmptyState, Explain, Field, IconButton, Modal, NumberInput, PageHeader, Spinner, Tabs, Toggle, cx } from '../../components/ui';
 import { useFeedback } from '../../components/feedback';
 import { useProfile } from '../../app/useAppData';
-import { addFoodLog, applyMealPlan, installVietnameseMenus, deleteFood, deleteFoodLog, deleteMealPlan, saveFood, saveMealPlan, toggleFavoriteFood, updateFoodLogServings } from '../../db/repo';
+import { addFoodLog, applyMealPlan, installVietnameseMenus, loadSchemas, deleteFood, deleteFoodLog, deleteMealPlan, saveFood, saveMealPlan, toggleFavoriteFood, updateFoodLogServings } from '../../db/repo';
 import { kcalFromMacros, proteinProgress, scale, sumLogs } from '../../domain/nutrition';
 import { addDays, formatDate, todayISO } from '../../lib/date';
 import { fmt0, fmt1 } from '../../lib/format';
 import { FoodPicker } from './FoodPicker';
+import { FieldErrorsContext, useFieldErrors } from '../../lib/formErrors';
 import { customFoods, groupDishes, groupIngredients, kindOf } from './foodCatalog';
 import { checkMeal, proteinPerMeal, suggestProteinFill, type MealVerdict } from '../../domain/mealCheck';
 import { NutritionDataContext, useNutritionData, useNutritionDataLoader } from './nutritionData';
@@ -399,22 +400,31 @@ function FoodFormModal({ open, initial, onClose, defaultName = '' }: { open: boo
     );
   }, [open, initial, defaultName]);
   const calc = kcalFromMacros(f.proteinG ?? 0, f.carbG ?? 0, f.fatG ?? 0);
+  const fe = useFieldErrors();
+  const { clearAll } = fe;
+  useEffect(() => {
+    if (open) clearAll();
+  }, [open, clearAll]);
 
   async function save() {
+    const payload = {
+      id: initial?.id,
+      name: f.name,
+      servingLabel: f.servingLabel,
+      servingGrams: f.servingGrams,
+      kcal: f.kcal ?? calc,
+      proteinG: f.proteinG ?? 0,
+      carbG: f.carbG ?? 0,
+      fatG: f.fatG ?? 0,
+      isVerified: f.isVerified && f.source.trim().length > 0,
+      source: f.source.trim() || undefined,
+      isFavorite: f.isFavorite,
+    };
+    const S = await loadSchemas();
+    const v = S.foodSchema.safeParse({ ...payload, id: payload.id ?? 'new', createdAt: 'x', updatedAt: 'x' });
+    if (!v.success) return fe.setFromZod(v.error);
     try {
-      await saveFood({
-        id: initial?.id,
-        name: f.name,
-        servingLabel: f.servingLabel,
-        servingGrams: f.servingGrams,
-        kcal: f.kcal ?? calc,
-        proteinG: f.proteinG ?? 0,
-        carbG: f.carbG ?? 0,
-        fatG: f.fatG ?? 0,
-        isVerified: f.isVerified && f.source.trim().length > 0,
-        source: f.source.trim() || undefined,
-        isFavorite: f.isFavorite,
-      });
+      await saveFood(payload);
       toast('Đã lưu thực phẩm');
       onClose();
     } catch (e) {
@@ -422,7 +432,7 @@ function FoodFormModal({ open, initial, onClose, defaultName = '' }: { open: boo
     }
   }
   const num = (k: 'kcal' | 'proteinG' | 'carbG' | 'fatG' | 'servingGrams', label: string, ph?: string) => (
-    <Field label={label}>{(id) => <NumberInput id={id} value={f[k]} min={0} max={5000} placeholder={ph} onChange={(v) => setF((x) => ({ ...x, [k]: v }))} />}</Field>
+    <Field name={k} label={label}>{(id) => <NumberInput id={id} value={f[k]} min={0} max={5000} placeholder={ph} onChange={(v) => setF((x) => ({ ...x, [k]: v }))} />}</Field>
   );
   return (
     <Modal
@@ -435,10 +445,11 @@ function FoodFormModal({ open, initial, onClose, defaultName = '' }: { open: boo
         </Button>
       }
     >
-      <div className="space-y-3">
-        <Field label="Tên *">{(id) => <input id={id} className="w-full" value={f.name} onChange={(e) => setF((x) => ({ ...x, name: e.target.value }))} />}</Field>
+      <FieldErrorsContext.Provider value={fe}>
+      <div className="space-y-3" ref={fe.containerRef as React.RefObject<HTMLDivElement>}>
+        <Field name="name" label="Tên *">{(id) => <input id={id} className="w-full" value={f.name} onChange={(e) => setF((x) => ({ ...x, name: e.target.value }))} />}</Field>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Khẩu phần (mô tả) *">{(id) => <input id={id} className="w-full" value={f.servingLabel} onChange={(e) => setF((x) => ({ ...x, servingLabel: e.target.value }))} placeholder="100 g / 1 quả" />}</Field>
+          <Field name="servingLabel" label="Khẩu phần (mô tả) *">{(id) => <input id={id} className="w-full" value={f.servingLabel} onChange={(e) => setF((x) => ({ ...x, servingLabel: e.target.value }))} placeholder="100 g / 1 quả" />}</Field>
           {num('servingGrams', 'Khối lượng (g)')}
           {num('proteinG', 'Protein (g)')}
           {num('carbG', 'Carb (g)')}
@@ -446,7 +457,7 @@ function FoodFormModal({ open, initial, onClose, defaultName = '' }: { open: boo
           {num('kcal', 'Calories (kcal)', `≈ ${fmt0(calc)}`)}
         </div>
         <p className="text-xs text-muted">Để trống calories thì app dùng ước tính từ macro: 4 kcal/g protein, 4 kcal/g carb, 9 kcal/g fat.</p>
-        <Field label="Nguồn số liệu" hint="vd. nhãn bao bì, Bảng thành phần thực phẩm Việt Nam (Viện Dinh dưỡng)">
+        <Field name="source" label="Nguồn số liệu" hint="vd. nhãn bao bì, Bảng thành phần thực phẩm Việt Nam (Viện Dinh dưỡng)">
           {(id) => <input id={id} className="w-full" value={f.source} onChange={(e) => setF((x) => ({ ...x, source: e.target.value }))} />}
         </Field>
         <Toggle
@@ -457,6 +468,7 @@ function FoodFormModal({ open, initial, onClose, defaultName = '' }: { open: boo
         />
         <Toggle label="Thường dùng (ưu tiên hiển thị)" checked={f.isFavorite} onChange={(v) => setF((x) => ({ ...x, isFavorite: v }))} />
       </div>
+      </FieldErrorsContext.Provider>
     </Modal>
   );
 }

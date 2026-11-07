@@ -5,7 +5,8 @@ import { db } from '../../db/db';
 import { EQUIPMENT, EQUIPMENT_LABELS, MUSCLE_GROUPS, MUSCLE_LABELS, type BodyRegion, type Equipment, type MuscleGroup } from '../../db/types';
 import { Button, Card, Field, PageHeader, Spinner, Toggle, cx } from '../../components/ui';
 import { useFeedback } from '../../components/feedback';
-import { saveCustomExercise } from '../../db/repo';
+import { loadSchemas, saveCustomExercise } from '../../db/repo';
+import { FieldErrorsContext, useFieldErrors } from '../../lib/formErrors';
 
 const lines = (s: string) => s.split('\n').map((x) => x.trim()).filter(Boolean);
 const LOWER: MuscleGroup[] = ['quads', 'hamstrings', 'glutes', 'calves'];
@@ -26,6 +27,7 @@ export function ExerciseForm() {
   const [instructions, setInstructions] = useState('');
   const [mistakes, setMistakes] = useState('');
   const [alts, setAlts] = useState<string[]>([]);
+  const fe = useFieldErrors();
 
   useEffect(() => {
     if (!id) return;
@@ -53,8 +55,23 @@ export function ExerciseForm() {
 
   async function submit(ev: React.FormEvent) {
     ev.preventDefault();
+    const r: BodyRegion = region !== 'auto' ? region : primary === 'abs' ? 'core' : LOWER.includes(primary) ? 'lower' : 'upper';
+    const payload = {
+      nameVi,
+      nameEn,
+      primaryMuscle: primary,
+      secondaryMuscles: secondary.filter((m) => m !== primary),
+      equipment,
+      region: r,
+      isBodyweight: isBodyweight || equipment === 'bodyweight',
+      instructions: lines(instructions),
+      commonMistakes: lines(mistakes),
+      alternativeIds: alts,
+    };
+    const S = await loadSchemas();
+    const v = S.exerciseSchema.safeParse({ ...payload, id: id ?? 'new', isCustom: true, createdAt: 'x', updatedAt: 'x' });
+    if (!v.success) return fe.setFromZod(v.error);
     try {
-      const r: BodyRegion = region !== 'auto' ? region : primary === 'abs' ? 'core' : LOWER.includes(primary) ? 'lower' : 'upper';
       const e = await saveCustomExercise({
         id,
         nameVi,
@@ -76,12 +93,13 @@ export function ExerciseForm() {
   }
 
   return (
-    <form onSubmit={submit} className="space-y-4">
+    <FieldErrorsContext.Provider value={fe}>
+    <form onSubmit={submit} className="space-y-4" ref={fe.containerRef as React.RefObject<HTMLFormElement>} noValidate>
       <PageHeader title={id ? 'Sửa bài tập' : 'Thêm bài tập'} back={true} />
       <Card>
         <div className="space-y-3">
-          <Field label="Tên tiếng Việt *">{(f) => <input id={f} required value={nameVi} onChange={(e) => setNameVi(e.target.value)} />}</Field>
-          <Field label="Tên tiếng Anh">{(f) => <input id={f} value={nameEn} onChange={(e) => setNameEn(e.target.value)} />}</Field>
+          <Field name="nameVi" label="Tên tiếng Việt *">{(f) => <input id={f} value={nameVi} onChange={(e) => setNameVi(e.target.value)} />}</Field>
+          <Field name="nameEn" label="Tên tiếng Anh">{(f) => <input id={f} value={nameEn} onChange={(e) => setNameEn(e.target.value)} />}</Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Nhóm cơ chính">
               {(f) => (
@@ -178,5 +196,6 @@ export function ExerciseForm() {
         Lưu bài tập
       </Button>
     </form>
+    </FieldErrorsContext.Provider>
   );
 }

@@ -6,7 +6,8 @@ import type { Profile, Settings } from '../../db/types';
 import { Button, Card, Field, NumberInput, PageHeader, Segmented, Spinner, Toggle } from '../../components/ui';
 import { useFeedback } from '../../components/feedback';
 import { useProfile, useSettings } from '../../app/useAppData';
-import { saveProfile, saveSettings } from '../../db/repo';
+import { loadSchemas, saveProfile, saveSettings } from '../../db/repo';
+import { FieldErrorsContext, useFieldErrors } from '../../lib/formErrors';
 import { suggestProteinRange } from '../../domain/nutrition';
 import { latest } from '../../domain/bodyTrends';
 import { useLiveQuery } from 'dexie-react-hooks';
@@ -79,8 +80,12 @@ function ProfileForm({ profile }: { profile: Profile }) {
   useEffect(() => setP(profile), [profile]);
   const sug = weight ? suggestProteinRange(weight.value) : null;
   const set = <K extends keyof Profile>(k: K, v: Profile[K]) => setP((x) => ({ ...x, [k]: v }));
+  const fe = useFieldErrors();
 
   async function save() {
+    const S = await loadSchemas();
+    const r = S.profileSchema.safeParse(p);
+    if (!r.success) return fe.setFromZod(r.error);
     try {
       const { id: _i, createdAt: _c, updatedAt: _u, ...rest } = p;
       void _i, _c, _u;
@@ -91,8 +96,9 @@ function ProfileForm({ profile }: { profile: Profile }) {
     }
   }
   return (
+    <FieldErrorsContext.Provider value={fe}>
     <Card title="Hồ sơ & mục tiêu">
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-3" ref={fe.containerRef as React.RefObject<HTMLDivElement>}>
         <Field label="Giới tính">
           {(id) => (
             <select id={id} value={p.sex} onChange={(e) => set('sex', e.target.value as Profile['sex'])}>
@@ -102,8 +108,8 @@ function ProfileForm({ profile }: { profile: Profile }) {
             </select>
           )}
         </Field>
-        <Field label="Chiều cao (cm)">{(id) => <NumberInput id={id} value={p.heightCm} onChange={(v) => set('heightCm', v ?? 0)} />}</Field>
-        <Field label="Tuổi">{(id) => <NumberInput id={id} value={p.age ?? null} onChange={(v) => set('age', v == null ? null : Math.round(v))} placeholder="—" />}</Field>
+        <Field name="heightCm" label="Chiều cao (cm)">{(id) => <NumberInput id={id} value={p.heightCm} onChange={(v) => set('heightCm', v ?? (null as unknown as number))} />}</Field>
+        <Field name="age" label="Tuổi">{(id) => <NumberInput id={id} value={p.age ?? null} onChange={(v) => set('age', v == null ? null : Math.round(v))} placeholder="—" />}</Field>
         <Field label="Mức vận động">
           {(id) => (
             <select id={id} value={p.activityLevel ?? ''} onChange={(e) => set('activityLevel', (e.target.value || null) as Profile['activityLevel'])}>
@@ -114,11 +120,11 @@ function ProfileForm({ profile }: { profile: Profile }) {
             </select>
           )}
         </Field>
-        <Field label="Mục tiêu tập luyện" className="col-span-2">
+        <Field name="goals" label="Mục tiêu tập luyện" className="col-span-2">
           {(id) => <textarea id={id} rows={2} value={p.goals} onChange={(e) => set('goals', e.target.value)} />}
         </Field>
-        <Field label="Protein tối thiểu (g/ngày)">{(id) => <NumberInput id={id} value={p.proteinTargetMinG} onChange={(v) => set('proteinTargetMinG', v ?? 0)} />}</Field>
-        <Field label="Protein tối đa (g/ngày)">{(id) => <NumberInput id={id} value={p.proteinTargetMaxG} onChange={(v) => set('proteinTargetMaxG', v ?? 0)} />}</Field>
+        <Field name="proteinTargetMinG" label="Protein tối thiểu (g/ngày)">{(id) => <NumberInput id={id} value={p.proteinTargetMinG} onChange={(v) => set('proteinTargetMinG', v ?? (null as unknown as number))} />}</Field>
+        <Field name="proteinTargetMaxG" label="Protein tối đa (g/ngày)">{(id) => <NumberInput id={id} value={p.proteinTargetMaxG} onChange={(v) => set('proteinTargetMaxG', v ?? (null as unknown as number))} />}</Field>
         {sug && (
           <div className="col-span-2 -mt-1 flex items-center justify-between gap-2 text-xs text-muted">
             <span>
@@ -129,21 +135,22 @@ function ProfileForm({ profile }: { profile: Profile }) {
             </Button>
           </div>
         )}
-        <Field label="Số bữa mỗi ngày" hint={`Kể cả bữa phụ. Đạm mục tiêu mỗi bữa ≈ ${Math.round(p.proteinTargetMinG / (p.mealsPerDay ?? 4))} g`}>
+        <Field name="mealsPerDay" label="Số bữa mỗi ngày" hint={`Kể cả bữa phụ. Đạm mục tiêu mỗi bữa ≈ ${Math.round(p.proteinTargetMinG / (p.mealsPerDay ?? 4))} g`}>
           {(id) => <NumberInput id={id} value={p.mealsPerDay ?? 4} onChange={(v) => set('mealsPerDay', v == null ? null : Math.round(v))} />}
         </Field>
         <div />
-        <Field label="Mục tiêu calories (kcal)" className="col-span-2" hint="Không bắt buộc. App không tự tính calories vì thiếu dữ liệu tiêu hao năng lượng thực tế.">
+        <Field name="calorieTarget" label="Mục tiêu calories (kcal)" className="col-span-2" hint="Không bắt buộc. App không tự tính calories vì thiếu dữ liệu tiêu hao năng lượng thực tế.">
           {(id) => <NumberInput id={id} value={p.calorieTarget ?? null} onChange={(v) => set('calorieTarget', v)} placeholder="Để trống nếu chưa xác định" />}
         </Field>
-        <Field label="Carb (g/ngày)">{(id) => <NumberInput id={id} value={p.carbTargetG ?? null} onChange={(v) => set('carbTargetG', v)} placeholder="—" />}</Field>
-        <Field label="Fat (g/ngày)">{(id) => <NumberInput id={id} value={p.fatTargetG ?? null} onChange={(v) => set('fatTargetG', v)} placeholder="—" />}</Field>
+        <Field name="carbTargetG" label="Carb (g/ngày)">{(id) => <NumberInput id={id} value={p.carbTargetG ?? null} onChange={(v) => set('carbTargetG', v)} placeholder="—" />}</Field>
+        <Field name="fatTargetG" label="Fat (g/ngày)">{(id) => <NumberInput id={id} value={p.fatTargetG ?? null} onChange={(v) => set('fatTargetG', v)} placeholder="—" />}</Field>
       </div>
       <p className="mt-2 text-xs text-muted">Cân nặng được cập nhật trong mục Tiến độ cơ thể (mỗi lần cân là một bản ghi).</p>
       <Button className="mt-3" variant="primary" block icon={<Save size={18} />} onClick={() => void save()}>
         Lưu hồ sơ
       </Button>
     </Card>
+    </FieldErrorsContext.Provider>
   );
 }
 
@@ -153,8 +160,12 @@ function TrainingForm({ settings }: { settings: Settings }) {
   useEffect(() => setS(settings), [settings]);
   const pr = s.progression;
   const setPr = <K extends keyof Settings['progression']>(k: K, v: Settings['progression'][K]) => setS((x) => ({ ...x, progression: { ...x.progression, [k]: v } }));
+  const fe = useFieldErrors();
 
   async function save() {
+    const S = await loadSchemas();
+    const r = S.settingsSchema.safeParse(s);
+    if (!r.success) return fe.setFromZod(r.error);
     try {
       const { id: _i, updatedAt: _u, ...rest } = s;
       void _i, _u;
@@ -165,13 +176,14 @@ function TrainingForm({ settings }: { settings: Settings }) {
     }
   }
   return (
+    <FieldErrorsContext.Provider value={fe}>
     <Card title="Tập luyện">
-      <div className="space-y-4">
+      <div className="space-y-4" ref={fe.containerRef as React.RefObject<HTMLDivElement>}>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Nghỉ mặc định (giây)">{(id) => <NumberInput id={id} value={s.restTimerDefaultSec} onChange={(v) => setS((x) => ({ ...x, restTimerDefaultSec: Math.round(v ?? 90) }))} />}</Field>
-          <Field label="Nhắc đo vòng (ngày)">{(id) => <NumberInput id={id} value={s.measurementReminderDays} onChange={(v) => setS((x) => ({ ...x, measurementReminderDays: Math.round(v ?? 14) }))} />}</Field>
-          <Field label="Hệ số nhóm cơ phụ" hint="0 = chỉ tính nhóm chính">
-            {(id) => <NumberInput id={id} value={s.secondaryMuscleFactor} onChange={(v) => setS((x) => ({ ...x, secondaryMuscleFactor: v ?? 0.5 }))} />}
+          <Field name="restTimerDefaultSec" label="Nghỉ mặc định (giây)">{(id) => <NumberInput id={id} value={s.restTimerDefaultSec} onChange={(v) => setS((x) => ({ ...x, restTimerDefaultSec: v == null ? (null as unknown as number) : Math.round(v) }))} />}</Field>
+          <Field name="measurementReminderDays" label="Nhắc đo vòng (ngày)">{(id) => <NumberInput id={id} value={s.measurementReminderDays} onChange={(v) => setS((x) => ({ ...x, measurementReminderDays: v == null ? (null as unknown as number) : Math.round(v) }))} />}</Field>
+          <Field name="secondaryMuscleFactor" label="Hệ số nhóm cơ phụ" hint="0 = chỉ tính nhóm chính">
+            {(id) => <NumberInput id={id} value={s.secondaryMuscleFactor} onChange={(v) => setS((x) => ({ ...x, secondaryMuscleFactor: v ?? (null as unknown as number) }))} />}
           </Field>
           <Field label="Công thức 1RM">
             {(id) => (
@@ -191,7 +203,7 @@ function TrainingForm({ settings }: { settings: Settings }) {
             Khi mọi hiệp ở mức tạ cao nhất đạt số lần tối đa trong khoảng mục tiêu và RIR ≥ ngưỡng, app gợi ý tăng tạ. Chỉ là gợi ý — giáo án không bị tự động thay đổi.
           </p>
           <div className="space-y-3">
-            <Field label="RIR tối thiểu để gợi ý tăng" hint="RIR = số lần còn có thể làm thêm. Mặc định 2 để không phải tập tới thất bại.">
+            <Field name="progression.minRIR" label="RIR tối thiểu để gợi ý tăng" hint="RIR = số lần còn có thể làm thêm. Mặc định 2 để không phải tập tới thất bại.">
               {(id) => (
                 <select id={id} value={pr.minRIR} onChange={(e) => setPr('minRIR', Number(e.target.value))}>
                   {[0, 1, 2, 3, 4].map((r) => (
@@ -213,13 +225,13 @@ function TrainingForm({ settings }: { settings: Settings }) {
             />
             {pr.mode === 'fixed' ? (
               <div className="grid grid-cols-2 gap-3">
-                <Field label="Thân trên (kg)">{(id) => <NumberInput id={id} value={pr.upperIncrementKg} onChange={(v) => setPr('upperIncrementKg', v ?? 2.5)} />}</Field>
-                <Field label="Thân dưới (kg)">{(id) => <NumberInput id={id} value={pr.lowerIncrementKg} onChange={(v) => setPr('lowerIncrementKg', v ?? 5)} />}</Field>
+                <Field name="progression.upperIncrementKg" label="Thân trên (kg)">{(id) => <NumberInput id={id} value={pr.upperIncrementKg} onChange={(v) => setPr('upperIncrementKg', v ?? (null as unknown as number))} />}</Field>
+                <Field name="progression.lowerIncrementKg" label="Thân dưới (kg)">{(id) => <NumberInput id={id} value={pr.lowerIncrementKg} onChange={(v) => setPr('lowerIncrementKg', v ?? (null as unknown as number))} />}</Field>
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-3">
-                <Field label="Tăng (%)">{(id) => <NumberInput id={id} value={pr.percent} onChange={(v) => setPr('percent', v ?? 5)} />}</Field>
-                <Field label="Làm tròn tới (kg)">{(id) => <NumberInput id={id} value={pr.roundToKg} onChange={(v) => setPr('roundToKg', v ?? 1.25)} />}</Field>
+                <Field name="progression.percent" label="Tăng (%)">{(id) => <NumberInput id={id} value={pr.percent} onChange={(v) => setPr('percent', v ?? (null as unknown as number))} />}</Field>
+                <Field name="progression.roundToKg" label="Làm tròn tới (kg)">{(id) => <NumberInput id={id} value={pr.roundToKg} onChange={(v) => setPr('roundToKg', v ?? (null as unknown as number))} />}</Field>
               </div>
             )}
           </div>
@@ -229,6 +241,7 @@ function TrainingForm({ settings }: { settings: Settings }) {
         </Button>
       </div>
     </Card>
+    </FieldErrorsContext.Provider>
   );
 }
 

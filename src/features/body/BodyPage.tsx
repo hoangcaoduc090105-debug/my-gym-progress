@@ -4,15 +4,16 @@ import { useSearchParams } from 'react-router-dom';
 import { Camera, Columns2, Pencil, Plus, Trash2 } from 'lucide-react';
 import { db } from '../../db/db';
 import { BODY_FIELDS, BODY_FIELD_LABELS, BODY_FIELD_UNITS, POSE_LABELS, type BodyField, type BodyMetric, type PhotoPose, type ProgressPhoto } from '../../db/types';
-import { Badge, Button, Card, EmptyState, Explain, Field, IconButton, Insufficient, Modal, NumberInput, PageHeader, Segmented, Spinner, Tabs, cx } from '../../components/ui';
+import { Badge, Button, Card, EmptyState, Explain, Field, FormError, IconButton, Insufficient, Modal, NumberInput, PageHeader, Segmented, Spinner, Tabs, cx } from '../../components/ui';
 import { useFeedback } from '../../components/feedback';
 import { TrendLineChart } from '../../components/charts';
-import { addPhoto, getPhotoData, saveBodyMetric, softDeleteBodyMetric, softDeletePhoto } from '../../db/repo';
+import { addPhoto, getPhotoData, loadSchemas, saveBodyMetric, softDeleteBodyMetric, softDeletePhoto } from '../../db/repo';
 import { aggregate, linearTrend, seriesOf, type Granularity } from '../../domain/bodyTrends';
 import { THRESHOLDS } from '../../domain/thresholds';
 import { formatDate, formatMonth, formatShort, todayISO } from '../../lib/date';
 import { fmt1, signed } from '../../lib/format';
 import { compressImage, photoUrl } from '../../lib/image';
+import { FieldErrorsContext, useFieldErrors } from '../../lib/formErrors';
 
 type Tab = 'log' | 'chart' | 'photos';
 
@@ -74,16 +75,22 @@ function MetricForm({ open, onClose, initial, last }: { open: boolean; onClose: 
   const [date, setDate] = useState(todayISO());
   const [vals, setVals] = useState<Partial<Record<BodyField, number | null>>>({});
   const [note, setNote] = useState('');
+  const fe = useFieldErrors();
+  const { clearAll } = fe;
   useEffect(() => {
     if (!open) return;
+    clearAll();
     setDate(initial?.date ?? todayISO());
     setVals(initial ? Object.fromEntries(BODY_FIELDS.map((f) => [f, initial[f] ?? null])) : {});
     setNote(initial?.note ?? '');
-  }, [open, initial]);
+  }, [open, initial, clearAll]);
 
   async function save() {
+    const clean = Object.fromEntries(BODY_FIELDS.map((f) => [f, vals[f] ?? null]));
+    const S = await loadSchemas();
+    const v = S.bodyMetricSchema.safeParse({ id: 'x', date, note, ...clean, createdAt: 'x', updatedAt: 'x' });
+    if (!v.success) return fe.setFromZod(v.error);
     try {
-      const clean = Object.fromEntries(BODY_FIELDS.map((f) => [f, vals[f] ?? null]));
       await saveBodyMetric({ id: initial?.id, date, note, ...clean });
       toast('Đã lưu số đo');
       onClose();
@@ -102,11 +109,13 @@ function MetricForm({ open, onClose, initial, last }: { open: boolean; onClose: 
         </Button>
       }
     >
-      <div className="space-y-3">
-        <Field label="Ngày">{(id) => <input id={id} type="date" max={todayISO()} value={date} onChange={(e) => setDate(e.target.value)} className="w-full" />}</Field>
+      <FieldErrorsContext.Provider value={fe}>
+      <div className="space-y-3" ref={fe.containerRef as React.RefObject<HTMLDivElement>}>
+        <FormError />
+        <Field name="date" label="Ngày">{(id) => <input id={id} type="date" max={todayISO()} value={date} onChange={(e) => setDate(e.target.value)} className="w-full" />}</Field>
         <div className="grid grid-cols-2 gap-3">
           {BODY_FIELDS.map((f) => (
-            <Field key={f} label={`${BODY_FIELD_LABELS[f]} (${BODY_FIELD_UNITS[f]})`}>
+            <Field key={f} name={f} label={`${BODY_FIELD_LABELS[f]} (${BODY_FIELD_UNITS[f]})`}>
               {(id) => (
                 <NumberInput
                   id={id}
@@ -120,11 +129,12 @@ function MetricForm({ open, onClose, initial, last }: { open: boolean; onClose: 
             </Field>
           ))}
         </div>
-        <Field label="Ghi chú">{(id) => <input id={id} value={note} onChange={(e) => setNote(e.target.value)} placeholder="vd. sáng, trước ăn" className="w-full" />}</Field>
+        <Field name="note" label="Ghi chú">{(id) => <input id={id} value={note} onChange={(e) => setNote(e.target.value)} placeholder="vd. sáng, trước ăn" className="w-full" />}</Field>
         <p className="text-xs text-muted">
           Chỉ cần nhập chỉ số bạn đo. Để so sánh chính xác: đo cùng thời điểm (buổi sáng, sau vệ sinh, trước ăn), cùng vị trí thước dây. Ứng dụng không ước tính tỷ lệ mỡ cơ thể.
         </p>
       </div>
+      </FieldErrorsContext.Provider>
     </Modal>
   );
 }

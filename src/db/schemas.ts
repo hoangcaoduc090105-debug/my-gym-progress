@@ -4,6 +4,35 @@ import { BODY_FIELDS, EQUIPMENT, MUSCLE_GROUPS } from './types';
 
 /** Schema Zod dùng chung cho form và cho kiểm tra file sao lưu. */
 
+/** Thông báo lỗi mặc định bằng tiếng Việt (thông báo riêng khai báo trong schema vẫn được ưu tiên). */
+const viErrorMap: z.ZodErrorMap = (issue, ctx) => {
+  switch (issue.code) {
+    case z.ZodIssueCode.invalid_type:
+      if (issue.received === 'undefined' || issue.received === 'null') return { message: 'Bắt buộc nhập' };
+      if (issue.expected === 'integer') return { message: 'Cần nhập số nguyên' };
+      if (issue.expected === 'number') return { message: 'Cần nhập một số hợp lệ' };
+      return { message: 'Giá trị không hợp lệ' };
+    case z.ZodIssueCode.too_small:
+      if (issue.type === 'string') return { message: Number(issue.minimum) <= 1 ? 'Không được để trống' : `Tối thiểu ${issue.minimum} ký tự` };
+      if (issue.type === 'number') return { message: `Tối thiểu ${issue.minimum}` };
+      if (issue.type === 'array') return { message: `Cần ít nhất ${issue.minimum} mục` };
+      break;
+    case z.ZodIssueCode.too_big:
+      if (issue.type === 'string') return { message: `Tối đa ${issue.maximum} ký tự` };
+      if (issue.type === 'number') return { message: `Tối đa ${issue.maximum}` };
+      if (issue.type === 'array') return { message: `Tối đa ${issue.maximum} mục` };
+      break;
+    case z.ZodIssueCode.not_finite:
+      return { message: 'Cần nhập một số hợp lệ' };
+    case z.ZodIssueCode.invalid_enum_value:
+      return { message: 'Lựa chọn không hợp lệ' };
+    default:
+      break;
+  }
+  return { message: ctx.defaultError };
+};
+z.setErrorMap(viErrorMap);
+
 const isoDate = z.string().refine(isISODate, { message: 'Ngày không hợp lệ (YYYY-MM-DD)' });
 const timestamp = z.string().min(1);
 const id = z.string().min(1).max(100);

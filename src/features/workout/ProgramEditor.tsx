@@ -6,7 +6,8 @@ import type { Program, ProgramDay, ProgramExercise } from '../../db/types';
 import { Button, Card, Field, IconButton, NumberInput, PageHeader, Spinner, Toggle } from '../../components/ui';
 import { useFeedback } from '../../components/feedback';
 import { useExerciseMap, useSettings } from '../../app/useAppData';
-import { saveProgram } from '../../db/repo';
+import { loadSchemas, saveProgram } from '../../db/repo';
+import { FieldErrorsContext, useFieldErrors } from '../../lib/formErrors';
 import { uid } from '../../lib/id';
 import { ExercisePicker } from './ExercisePicker';
 import { formatClock, nowISO } from '../../lib/date';
@@ -28,6 +29,7 @@ export function ProgramEditor() {
   const [p, setP] = useState<Program | null>(null);
   const [pickFor, setPickFor] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
+  const fe = useFieldErrors();
 
   useEffect(() => {
     void (async () => {
@@ -56,6 +58,9 @@ export function ProgramEditor() {
 
   async function save() {
     if (!p) return;
+    const S = await loadSchemas();
+    const v = S.programSchema.safeParse(p);
+    if (!v.success) return fe.setFromZod(v.error);
     try {
       await saveProgram(p);
       setDirty(false);
@@ -67,7 +72,8 @@ export function ProgramEditor() {
   }
 
   return (
-    <div className="space-y-4 pb-20">
+    <FieldErrorsContext.Provider value={fe}>
+    <div className="space-y-4 pb-20" ref={fe.containerRef as React.RefObject<HTMLDivElement>}>
       <PageHeader
         title={id === 'moi' ? 'Tạo giáo án' : 'Sửa giáo án'}
         back={true}
@@ -79,16 +85,18 @@ export function ProgramEditor() {
       />
       <Card>
         <div className="space-y-3">
-          <Field label="Tên giáo án">{(fid) => <input id={fid} value={p.name} onChange={(e) => update((x) => ({ ...x, name: e.target.value }))} />}</Field>
-          <Field label="Mô tả">{(fid) => <textarea id={fid} rows={2} value={p.description ?? ''} onChange={(e) => update((x) => ({ ...x, description: e.target.value }))} />}</Field>
+          <Field name="name" label="Tên giáo án">{(fid) => <input id={fid} value={p.name} onChange={(e) => update((x) => ({ ...x, name: e.target.value }))} />}</Field>
+          <Field name="description" label="Mô tả">{(fid) => <textarea id={fid} rows={2} value={p.description ?? ''} onChange={(e) => update((x) => ({ ...x, description: e.target.value }))} />}</Field>
           <Toggle label="Đặt làm giáo án đang dùng" checked={p.isActive} onChange={(v) => update((x) => ({ ...x, isActive: v }))} />
         </div>
       </Card>
 
       {p.days.map((d, di) => (
         <Card key={d.id}>
-          <div className="mb-3 flex items-center gap-1">
-            <input aria-label="Tên buổi" className="flex-1 font-semibold" value={d.name} onChange={(e) => updDay(d.id, (x) => ({ ...x, name: e.target.value }))} />
+          <div className="mb-3 flex items-start gap-1">
+            <Field name={`days.${di}.name`} label="Tên buổi" className="flex-1 [&>label]:sr-only">
+              {(fid) => <input id={fid} className="w-full font-semibold" value={d.name} onChange={(e) => updDay(d.id, (x) => ({ ...x, name: e.target.value }))} />}
+            </Field>
             <IconButton label="Đưa buổi lên" disabled={di === 0} onClick={() => update((x) => ({ ...x, days: move(x.days, di, -1) }))}>
               <ArrowUp size={18} />
             </IconButton>
@@ -122,11 +130,11 @@ export function ProgramEditor() {
                   </IconButton>
                 </div>
                 <div className="grid grid-cols-5 gap-2 text-xs">
-                  <Field label="Hiệp">{(fid) => <NumberInput id={fid} value={e.sets} onChange={(v) => updEx(d.id, e.id, { sets: Math.round(v ?? 1) })} className="px-2 text-center" />}</Field>
-                  <Field label="Lần từ">{(fid) => <NumberInput id={fid} value={e.repMin} onChange={(v) => updEx(d.id, e.id, { repMin: Math.round(v ?? 1) })} className="px-2 text-center" />}</Field>
-                  <Field label="đến">{(fid) => <NumberInput id={fid} value={e.repMax} onChange={(v) => updEx(d.id, e.id, { repMax: Math.round(v ?? 1) })} className="px-2 text-center" />}</Field>
-                  <Field label="RIR">{(fid) => <NumberInput id={fid} value={e.targetRIR} onChange={(v) => updEx(d.id, e.id, { targetRIR: Math.round(v ?? 0) })} className="px-2 text-center" />}</Field>
-                  <Field label="Nghỉ (s)">{(fid) => <NumberInput id={fid} value={e.restSec} onChange={(v) => updEx(d.id, e.id, { restSec: Math.round(v ?? 0) })} className="px-2 text-center" />}</Field>
+                  <Field name={`days.${di}.exercises.${ei}.sets`} label="Hiệp">{(fid) => <NumberInput id={fid} value={e.sets} onChange={(v) => updEx(d.id, e.id, { sets: v == null ? (null as unknown as number) : Math.round(v) })} className="px-2 text-center" />}</Field>
+                  <Field name={`days.${di}.exercises.${ei}.repMin`} label="Lần từ">{(fid) => <NumberInput id={fid} value={e.repMin} onChange={(v) => updEx(d.id, e.id, { repMin: v == null ? (null as unknown as number) : Math.round(v) })} className="px-2 text-center" />}</Field>
+                  <Field name={`days.${di}.exercises.${ei}.repMax`} label="đến">{(fid) => <NumberInput id={fid} value={e.repMax} onChange={(v) => updEx(d.id, e.id, { repMax: v == null ? (null as unknown as number) : Math.round(v) })} className="px-2 text-center" />}</Field>
+                  <Field name={`days.${di}.exercises.${ei}.targetRIR`} label="RIR">{(fid) => <NumberInput id={fid} value={e.targetRIR} onChange={(v) => updEx(d.id, e.id, { targetRIR: v == null ? (null as unknown as number) : Math.round(v) })} className="px-2 text-center" />}</Field>
+                  <Field name={`days.${di}.exercises.${ei}.restSec`} label="Nghỉ (s)">{(fid) => <NumberInput id={fid} value={e.restSec} onChange={(v) => updEx(d.id, e.id, { restSec: v == null ? (null as unknown as number) : Math.round(v) })} className="px-2 text-center" />}</Field>
                 </div>
                 <div className="mt-1 text-xs text-muted">
                   {e.sets} × {e.repMin}–{e.repMax} lần · RIR {e.targetRIR} · nghỉ {formatClock(e.restSec)}
@@ -161,5 +169,6 @@ export function ProgramEditor() {
         }
       />
     </div>
+    </FieldErrorsContext.Provider>
   );
 }

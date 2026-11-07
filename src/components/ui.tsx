@@ -1,4 +1,5 @@
-import { forwardRef, useEffect, useId, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode } from 'react';
+import { cloneElement, forwardRef, isValidElement, useEffect, useId, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode } from 'react';
+import { useFieldErrorsContext } from '../lib/formErrors';
 import { ChevronDown, ChevronLeft, Info, X } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { parseNumber } from '../lib/format';
@@ -131,16 +132,66 @@ export function EmptyState({ icon, title, children, action }: { icon?: ReactNode
   );
 }
 
-export function Field({ label, hint, error, children, className }: { label: string; hint?: ReactNode; error?: string | null; children: (id: string) => ReactNode; className?: string }) {
+export interface FieldA11y {
+  invalid: boolean;
+  /** id của dòng lỗi (khi có lỗi) — gắn vào aria-describedby của ô nhập. */
+  describedBy: string | undefined;
+}
+
+/**
+ * Nhãn + ô nhập + dòng gợi ý/lỗi.
+ * - `error` hiển thị trực tiếp; hoặc `name` để lấy lỗi từ FieldErrorsContext (useFieldErrors) và tự xóa lỗi khi người dùng sửa ô.
+ * - Có lỗi: ô con được gắn aria-invalid + aria-describedby (trỏ tới dòng lỗi role="alert"); các thuộc tính này cũng truyền qua tham số thứ hai.
+ */
+export function Field({
+  label,
+  hint,
+  error,
+  name,
+  children,
+  className,
+}: {
+  label: string;
+  hint?: ReactNode;
+  error?: string | null;
+  name?: string;
+  children: (id: string, a11y: FieldA11y) => ReactNode;
+  className?: string;
+}) {
   const id = useId();
+  const ctx = useFieldErrorsContext();
+  const err = error ?? (name != null ? ctx?.errors[name] : undefined) ?? null;
+  const errId = `${id}-err`;
+  const a11y: FieldA11y = { invalid: !!err, describedBy: err ? errId : undefined };
+  let child = children(id, a11y);
+  if (err && isValidElement(child)) {
+    child = cloneElement(child as React.ReactElement<Record<string, unknown>>, { 'aria-invalid': true, 'aria-describedby': errId });
+  }
+  const onEdit = name != null && ctx && err ? () => ctx.clear(name) : undefined;
   return (
-    <div className={cx('flex flex-col gap-1', className)}>
+    <div className={cx('flex flex-col gap-1', className)} onChangeCapture={onEdit} onInputCapture={onEdit}>
       <label htmlFor={id} className="text-sm font-medium text-muted">
         {label}
       </label>
-      {children(id)}
-      {hint && !error && <div className="text-xs text-muted">{hint}</div>}
-      {error && <div className="text-xs text-danger">{error}</div>}
+      {child}
+      {hint && !err && <div className="text-xs text-muted">{hint}</div>}
+      {err && (
+        <div id={errId} role="alert" className="text-xs font-medium text-danger">
+          {err}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Lỗi chung của form (path rỗng), ví dụ "Cần nhập ít nhất một chỉ số". */
+export function FormError() {
+  const ctx = useFieldErrorsContext();
+  const err = ctx?.errors[''];
+  if (!err) return null;
+  return (
+    <div role="alert" className="rounded-xl border border-danger/40 bg-danger/10 p-3 text-sm text-danger">
+      {err}
     </div>
   );
 }
