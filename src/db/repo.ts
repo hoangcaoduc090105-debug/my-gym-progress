@@ -156,6 +156,23 @@ export async function saveProgram(p: Omit<Program, 'createdAt' | 'updatedAt'> & 
   return v;
 }
 
+/**
+ * v1.9: thêm giáo án từ mẫu (src/data/programTemplates.ts, tải lười). Mẫu đã có (giáo án cùng tên, chưa xóa)
+ * thì KHÔNG tạo trùng: trả về giáo án đang có với `existed: true`. `activate` = đặt làm giáo án đang dùng.
+ */
+export async function addProgramFromTemplate(key: string, opts: { activate?: boolean } = {}): Promise<{ program: Program; existed: boolean }> {
+  const { PROGRAM_TEMPLATES, programFromTemplate } = await import('../data/programTemplates');
+  const t = PROGRAM_TEMPLATES.find((x) => x.key === key);
+  if (!t) throw new AppError('Không tìm thấy giáo án mẫu.');
+  const existing = (await db.programs.toArray()).find((p) => p.name === t.name);
+  if (existing) {
+    if (opts.activate && !existing.isActive) await setActiveProgram(existing.id);
+    return { program: opts.activate ? { ...existing, isActive: true } : existing, existed: true };
+  }
+  const program = await saveProgram(programFromTemplate(t, uid, nowISO(), !!opts.activate));
+  return { program, existed: false };
+}
+
 export async function setActiveProgram(id: string): Promise<void> {
   const now = nowISO();
   await db.transaction('rw', db.programs, async () => {

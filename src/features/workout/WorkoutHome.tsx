@@ -1,12 +1,13 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { CalendarDays, CalendarPlus, ChevronLeft, ChevronRight, Copy, History, Pencil, Play, Plus, Trash2, Zap } from 'lucide-react';
+import { CalendarDays, CalendarPlus, ChevronLeft, ChevronRight, Copy, History, LayoutTemplate, Pencil, Play, Plus, Trash2, Zap } from 'lucide-react';
 import { db } from '../../db/db';
 import type { Program, ScheduledWorkout, WorkoutSession } from '../../db/types';
 import { Badge, Button, Card, EmptyState, IconButton, Modal, PageHeader, Spinner, Tabs, Toggle, cx } from '../../components/ui';
 import { useFeedback } from '../../components/feedback';
-import { addSchedule, deleteProgram, duplicateProgram, removeSchedule, setActiveProgram, startSession } from '../../db/repo';
+import { addProgramFromTemplate, addSchedule, deleteProgram, duplicateProgram, removeSchedule, setActiveProgram, startSession } from '../../db/repo';
+import type { ProgramTemplate } from '../../data/programTemplates';
 import { nextWorkout, openSchedules } from '../../domain/schedule';
 import { useExerciseMap } from '../../app/useAppData';
 import { countWorkingSets, totalVolume } from '../../domain/volume';
@@ -348,6 +349,25 @@ function CalendarTab({ programs, sessions, schedule }: { programs: Program[]; se
 function ProgramsTab({ programs }: { programs: Program[] }) {
   const nav = useNavigate();
   const { confirm, toast, toastError } = useFeedback();
+  const [tplOpen, setTplOpen] = useState(false);
+  const [templates, setTemplates] = useState<ProgramTemplate[] | null>(null);
+  const [adding, setAdding] = useState<string | null>(null);
+  async function openTemplates() {
+    setTplOpen(true);
+    if (!templates) setTemplates((await import('../../data/programTemplates')).PROGRAM_TEMPLATES);
+  }
+  async function addTemplate(key: string, activate: boolean) {
+    setAdding(key);
+    try {
+      const r = await addProgramFromTemplate(key, { activate });
+      toast(r.existed ? `Đã có giáo án "${r.program.name}"${activate ? ' — đã chuyển sang dùng' : ''}` : activate ? `Đã thêm và dùng "${r.program.name}"` : `Đã thêm "${r.program.name}"`);
+      setTplOpen(false);
+    } catch (e) {
+      toastError(e);
+    } finally {
+      setAdding(null);
+    }
+  }
   return (
     <div className="space-y-3">
       {programs.length === 0 && <EmptyState title="Chưa có giáo án" />}
@@ -394,9 +414,48 @@ function ProgramsTab({ programs }: { programs: Program[] }) {
           </div>
         </Card>
       ))}
-      <Button block icon={<Plus size={18} />} onClick={() => nav('/lich-tap/giao-an/moi')}>
-        Tạo giáo án mới
-      </Button>
+      <div className="grid grid-cols-2 gap-2">
+        <Button icon={<LayoutTemplate size={18} />} onClick={() => void openTemplates()}>
+          Thêm từ mẫu
+        </Button>
+        <Button icon={<Plus size={18} />} onClick={() => nav('/lich-tap/giao-an/moi')}>
+          Tạo giáo án mới
+        </Button>
+      </div>
+      <Modal open={tplOpen} onClose={() => setTplOpen(false)} title="Giáo án mẫu" wide>
+        {!templates ? (
+          <Spinner />
+        ) : (
+          <div className="space-y-3">
+            <p className="text-xs text-muted">Mẫu dựng từ bài trong thư viện; thêm xong bạn sửa thoải mái. Mẫu đã thêm rồi sẽ không bị tạo trùng.</p>
+            {templates.map((t) => {
+              const existed = programs.some((p) => p.name === t.name);
+              return (
+                <Card key={t.key} className={existed ? 'opacity-80' : undefined}>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-semibold">{t.name}</span>
+                    <Badge tone="info">{t.daysPerWeek} buổi/tuần</Badge>
+                    <Badge tone={t.level === 'beginner' ? 'ok' : 'warn'}>{t.level === 'beginner' ? 'Người mới' : 'Đã tập ≥ 6 tháng'}</Badge>
+                    {existed && <Badge>Đã có</Badge>}
+                  </div>
+                  <div className="mt-0.5 text-sm text-muted">{t.days.map((d) => d.name).join(' · ')}</div>
+                  <p className="mt-2 text-xs text-muted">{t.description}</p>
+                  <div className="mt-3 flex gap-2">
+                    <Button size="sm" variant="primary" disabled={adding != null} onClick={() => void addTemplate(t.key, true)}>
+                      {existed ? 'Dùng ngay' : 'Thêm và dùng ngay'}
+                    </Button>
+                    {!existed && (
+                      <Button size="sm" disabled={adding != null} onClick={() => void addTemplate(t.key, false)}>
+                        Chỉ thêm
+                      </Button>
+                    )}
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

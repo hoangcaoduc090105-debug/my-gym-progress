@@ -377,6 +377,33 @@ try {
     await cancelCurrent();
   });
 
+  await check('Thêm giáo án từ mẫu, dùng ngay, bắt đầu buổi từ mẫu, rồi quay về giáo án mặc định', async () => {
+    await page.goto(BASE + '#/lich-tap?tab=programs');
+    await page.getByRole('button', { name: 'Thêm từ mẫu' }).click();
+    const dlg = page.getByRole('dialog', { name: 'Giáo án mẫu' });
+    await dlg.getByText('Toàn thân 2 buổi — Người bận').waitFor();
+    await shot('14-templates');
+    const tpl = dlg.locator('section').filter({ hasText: 'Toàn thân 2 buổi — Người bận' });
+    await tpl.getByRole('button', { name: 'Thêm và dùng ngay' }).click();
+    await page.getByText('Đã thêm và dùng "Toàn thân 2 buổi — Người bận"').waitFor();
+    await page.goto(BASE + '#/lich-tap');
+    await page.getByRole('button', { name: 'Bắt đầu Buổi 1' }).click();
+    await page.getByRole('heading', { name: 'Đang tập' }).waitFor();
+    await page.getByRole('link', { name: 'Squat tạ ấm/tạ đơn trước ngực', exact: true }).first().waitFor();
+    await cancelCurrent();
+    // Thêm lần 2 không tạo trùng
+    await page.goto(BASE + '#/lich-tap?tab=programs');
+    await page.getByRole('button', { name: 'Thêm từ mẫu' }).click();
+    const dlg2 = page.getByRole('dialog', { name: 'Giáo án mẫu' });
+    await dlg2.getByText('Đẩy/Kéo/Chân 6 buổi').waitFor();
+    assert.equal(await dlg2.getByText('Đã có', { exact: true }).count(), 1);
+    await page.keyboard.press('Escape');
+    // Quay về giáo án mặc định cho các bước sau
+    const def = page.locator('section').filter({ hasText: 'Toàn thân 3 buổi — Người mới' }).filter({ has: page.getByRole('button', { name: 'Dùng giáo án này' }) }).first();
+    await def.getByRole('button', { name: 'Dùng giáo án này' }).click();
+    await page.getByText('Đã chuyển giáo án').waitFor();
+  });
+
   await check('Tạo giáo án mới, đổi tên; rời trang khi chưa lưu thì hỏi', async () => {
     await page.goto(BASE + '#/lich-tap?tab=programs');
     await page.getByRole('button', { name: 'Tạo giáo án mới' }).click();

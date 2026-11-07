@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Dumbbell, ShieldCheck } from 'lucide-react';
 import { Button, Card, Field, NumberInput, Segmented } from '../../components/ui';
 import { useFeedback } from '../../components/feedback';
-import { getSettings, saveBodyMetric, saveProfile, saveSettings } from '../../db/repo';
+import { addProgramFromTemplate, getSettings, saveBodyMetric, saveProfile, saveSettings } from '../../db/repo';
 import { fromDisplay, type WeightUnit } from '../../lib/units';
 import { suggestProteinRange } from '../../domain/nutrition';
 import { nowISO, todayISO } from '../../lib/date';
@@ -25,6 +25,8 @@ export function Onboarding() {
   const [pMin, setPMin] = useState<number | null>(null);
   const [pMax, setPMax] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
+  // v1.9: giáo án bắt đầu — 'default' = Toàn thân 3 buổi có sẵn; còn lại là khóa mẫu trong programTemplates.
+  const [programKey, setProgramKey] = useState<'default' | 'fullbody-2' | 'upper-lower-4' | 'ppl-6'>('default');
 
   const suggestion = weightKg ? suggestProteinRange(weightKg) : null;
   const effMin = pMin ?? suggestion?.min ?? null;
@@ -53,6 +55,7 @@ export function Onboarding() {
         void _id, _u;
         await saveSettings({ ...cur, weightUnit: 'lb' });
       }
+      if (programKey !== 'default') await addProgramFromTemplate(programKey, { activate: true });
       toast('Đã lưu hồ sơ. Chúc bạn tập tốt!');
       nav('/', { replace: true });
     } catch (err) {
@@ -124,6 +127,32 @@ export function Onboarding() {
           <p className="mt-2 text-xs text-muted">
             Gợi ý theo cân nặng: 1,6–2,0 g/kg/ngày, làm tròn 5 g. Phân tích gộp của Morton và cộng sự (2018) cho thấy lợi ích tăng cơ từ protein chững lại quanh mức ~1,6 g/kg/ngày. Bạn có thể sửa bất kỳ lúc nào trong Cài đặt.
           </p>
+        </Card>
+        <Card>
+          <div className="mb-2 text-sm font-semibold">Bạn tập được mấy buổi mỗi tuần?</div>
+          <div role="radiogroup" aria-label="Giáo án bắt đầu" className="grid grid-cols-2 gap-2">
+            {(
+              [
+                ['default', '3 buổi', 'Toàn thân — Người mới'],
+                ['fullbody-2', '2 buổi', 'Toàn thân — Người bận'],
+                ['upper-lower-4', '4 buổi', 'Trên/Dưới'],
+                ['ppl-6', '6 buổi', 'Đẩy/Kéo/Chân'],
+              ] as const
+            ).map(([k, n, label]) => (
+              <button
+                key={k}
+                type="button"
+                role="radio"
+                aria-checked={programKey === k}
+                onClick={() => setProgramKey(k)}
+                className={`min-h-[56px] rounded-xl border px-3 py-2 text-left ${programKey === k ? 'border-accent bg-accent/10' : 'border-line'}`}
+              >
+                <div className="font-semibold">{n}</div>
+                <div className="text-xs text-muted">{label}</div>
+              </button>
+            ))}
+          </div>
+          <p className="mt-2 text-xs text-muted">Chọn sai cũng không sao: đổi giáo án bất kỳ lúc nào trong Tập → Giáo án.</p>
         </Card>
         <Button type="submit" variant="primary" size="lg" block disabled={busy}>
           Bắt đầu
