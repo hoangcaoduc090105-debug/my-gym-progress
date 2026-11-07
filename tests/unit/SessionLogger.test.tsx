@@ -220,7 +220,7 @@ describe('SessionLogger — đơn vị lb (v1.8.0)', () => {
     await screen.findByRole('heading', { name: 'Đang tập' });
     await waitFor(() => expect(screen.getAllByText('lb').length).toBeGreaterThan(0));
     const kg = screen.getAllByLabelText('Mức tạ hiệp 1') as HTMLInputElement[];
-    await waitFor(() => expect(kg[1]!.value).toBe('132.3'));
+    await waitFor(() => expect(kg[1]!.value).toBe('132,3'));
     fireEvent.change(kg[0]!, { target: { value: '225' } });
     // ô thứ 2: gõ lại đúng số đang hiển thị => giữ nguyên 60 kg
     fireEvent.change(kg[1]!, { target: { value: '132,3' } });

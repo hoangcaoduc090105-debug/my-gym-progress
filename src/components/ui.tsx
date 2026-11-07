@@ -209,6 +209,11 @@ export function FormError() {
  * Giá trị ngoài [min, max] hoặc không đọc được => ô được đánh dấu lỗi (aria-invalid) và cha nhận null,
  * để màn hình không bao giờ hiển thị một số trong khi dữ liệu lưu là số khác.
  */
+/** Số → chữ trong ô nhập theo thói quen Việt: dấu phẩy thập phân (88.2 → "88,2"), không phân cách nghìn. */
+export function numberToInputText(value: number | null | undefined): string {
+  return value == null ? '' : String(value).replace('.', ',');
+}
+
 export function NumberInput({
   value,
   onChange,
@@ -224,14 +229,14 @@ export function NumberInput({
   min?: number;
   max?: number;
 }) {
-  const [text, setText] = useState(value == null ? '' : String(value));
+  const [text, setText] = useState(numberToInputText(value));
   const [invalid, setInvalid] = useState(false);
   useEffect(() => {
     // Ô đang báo lỗi và cha giữ null: giữ nguyên chữ đã gõ để người dùng sửa.
     if (invalid && value == null) return;
     const parsed = text.trim() === '' ? null : parseNumber(text);
     if (parsed !== (value ?? null)) {
-      setText(value == null ? '' : String(value));
+      setText(numberToInputText(value));
       setInvalid(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
