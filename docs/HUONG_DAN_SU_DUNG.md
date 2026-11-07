@@ -69,17 +69,47 @@
 - Đổi điện thoại: cài app ở máy mới → Thêm → Cài đặt → "Nhập dữ liệu JSON" → chọn tệp đã lưu.
 - Xóa dữ liệu trình duyệt mà không có tệp sao lưu sẽ mất toàn bộ nhật ký.
 
+## Tính năng mới ở bản 1.8
+
+### Thay bài khi máy bận
+Đang tập mà máy bận hoặc thiếu dụng cụ: bấm nút **⇄ Thay bài** trên bài đó. Phía trên là các bài thay thế gợi ý, phía dưới tìm được bài bất kỳ. Số hiệp và mục tiêu giữ nguyên, hiệp đã làm vẫn được tính cho bài cũ. Nếu buổi theo giáo án, app hỏi **Chỉ buổi này** (giáo án giữ nguyên) hay **Cả giáo án** (các buổi sau cũng dùng bài mới).
+
+### Xem lại lịch sử một bài
+Thư viện → chọn bài → tab **Lịch sử**: từng buổi đã tập bài đó, các hiệp dạng `40×10 · 40×9`, e1RM và huy hiệu **PR** khi lập kỷ lục. Lọc 3 tháng / 1 năm / tất cả, bấm **Xem thêm** để tải tiếp. Khi đang tập, chạm vào dòng **"Lần trước…"** để xem nhanh 3 buổi gần nhất mà không rời màn hình.
+
+### Superset (tập xen kẽ 2 bài)
+Tập → Giáo án → Sửa → bấm **Ghép với bài dưới** để 2 bài thành một nhóm (nhãn **A1, A2**). Khi tập, bấm ✓ ở bài A1 thì app không bấm giờ nghỉ mà chuyển xuống A2; bấm ✓ ở bài cuối nhóm mới bắt đầu nghỉ. Bấm **Tách nhóm** để trở lại bình thường.
+
+### Máy tính đĩa tạ
+Bài dùng tạ đòn có nút **đĩa** cạnh ô mức tạ. Nhập tổng tạ, app vẽ mỗi bên cần gắn đĩa gì. Nếu không gắn đúng được bằng đĩa bạn có, app gợi ý **"Gần nhất: … kg"**, chạm để điền. Đặt trọng lượng đòn và các loại đĩa phòng tập có trong Cài đặt → Tập luyện.
+
+### Dùng đơn vị pound (lb)
+Cài đặt → Tập luyện → **Đơn vị khối lượng → lb** → Lưu. Mọi chỗ hiện tạ và cân nặng sẽ đổi sang lb, ô nhập cũng nhận lb. Dữ liệu vẫn lưu bằng kg nên đổi qua lại không làm sai số liệu. Số đo vòng vẫn là cm.
+
+### Buổi nhẹ (deload) và cảnh báo chững
+Khi mệt hoặc sau nhiều tuần tập nặng, bật **Buổi nhẹ (deload)** trước khi bắt đầu. App gợi ý khoảng 60% mức tạ buổi trước, bớt 1 hiệp, và không tính buổi này vào kỷ lục hay gợi ý tăng tạ. Nếu một bài 4 buổi liền không tiến bộ, app hiện **"4 buổi chưa tiến bộ"** để bạn cân nhắc giảm tạ hoặc nghỉ thêm. Danh sách đầy đủ có ở thẻ **Bài đang chững** trong Phân tích.
+
+### Chuyển lịch sử từ Strong hoặc Hevy
+Xuất CSV từ app cũ (Strong: Settings → Export Strong Data; Hevy: Settings → Export & Import Data → Export Workouts). Rồi vào Cài đặt → Sao lưu & khôi phục → **Nhập lịch sử từ Strong / Hevy (CSV)** → chọn tệp. Tên bài nào app chưa nhận ra, bạn bấm **Chọn bài** hoặc **Tạo bài mới** (bắt buộc chọn nhóm cơ). App nhớ cách ghép cho lần sau. Xem trước số buổi rồi bấm **Nhập**. Buổi đã có sẽ được tự bỏ qua, nên nhập lại cùng một tệp không bị trùng.
+
+### Nhắc lịch tập
+- Icon app hiện **số buổi đến hạn** (nếu điện thoại hỗ trợ).
+- Cài đặt → Tập luyện → bật **Thông báo khi có buổi đến hạn**: khi mở app vào ngày có lịch, app báo một lần trong ngày. Trên iPhone, cần cài app lên màn hình chính trước.
+- App không có máy chủ nên **không nhắc được khi đang đóng**. Muốn điện thoại tự nhắc: Tập → tab **Lịch** → **Thêm vào Lịch (.ics)**, mở tệp vừa tải để thêm vào ứng dụng Lịch. Lịch sẽ nhắc trước 1 giờ (giờ mặc định 18:00, sửa được trong Lịch).
+
 ## Giải thích nhanh các nút trên màn hình tập
 
 | Thành phần | Ý nghĩa |
 |---|---|
 | **Hiệp** (1, 2, 3 hoặc K) | Số thứ tự hiệp. Chạm để chuyển thành hiệp khởi động **K** (không tính thống kê) |
-| **kg** | Mức tạ. Bài không dùng tạ (hít đất, plank…) ghi **0** |
+| **kg / lb** | Mức tạ theo đơn vị đã chọn. Bài không dùng tạ (hít đất, plank…) ghi **0**. Bài tạ đòn có nút **đĩa** bên cạnh |
 | **Lần** | Số lần lặp. Bài giữ tư thế (plank) ghi **số giây** |
 | **RIR** | Số lần **còn có thể làm thêm** khi dừng. 0 = hết sức, 2 = còn dư 2 lần |
 | **✓** | Đánh dấu hiệp đã xong; đồng hồ nghỉ tự chạy |
 | **📖** | Bản đồ cơ, 3 bước làm đúng, 3 lỗi cần tránh, nút xem video YouTube |
 | **Chép lần trước** | Điền nhanh số liệu buổi trước |
+| **⇄** | Thay bài giữa buổi |
+| **A1, A2** | Bài trong cùng superset — nghỉ sau bài cuối nhóm |
 
 ## Câu hỏi thường gặp
 
