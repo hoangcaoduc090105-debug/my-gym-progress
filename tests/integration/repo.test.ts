@@ -397,3 +397,19 @@ describe('sessionsWithExercise — phân trang (v1.8.0)', () => {
     expect([...(await prSessionIdsFor('goblet-squat', 'epley'))].sort()).toEqual(['hs-001', 'hs-002']);
   });
 });
+
+describe('superset (v1.8.0)', () => {
+  it('startSession / Tập lại mang groupId; giáo án lưu giữ groupId', async () => {
+    const p = (await repo.getActiveProgram())!;
+    const g = structuredClone(p);
+    g.days[0]!.exercises[0]!.groupId = 'grp-1';
+    g.days[0]!.exercises[1]!.groupId = 'grp-1';
+    await repo.saveProgram(g);
+    expect((await db.programs.get(p.id))!.days[0]!.exercises[1]!.groupId).toBe('grp-1');
+    const s = await repo.startSession({ programId: p.id, programDayId: 'day-a' });
+    expect(s.exercises.map((e) => e.groupId ?? null).slice(0, 3)).toEqual(['grp-1', 'grp-1', null]);
+    await repo.saveSession({ ...s, status: 'completed', exercises: s.exercises.map((e) => ({ ...e, sets: e.sets.map((x) => ({ ...x, weightKg: 10, reps: 10, done: true })) })) });
+    const again = await repo.startRepeatSession(s.id);
+    expect(again.exercises.slice(0, 2).map((e) => e.groupId)).toEqual(['grp-1', 'grp-1']);
+  });
+});

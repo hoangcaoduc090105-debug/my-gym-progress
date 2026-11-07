@@ -290,6 +290,7 @@ export async function startSession(params: {
         target: { sets: pe.sets, repMin: pe.repMin, repMax: pe.repMax, targetRIR: pe.targetRIR, restSec: pe.restSec },
         note: '',
         sets: Array.from({ length: pe.sets }, emptySet),
+        ...(pe.groupId ? { groupId: pe.groupId } : {}),
       }));
     }
     const s: WorkoutSession = {
@@ -329,6 +330,7 @@ export async function startRepeatSession(sourceId: string, date?: string): Promi
       target: e.target,
       note: '',
       sets: Array.from({ length: Math.max(1, e.sets.filter((x) => !x.isWarmup).length) }, emptySet),
+      ...(e.groupId ? { groupId: e.groupId } : {}),
     })),
   };
   return saveSession(copy);

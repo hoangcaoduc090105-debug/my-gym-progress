@@ -118,6 +118,8 @@ export interface ProgramExercise extends ExerciseTarget {
   id: string;
   exerciseId: string;
   note?: string;
+  /** v1.8: superset — bài cùng groupId nằm liên tiếp (A1, A2…). */
+  groupId?: string;
 }
 
 export interface ProgramDay {
@@ -165,6 +167,8 @@ export interface SessionExercise {
   sets: SetEntry[];
   /** v1.8: bài này đã được "Thay bài" giữa buổi; giá trị là exerciseId cũ. */
   replacedFrom?: string;
+  /** v1.8: superset — bài cùng groupId nằm liên tiếp. */
+  groupId?: string;
 }
 
 export interface WorkoutSession {

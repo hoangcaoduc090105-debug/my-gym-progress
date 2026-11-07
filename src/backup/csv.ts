@@ -2,6 +2,7 @@ import type { BodyMetric, Exercise, WorkoutSession } from '../db/types';
 import { BODY_FIELDS, BODY_FIELD_LABELS } from '../db/types';
 import { estimate1RM, type OneRmFormula } from '../domain/oneRepMax';
 import { isWorkingSet, splitByExercise } from '../domain/sets';
+import { groupExercises } from '../domain/superset';
 
 /** Escape theo RFC 4180: bọc ngoặc kép khi có dấu phẩy, ngoặc kép, xuống dòng. Chặn CSV injection. */
 export function csvCell(v: unknown): string {
@@ -32,12 +33,16 @@ export function workoutsToCsv(sessions: WorkoutSession[], exercises: Map<string,
     'e1RM ước tính (kg)',
     'Ghi chú bài tập',
     'Ghi chú buổi',
+    'Nhóm',
   ];
   const rows: unknown[][] = [header];
   const sorted = [...sessions]
     .filter((s) => s.status === 'completed' && !s.deletedAt)
     .sort((a, b) => a.date.localeCompare(b.date) || a.startedAt.localeCompare(b.startedAt));
   for (const s of sorted) {
+    // Nhãn superset (A1, A2…) theo vị trí bài trong buổi.
+    const labels = new Map<string, string>();
+    for (const g of groupExercises(s.exercises)) for (const x of g.items) if (x.label) labels.set(x.item.id, x.label);
     for (const se of s.exercises.flatMap(splitByExercise)) {
       const ex = exercises.get(se.exerciseId);
       se.sets.forEach((set, i) => {
@@ -56,6 +61,7 @@ export function workoutsToCsv(sessions: WorkoutSession[], exercises: Map<string,
           isWorkingSet(set) ? (estimate1RM(set.weightKg ?? 0, set.reps ?? 0, formula) ?? '') : '',
           i === 0 ? se.note : '',
           i === 0 ? s.notes : '',
+          labels.get(se.id) ?? '',
         ]);
       });
     }

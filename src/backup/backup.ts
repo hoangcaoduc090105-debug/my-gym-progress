@@ -24,7 +24,11 @@ import { nowISO } from '../lib/date';
 import { arrayBufferToBase64, base64ToArrayBuffer } from './base64';
 
 export const BACKUP_APP_ID = 'my-gym-progress';
-export const BACKUP_FORMAT_VERSION = 1;
+/**
+ * 1: v1.0–1.7. 2: v1.8 — thêm trường tùy chọn (groupId, replacedFrom, isDeload, settings.barbell, weightUnit…).
+ * Tệp định dạng 1 vẫn nhập được (các trường mới vắng mặt = mặc định).
+ */
+export const BACKUP_FORMAT_VERSION = 2;
 
 const photoExportSchema = photoMetaSchema.and(z.object({ dataBase64: z.string().min(1) }));
 

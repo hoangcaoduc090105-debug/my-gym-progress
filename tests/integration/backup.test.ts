@@ -226,3 +226,40 @@ describe('sao lưu lớn & kiểm tra chặt (v1.7.0)', () => {
     expect((await db.exercises.get(BUILTIN_EXERCISES[0]!.id))?.setup?.length).toBeGreaterThan(0);
   });
 });
+
+describe('định dạng 2 (v1.8.0)', () => {
+  it('xuất formatVersion 2; khứ hồi giữ groupId (giáo án + buổi) và replacedFrom', async () => {
+    const p = (await repo.getActiveProgram())!;
+    const g = structuredClone(p);
+    g.days[0]!.exercises[0]!.groupId = 'grp-x';
+    g.days[0]!.exercises[1]!.groupId = 'grp-x';
+    await repo.saveProgram(g);
+    const s = await repo.startSession({ programId: p.id, programDayId: 'day-a', date: '2026-11-07' });
+    s.exercises[0]!.sets[0] = { ...s.exercises[0]!.sets[0]!, weightKg: 16, reps: 10, done: true, replacedFrom: 'leg-press' };
+    s.exercises[0]!.replacedFrom = 'leg-press';
+    await repo.saveSession(s);
+    await repo.finishSession(s.id);
+    const backup = await exportAll({ includePhotos: false, appVersion: 'test' });
+    expect(backup.formatVersion).toBe(2);
+    const before = { sessions: await db.sessions.toArray(), programs: await db.programs.toArray() };
+    await db.transaction('rw', db.tables, async () => {
+      for (const t of db.tables) await t.clear();
+    });
+    const parsed = parseBackupText(JSON.stringify(backup));
+    expect(parsed.ok).toBe(true);
+    await importBackup(parsed.backup!, 'replace');
+    expect(await db.sessions.toArray()).toEqual(before.sessions);
+    expect((await db.programs.get(p.id))!.days[0]!.exercises.slice(0, 2).map((e) => e.groupId)).toEqual(['grp-x', 'grp-x']);
+    const se = (await db.sessions.get(s.id))!.exercises[0]!;
+    expect([se.groupId, se.replacedFrom, se.sets[0]!.replacedFrom]).toEqual(['grp-x', 'leg-press', 'leg-press']);
+  });
+  it('tệp formatVersion 1 vẫn nhập được', async () => {
+    await seedUserData();
+    const backup = await exportAll({ includePhotos: false, appVersion: 'old' });
+    const v1 = { ...backup, formatVersion: 1 };
+    const parsed = parseBackupText(JSON.stringify(v1));
+    expect(parsed.ok).toBe(true);
+    await importBackup(parsed.backup!, 'replace');
+    expect(await db.sessions.count()).toBe(1);
+  });
+});

@@ -9,6 +9,7 @@ import { useFeedback } from '../../components/feedback';
 import { useExerciseMap, useSettings } from '../../app/useAppData';
 import { emptySet, finishSession, lastPerformances, replaceExerciseInProgramDay, softDeleteSession } from '../../db/repo';
 import { swapExercise } from '../../domain/swap';
+import { groupExercises, groupRestSec, isLastInGroup, moveBlock, nextInGroup, normalizeGroups } from '../../domain/superset';
 import { suggestProgression, type Suggestion } from '../../domain/progression';
 import { isWorkingSet } from '../../domain/sets';
 import { formatClock, formatShort, todayISO } from '../../lib/date';
@@ -89,7 +90,18 @@ export function SessionLogger() {
     if (reps == null || reps <= 0) return toast('Nhập số lần trước khi đánh dấu ✓', 'error');
     if (weight == null) return toast('Nhập mức tạ (kg). Bài không dùng tạ thì nhập 0.', 'error');
     updEx(se.id, (e) => ({ ...e, sets: e.sets.map((x, i) => (i === idx ? { ...x, reps, weightKg: weight, done: true } : x)) }));
-    if (!set.isWarmup) timer.start(se.target?.restSec || settings.restTimerDefaultSec, ex?.nameVi ?? '');
+    if (set.isWarmup) return;
+    // Superset: bài chưa phải cuối nhóm => không nghỉ, chuyển ngay sang bài kế trong nhóm.
+    const list = latest.current?.exercises ?? [];
+    const pos = list.findIndex((x) => x.id === se.id);
+    if (pos >= 0 && !isLastInGroup(list, pos)) {
+      const n = nextInGroup(list, pos);
+      const next = n != null ? list[n] : undefined;
+      if (next) document.getElementById(`se-${next.id}`)?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+    const rest = pos >= 0 ? groupRestSec(list, pos, (x) => x.target?.restSec) : null;
+    timer.start(rest || se.target?.restSec || settings.restTimerDefaultSec, ex?.nameVi ?? '');
   }
 
   function copyLast(se: SessionExercise) {
@@ -230,41 +242,43 @@ export function SessionLogger() {
 
       {s.exercises.length === 0 && <Card><p className="text-sm text-muted">Chưa có bài tập. Bấm "Thêm bài tập" bên dưới.</p></Card>}
 
-      {s.exercises.map((se, i) => (
+      {groupExercises(s.exercises).map((g) => {
+        const blocks = g.items.map(({ item: se, index: i, label }) => (
         <ExerciseBlock
+          groupLabel={label}
           key={se.id}
           sessionId={s.id}
           se={se}
           ex={exMap.get(se.exerciseId)}
           hint={hints?.[se.exerciseId]}
           settings={settings}
-          first={i === 0}
-          last={i === s.exercises.length - 1}
+          first={g.items[0]!.index === 0}
+          last={g.items[g.items.length - 1]!.index === s.exercises.length - 1}
           onChange={(fn) => updEx(se.id, fn)}
           onChangeText={(fn) => updExText(se.id, fn)}
           onBlurText={() => void flush()}
           onToggle={(idx) => toggleSet(se, idx)}
           onCopyLast={() => copyLast(se)}
           onSwap={() => setSwapFor(se.id)}
-          onMove={(d) =>
-            commit((c) => {
-              const arr = [...c.exercises];
-              const j = i + d;
-              if (j < 0 || j >= arr.length) return c;
-              [arr[i], arr[j]] = [arr[j]!, arr[i]!];
-              return { ...c, exercises: arr };
-            })
-          }
+          onMove={(d) => commit((c) => ({ ...c, exercises: moveBlock(c.exercises, i, d < 0 ? -1 : 1) }))}
           onRemove={async () => {
             const hasData = se.sets.some((x) => x.done);
             if (
               !hasData ||
               (await confirm({ title: 'Bỏ bài này khỏi buổi tập?', message: 'Các hiệp đã ghi của bài này trong buổi sẽ bị xóa.', danger: true, confirmText: 'Bỏ bài' }))
             )
-              commit((c) => ({ ...c, exercises: c.exercises.filter((x) => x.id !== se.id) }));
+              commit((c) => ({ ...c, exercises: normalizeGroups(c.exercises.filter((x) => x.id !== se.id)) }));
           }}
         />
-      ))}
+        ));
+        if (!g.letter) return blocks;
+        return (
+          <section key={g.groupId} aria-label={`Superset ${g.letter}`} className="space-y-2 rounded-2xl border-2 border-accent/50 p-1.5" data-testid="superset">
+            <div className="px-2 pt-1 text-xs font-semibold uppercase tracking-wide text-accent">Superset {g.letter} · làm xen kẽ, nghỉ sau bài cuối</div>
+            {blocks}
+          </section>
+        );
+      })}
 
       <Button block icon={<Plus size={18} />} onClick={() => setPickOpen(true)}>
         Thêm bài tập
@@ -366,6 +380,7 @@ function SuggestionBanner({ sg }: { sg: Suggestion }) {
 
 function ExerciseBlock(props: {
   sessionId: string;
+  groupLabel: string | null;
   se: SessionExercise;
   ex: Exercise | undefined;
   hint: Hint | undefined;
@@ -392,8 +407,13 @@ function ExerciseBlock(props: {
   let workIdx = 0;
 
   return (
-    <Card>
+    <Card id={`se-${se.id}`} className="scroll-mt-4">
       <div className="mb-2 flex items-start gap-1">
+        {props.groupLabel && (
+          <Badge tone="accent" className="mt-0.5 shrink-0">
+            {props.groupLabel}
+          </Badge>
+        )}
         <div className="min-w-0 flex-1">
           <Link to={`/thu-vien/${se.exerciseId}`} className="font-semibold leading-tight hover:text-accent">
             {ex?.nameVi ?? 'Bài tập đã bị xóa'}

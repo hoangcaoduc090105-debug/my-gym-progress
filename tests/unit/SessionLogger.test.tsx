@@ -12,6 +12,23 @@ vi.mock('../../src/db/repo', async (importOriginal) => {
   return { ...m, saveSession: vi.fn(m.saveSession) };
 });
 const saveSpy = vi.mocked(repo.saveSession);
+const timerStart = vi.hoisted(() => vi.fn());
+vi.mock('../../src/features/workout/RestTimer', async (importOriginal) => {
+  const m = await importOriginal<typeof import('../../src/features/workout/RestTimer')>();
+  return {
+    ...m,
+    useRestTimerActions: () => {
+      const a = m.useRestTimerActions();
+      return {
+        ...a,
+        start: (sec: number, label: string) => {
+          timerStart(sec, label);
+          a.start(sec, label);
+        },
+      };
+    },
+  };
+});
 const sleep = (ms: number) => act(() => new Promise((r) => setTimeout(r, ms)));
 
 async function renderLogger() {
@@ -113,5 +130,57 @@ describe('SessionLogger — Thay bài (v1.8.0)', () => {
     // "Chỉ buổi này" => giáo án không đổi
     expect((await repo.getActiveProgram())!.days).toEqual(before.days);
     expect(await screen.findByRole('link', { name: 'Đạp đùi máy' })).toBeInTheDocument();
+  });
+});
+
+describe('SessionLogger — superset (v1.8.0)', () => {
+  afterEach(() => saveSpy.mockReset());
+
+  it('✓ bài A1 => KHÔNG bấm giờ nghỉ; ✓ bài A2 => bấm giờ 1 lần với restSec lớn nhất nhóm', async () => {
+    await resetDb();
+    const p = (await repo.getActiveProgram())!;
+    const g = structuredClone(p);
+    const [e1, e2] = g.days[0]!.exercises;
+    Object.assign(e1!, { groupId: 'grp-a', restSec: 90 });
+    Object.assign(e2!, { groupId: 'grp-a', restSec: 150 });
+    await repo.saveProgram(g);
+    const s = await repo.startSession({ programId: p.id, programDayId: 'day-a' });
+    expect(s.exercises.slice(0, 2).map((x) => x.groupId)).toEqual(['grp-a', 'grp-a']);
+    expect(s.exercises[2]!.groupId).toBeUndefined();
+    render(
+      <FeedbackProvider>
+        <RestTimerProvider sound={false} vibrate={false}>
+          <MemoryRouter initialEntries={[`/tap/${s.id}`]}>
+            <Routes>
+              <Route path="/tap/:id" element={<SessionLogger />} />
+            </Routes>
+          </MemoryRouter>
+        </RestTimerProvider>
+      </FeedbackProvider>,
+    );
+    await screen.findByRole('heading', { name: 'Đang tập' });
+    expect(await screen.findByLabelText('Superset A')).toBeInTheDocument();
+    expect(screen.getByText('A1')).toBeInTheDocument();
+    expect(screen.getByText('A2')).toBeInTheDocument();
+    timerStart.mockClear();
+    const kg = screen.getAllByLabelText('Mức tạ hiệp 1');
+    const reps = screen.getAllByLabelText('Số lần hiệp 1');
+    const done = screen.getAllByRole('button', { name: 'Hoàn thành hiệp 1' });
+    fireEvent.change(kg[0]!, { target: { value: '16' } });
+    fireEvent.change(reps[0]!, { target: { value: '12' } });
+    fireEvent.click(done[0]!);
+    await sleep(20);
+    expect(timerStart).not.toHaveBeenCalled();
+    fireEvent.change(kg[1]!, { target: { value: '20' } });
+    fireEvent.change(reps[1]!, { target: { value: '10' } });
+    fireEvent.click(done[1]!);
+    await waitFor(() => expect(timerStart).toHaveBeenCalledTimes(1));
+    expect(timerStart.mock.calls[0]![0]).toBe(150);
+    // Bài lẻ sau nhóm vẫn nghỉ theo restSec của chính nó
+    fireEvent.change(kg[2]!, { target: { value: '30' } });
+    fireEvent.change(reps[2]!, { target: { value: '10' } });
+    fireEvent.click(done[2]!);
+    await waitFor(() => expect(timerStart).toHaveBeenCalledTimes(2));
+    expect(timerStart.mock.calls[1]![0]).toBe(s.exercises[2]!.target!.restSec);
   });
 });

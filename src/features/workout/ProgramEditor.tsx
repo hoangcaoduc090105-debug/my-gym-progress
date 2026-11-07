@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { setLeaveGuard } from '../../lib/leaveGuard';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowDown, ArrowUp, Plus, Save, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, Link2, Plus, Save, Trash2, Unlink } from 'lucide-react';
+import { groupExercises, linkWithNext, moveBlock, normalizeGroups, ungroup } from '../../domain/superset';
 import { db } from '../../db/db';
 import type { Program, ProgramDay, ProgramExercise } from '../../db/types';
-import { Button, Card, Field, IconButton, NumberInput, PageHeader, Spinner, Toggle } from '../../components/ui';
+import { Badge, Button, Card, Field, IconButton, NumberInput, PageHeader, Spinner, Toggle } from '../../components/ui';
 import { useFeedback } from '../../components/feedback';
 import { useExerciseMap, useSettings } from '../../app/useAppData';
 import { loadSchemas, saveProgram } from '../../db/repo';
@@ -224,17 +225,23 @@ export function ProgramEditor() {
             </IconButton>
           </div>
           <ul className="space-y-3">
-            {d.exercises.map((e, ei) => (
-              <li key={e.id} className="rounded-xl bg-surface2 p-3">
+            {groupExercises(d.exercises).map((g) => {
+              const rows = g.items.map(({ item: e, index: ei, label }) => (
+              <li key={e.id} className="rounded-xl bg-surface2 p-3" data-testid="program-exercise">
                 <div className="mb-2 flex items-center gap-1">
+                  {label && <Badge tone="accent" className="shrink-0">{label}</Badge>}
                   <div className="min-w-0 flex-1 font-medium">{exMap.get(e.exerciseId)?.nameVi ?? 'Bài tập đã bị xóa'}</div>
-                  <IconButton label="Đưa lên" disabled={ei === 0} onClick={() => updDay(d.id, (x) => ({ ...x, exercises: move(x.exercises, ei, -1) }))}>
+                  <IconButton label="Đưa lên" disabled={g.items[0]!.index === 0} onClick={() => updDay(d.id, (x) => ({ ...x, exercises: moveBlock(x.exercises, ei, -1) }))}>
                     <ArrowUp size={16} />
                   </IconButton>
-                  <IconButton label="Đưa xuống" disabled={ei === d.exercises.length - 1} onClick={() => updDay(d.id, (x) => ({ ...x, exercises: move(x.exercises, ei, 1) }))}>
+                  <IconButton
+                    label="Đưa xuống"
+                    disabled={g.items[g.items.length - 1]!.index === d.exercises.length - 1}
+                    onClick={() => updDay(d.id, (x) => ({ ...x, exercises: moveBlock(x.exercises, ei, 1) }))}
+                  >
                     <ArrowDown size={16} />
                   </IconButton>
-                  <IconButton label="Bỏ bài này" onClick={() => updDay(d.id, (x) => ({ ...x, exercises: x.exercises.filter((y) => y.id !== e.id) }))}>
+                  <IconButton label="Bỏ bài này" onClick={() => updDay(d.id, (x) => ({ ...x, exercises: normalizeGroups(x.exercises.filter((y) => y.id !== e.id)) }))}>
                     <Trash2 size={16} />
                   </IconButton>
                 </div>
@@ -249,8 +256,28 @@ export function ProgramEditor() {
                   {e.sets} × {e.repMin}–{e.repMax} lần · RIR {e.targetRIR} · nghỉ {formatClock(e.restSec)}
                   {e.repMax < e.repMin && <span className="text-danger"> · số lần tối đa phải ≥ tối thiểu</span>}
                 </div>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {ei < d.exercises.length - 1 && !(e.groupId && d.exercises[ei + 1]?.groupId === e.groupId) && (
+                    <Button size="sm" variant="ghost" icon={<Link2 size={16} />} onClick={() => updDay(d.id, (x) => ({ ...x, exercises: linkWithNext(x.exercises, ei, () => uid('grp')) }))}>
+                      Ghép với bài dưới
+                    </Button>
+                  )}
+                  {label && (
+                    <Button size="sm" variant="ghost" icon={<Unlink size={16} />} onClick={() => updDay(d.id, (x) => ({ ...x, exercises: ungroup(x.exercises, ei) }))}>
+                      Tách nhóm
+                    </Button>
+                  )}
+                </div>
               </li>
-            ))}
+              ));
+              if (!g.letter) return rows;
+              return (
+                <li key={g.groupId} className="rounded-2xl border-2 border-accent/50 p-2" aria-label={`Superset ${g.letter}`}>
+                  <div className="mb-2 px-1 text-xs font-semibold uppercase tracking-wide text-accent">Superset {g.letter} · làm xen kẽ, nghỉ sau bài cuối</div>
+                  <ul className="space-y-2">{rows}</ul>
+                </li>
+              );
+            })}
           </ul>
           <Button className="mt-3" block icon={<Plus size={18} />} onClick={() => setPickFor(d.id)}>
             Thêm bài tập

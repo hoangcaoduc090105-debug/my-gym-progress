@@ -326,6 +326,32 @@ try {
     assert.equal(await page.getByText('Giáo án thử E2E').count(), 0);
   });
 
+  await check('Superset: ghép 2 bài trong giáo án, lưu, mở lại thấy A1/A2', async () => {
+    await page.goto(BASE + '#/lich-tap?tab=programs');
+    const card = page.locator('section, div').filter({ hasText: 'Giáo án E2E đã đổi tên' }).filter({ has: page.getByRole('button', { name: 'Sửa', exact: true }) }).last();
+    await card.getByRole('button', { name: 'Sửa', exact: true }).click();
+    await page.getByRole('heading', { name: 'Sửa giáo án' }).waitFor();
+    for (const q of ['dead bug', 'plank']) {
+      await page.getByRole('button', { name: 'Thêm bài tập' }).first().click();
+      const dlg = page.getByRole('dialog');
+      await dlg.getByLabel('Tìm bài tập').fill(q);
+      await dlg.getByRole('listitem').getByRole('button').first().click();
+      await dlg.waitFor({ state: 'detached' });
+    }
+    assert.equal(await page.getByTestId('program-exercise').count(), 2);
+    await page.getByRole('button', { name: 'Ghép với bài dưới' }).first().click();
+    await page.getByText('A1', { exact: true }).waitFor();
+    await page.getByRole('button', { name: 'Lưu', exact: true }).click();
+    await page.getByText('Đã lưu giáo án').waitFor();
+    await card.getByRole('button', { name: 'Sửa', exact: true }).click();
+    await page.getByRole('heading', { name: 'Sửa giáo án' }).waitFor();
+    await page.getByText('A1', { exact: true }).waitFor();
+    await page.getByText('A2', { exact: true }).waitFor();
+    await page.getByLabel('Superset A').waitFor();
+    await shot('14-superset');
+    await page.getByRole('button', { name: 'Quay lại' }).click();
+  });
+
   await check('Ô đang báo lỗi nhận đúng ký tự đầu tiên (v1.7.1)', async () => {
     await page.goto(BASE + '#/lich-tap/giao-an/program-default-fullbody');
     const name = page.getByLabel('Tên giáo án');

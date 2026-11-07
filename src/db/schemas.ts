@@ -124,6 +124,7 @@ const programExerciseSchema = z
     targetRIR: z.number().int().min(0).max(5),
     restSec: z.number().int().min(0).max(900),
     note: z.string().max(500).optional(),
+    groupId: id.optional(),
   })
   .refine((t) => t.repMax >= t.repMin, { message: 'Số lần tối đa phải ≥ tối thiểu', path: ['repMax'] });
 
@@ -178,6 +179,7 @@ export const sessionSchema = z.object({
         note: z.string().max(2000),
         sets: z.array(setEntrySchema).max(50),
         replacedFrom: id.optional(),
+        groupId: id.optional(),
       }),
     )
     .max(40),
