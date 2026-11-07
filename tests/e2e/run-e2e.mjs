@@ -251,6 +251,99 @@ try {
     await page.getByText('2 hiệp').first().waitFor();
   });
 
+  // Chỉ dùng cho các bước sau: hủy buổi đang tập dở (nếu có) để không chặn buổi mới.
+  const cancelCurrent = async () => {
+    await page.getByRole('button', { name: 'Hủy buổi', exact: true }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Hủy buổi', exact: true }).click();
+    await page.getByRole('heading', { name: 'Đang tập' }).waitFor({ state: 'detached' });
+  };
+
+  await check('Hủy buổi tập rồi khôi phục từ Thùng rác', async () => {
+    await page.goto(BASE + '#/lich-tap');
+    await page.getByRole('button', { name: 'Bắt đầu Buổi B' }).click();
+    await page.getByRole('heading', { name: 'Đang tập' }).waitFor();
+    const draftUrl = page.url();
+    await cancelCurrent();
+    await page.goto(BASE + '#/cai-dat');
+    const row = page.locator('#thung-rac li').filter({ hasText: 'Buổi tập: Buổi B' });
+    await row.waitFor();
+    await row.getByRole('button', { name: 'Khôi phục' }).click();
+    await page.getByText('Đã khôi phục').waitFor();
+    await row.waitFor({ state: 'detached' });
+    // Buổi dở đã quay lại: mở được và hủy lần nữa để dọn
+    await page.goto(draftUrl);
+    await page.getByRole('heading', { name: 'Đang tập' }).waitFor();
+    await cancelCurrent();
+  });
+
+  await check('Tạo giáo án mới, đổi tên; rời trang khi chưa lưu thì hỏi', async () => {
+    await page.goto(BASE + '#/lich-tap?tab=programs');
+    await page.getByRole('button', { name: 'Tạo giáo án mới' }).click();
+    await page.getByRole('heading', { name: 'Tạo giáo án' }).waitFor();
+    await page.getByLabel('Tên giáo án').fill('Giáo án thử E2E');
+    await page.getByRole('button', { name: 'Lưu', exact: true }).click();
+    await page.getByText('Đã lưu giáo án').waitFor();
+    const card = page.locator('section, div').filter({ hasText: 'Giáo án thử E2E' }).filter({ has: page.getByRole('button', { name: 'Sửa', exact: true }) }).last();
+    await card.getByRole('button', { name: 'Sửa', exact: true }).click();
+    await page.getByRole('heading', { name: 'Sửa giáo án' }).waitFor();
+    await page.getByLabel('Tên giáo án').fill('Giáo án E2E đã đổi tên');
+    // Bấm link điều hướng khi chưa lưu → hỏi; Hủy → ở lại
+    await page.locator('nav[aria-label="Điều hướng nhanh"]').getByRole('link', { name: 'Hôm nay', exact: true }).click();
+    await page.getByRole('dialog', { name: 'Có thay đổi chưa lưu. Rời trang?' }).waitFor();
+    await page.getByRole('dialog').getByRole('button', { name: 'Hủy', exact: true }).click();
+    await page.getByRole('heading', { name: 'Sửa giáo án' }).waitFor();
+    await page.getByRole('button', { name: 'Lưu', exact: true }).click();
+    await page.getByText('Đã lưu giáo án').waitFor();
+    await page.getByText('Giáo án E2E đã đổi tên').first().waitFor();
+    assert.equal(await page.getByText('Giáo án thử E2E').count(), 0);
+  });
+
+  await check('Đặt lịch một buổi tập', async () => {
+    await page.goto(BASE + '#/lich-tap?tab=calendar');
+    await page.getByRole('button', { name: 'Đặt lịch', exact: true }).click();
+    const dlg = page.getByRole('dialog', { name: /^Đặt lịch — / });
+    await dlg.waitFor();
+    await dlg.getByRole('button', { name: 'Buổi C', exact: true }).first().click();
+    await dlg.waitFor({ state: 'detached' });
+    await page.getByText(/^Lịch đã đặt · /).first().waitFor();
+    await page.getByRole('button', { name: 'Gỡ lịch' }).first().waitFor();
+    await shot('11-schedule');
+  });
+
+  await check('"Tập lại" một buổi đã hoàn thành', async () => {
+    await page.goto(BASE + '#/lich-tap?tab=history');
+    await page.getByText('2 hiệp').first().click();
+    await page.getByRole('button', { name: 'Tập lại' }).click();
+    await page.getByRole('heading', { name: 'Đang tập' }).waitFor();
+    assert.equal(await page.getByLabel('Mức tạ hiệp 1').first().inputValue(), '');
+    assert.ok((await page.getByLabel('Mức tạ hiệp 2').count()) >= 1, 'giữ số hiệp của buổi gốc');
+    await cancelCurrent();
+  });
+
+  await check('Nhập sao lưu chế độ Gộp: giữ dữ liệu mới trên máy', async () => {
+    await page.goto(BASE + '#/cai-dat');
+    await page.getByTestId('import-input').setInputFiles(backupPath);
+    await page.getByText('Kiểm tra tệp sao lưu').waitFor();
+    assert.equal(await page.getByRole('tab', { name: 'Gộp', exact: true }).getAttribute('aria-selected'), 'true');
+    await page.getByRole('dialog').getByRole('button', { name: 'Nhập' }).click();
+    await page.getByRole('button', { name: 'Gộp dữ liệu' }).last().click();
+    await page.getByText(/Đã nhập \d+ bản ghi/).waitFor();
+    await page.goto(BASE + '#/lich-tap?tab=programs');
+    await page.getByText('Giáo án E2E đã đổi tên').first().waitFor();
+    await page.goto(BASE + '#/lich-tap?tab=history');
+    await page.getByText('2 hiệp').first().waitFor();
+  });
+
+  await check('Nhập "1.200" vào mục tiêu calories → lưu → hiển thị 1.200 kcal', async () => {
+    await page.goto(BASE + '#/cai-dat');
+    await page.getByLabel('Mục tiêu calories (kcal)').fill('1.200');
+    await page.getByRole('button', { name: 'Lưu hồ sơ' }).click();
+    await page.goto(BASE + '#/dinh-duong');
+    await page.getByText('/ 1.200 kcal').waitFor();
+    await page.goto(BASE + '#/cai-dat');
+    assert.equal(await page.getByLabel('Mục tiêu calories (kcal)').inputValue(), '1200');
+  });
+
   await check('Offline: tắt mạng, tải lại — app và dữ liệu vẫn hoạt động', async () => {
     await page.goto(BASE);
     await page.evaluate(() => navigator.serviceWorker.ready.then(() => true));
@@ -264,13 +357,17 @@ try {
     await context.setOffline(false);
   });
 
-  await check('Chuyển giao diện Tối và quay lại Sáng (lưu trên thiết bị)', async () => {
+  await check('Chuyển giao diện Tối (chụp Phân tích) và quay lại Sáng (lưu trên thiết bị)', async () => {
     await page.goto(BASE + '#/cai-dat');
     await page.getByRole('tab', { name: /Tối/ }).click();
     assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), 'dark');
     await page.goto(BASE);
     await page.getByRole('heading', { name: 'Hôm nay' }).waitFor();
     await shot('09-dashboard-dark');
+    await page.goto(BASE + '#/phan-tich');
+    await page.getByText('Kỷ lục cá nhân (Personal Records)').waitFor();
+    assert.ok((await page.locator('.recharts-surface').count()) >= 3);
+    await shot('09b-analytics-dark');
     await page.reload();
     assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), 'dark');
     await page.goto(BASE + '#/cai-dat');

@@ -26,6 +26,22 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
+      # E2E chạy trên bản build gốc "/" (vite preview); lỗi => dừng, KHÔNG deploy.
+      - name: Build cho E2E
+        run: npm run build
+      - name: Cài Chromium cho Playwright
+        run: npx playwright install --with-deps chromium
+      - name: E2E
+        run: npm run test:e2e
+        env:
+          SCREENSHOT_DIR: e2e-screenshots
+      - name: Lưu ảnh chụp E2E
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-screenshots
+          path: e2e-screenshots
+          if-no-files-found: ignore
       - name: Build (đường dẫn con /<tên-repo>/)
         run: npm run build
         env:
