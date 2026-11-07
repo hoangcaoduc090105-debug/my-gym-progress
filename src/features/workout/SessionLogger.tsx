@@ -1,13 +1,14 @@
 import { Suspense, lazy, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { ArrowDown, ArrowUp, BookOpen, Check, ClipboardCopy, Info, Minus, Plus, Timer, Trash2, TrendingUp } from 'lucide-react';
+import { ArrowDown, ArrowLeftRight, ArrowUp, BookOpen, Check, ClipboardCopy, Info, Minus, Plus, Timer, Trash2, TrendingUp } from 'lucide-react';
 import { db } from '../../db/db';
 import { MUSCLE_LABELS, type Exercise, type SessionExercise, type SetEntry, type Settings } from '../../db/types';
 import { Badge, Button, Card, IconButton, Modal, NumberInput, PageHeader, Spinner, cx } from '../../components/ui';
 import { useFeedback } from '../../components/feedback';
 import { useExerciseMap, useSettings } from '../../app/useAppData';
-import { emptySet, finishSession, lastPerformances, softDeleteSession } from '../../db/repo';
+import { emptySet, finishSession, lastPerformances, replaceExerciseInProgramDay, softDeleteSession } from '../../db/repo';
+import { swapExercise } from '../../domain/swap';
 import { suggestProgression, type Suggestion } from '../../domain/progression';
 import { isWorkingSet } from '../../domain/sets';
 import { formatClock, formatShort, todayISO } from '../../lib/date';
@@ -17,6 +18,7 @@ import { persistAfterFirstWorkout } from '../../db/persistence';
 import { useRestTimerActions } from './RestTimer';
 import { ExercisePicker } from './ExercisePicker';
 import { useSessionWriter, type SaveState } from './useSessionWriter';
+const SwapExerciseDialog = lazy(() => import('./SwapExerciseDialog'));
 const ExerciseTechnique = lazy(() => import('../library/ExerciseTechnique').then((m) => ({ default: m.ExerciseTechnique })));
 
 type Hint = { date: string; sets: SetEntry[] };
@@ -35,6 +37,7 @@ export function SessionLogger() {
   const { toast, toastError, confirm } = useFeedback();
   const { s, latest, load, commit, commitText, flush, retry, saveState } = useSessionWriter(null);
   const [pickOpen, setPickOpen] = useState(false);
+  const [swapFor, setSwapFor] = useState<string | null>(null);
   const [, setTick] = useState(0);
 
   useEffect(() => {
@@ -103,6 +106,37 @@ export function SessionLogger() {
       return { ...e, sets };
     });
     toast('Đã chép thông số buổi trước (chưa ✓)', 'info');
+  }
+
+  /** Thay bài: hỏi phạm vi nếu buổi theo giáo án, rồi đổi bài trong buổi (giữ mục tiêu, ghi chú, hiệp đã làm). */
+  async function doSwap(seId: string, newExerciseId: string) {
+    const cur = latest.current;
+    const se = cur?.exercises.find((x) => x.id === seId);
+    if (!cur || !se || se.exerciseId === newExerciseId) return;
+    const oldId = se.exerciseId;
+    const newName = exMap!.get(newExerciseId)?.nameVi ?? 'bài mới';
+    if (cur.programId && cur.programDayId) {
+      const inProgram = await db.programs
+        .get(cur.programId)
+        .then((p) => !!p?.days.find((d) => d.id === cur.programDayId)?.exercises.some((e) => e.exerciseId === oldId));
+      if (inProgram) {
+        const whole = await confirm({
+          title: `Thay bằng "${newName}" ở đâu?`,
+          message: '"Chỉ buổi này": giáo án giữ nguyên. "Cả giáo án": các buổi sau của ngày này cũng dùng bài mới.',
+          confirmText: 'Cả giáo án',
+          cancelText: 'Chỉ buổi này',
+        });
+        if (whole) {
+          try {
+            await replaceExerciseInProgramDay(cur.programId, cur.programDayId, oldId, newExerciseId);
+          } catch (e) {
+            toastError(e);
+          }
+        }
+      }
+    }
+    updEx(seId, (e) => swapExercise(e, newExerciseId));
+    toast(`Đã thay bằng ${newName}`, 'info');
   }
 
   function copyAll() {
@@ -209,6 +243,7 @@ export function SessionLogger() {
           onBlurText={() => void flush()}
           onToggle={(idx) => toggleSet(se, idx)}
           onCopyLast={() => copyLast(se)}
+          onSwap={() => setSwapFor(se.id)}
           onMove={(d) =>
             commit((c) => {
               const arr = [...c.exercises];
@@ -260,6 +295,18 @@ export function SessionLogger() {
         </Button>
       )}
       <p className="text-center text-xs text-muted">Mọi thay đổi được lưu tự động trên thiết bị.</p>
+
+      {swapFor && (
+        <Suspense fallback={null}>
+          <SwapExerciseDialog
+            open
+            ex={exMap.get(s.exercises.find((x) => x.id === swapFor)?.exerciseId ?? '')}
+            currentId={s.exercises.find((x) => x.id === swapFor)?.exerciseId ?? ''}
+            onClose={() => setSwapFor(null)}
+            onPick={(newId) => void doSwap(swapFor, newId)}
+          />
+        </Suspense>
+      )}
 
       <ExercisePicker
         open={pickOpen}
@@ -327,6 +374,7 @@ function ExerciseBlock(props: {
   onBlurText: () => void;
   onToggle: (idx: number) => void;
   onCopyLast: () => void;
+  onSwap: () => void;
   onMove: (d: number) => void;
   onRemove: () => void;
 }) {
@@ -346,6 +394,7 @@ function ExerciseBlock(props: {
           <Link to={`/thu-vien/${se.exerciseId}`} className="font-semibold leading-tight hover:text-accent">
             {ex?.nameVi ?? 'Bài tập đã bị xóa'}
           </Link>
+          {se.replacedFrom && <div className="text-xs text-muted">Đã thay bài giữa buổi</div>}
           <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-muted">
             {ex && <Badge tone="accent">{MUSCLE_LABELS[ex.primaryMuscle]}</Badge>}
             {t && (
@@ -360,6 +409,9 @@ function ExerciseBlock(props: {
             <BookOpen size={18} />
           </IconButton>
         )}
+        <IconButton label="Thay bài" onClick={props.onSwap}>
+          <ArrowLeftRight size={16} />
+        </IconButton>
         <IconButton label="Đưa lên" disabled={props.first} onClick={() => props.onMove(-1)}>
           <ArrowUp size={16} />
         </IconButton>

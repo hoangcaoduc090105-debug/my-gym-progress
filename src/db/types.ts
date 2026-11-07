@@ -153,6 +153,8 @@ export interface SetEntry {
   rir: number | null;
   isWarmup: boolean;
   done: boolean;
+  /** v1.8: hiệp đã làm TRƯỚC khi "Thay bài" — thuộc về bài cũ (exerciseId), không phải bài hiện tại. */
+  replacedFrom?: string;
 }
 
 export interface SessionExercise {
@@ -161,6 +163,8 @@ export interface SessionExercise {
   target: ExerciseTarget | null;
   note: string;
   sets: SetEntry[];
+  /** v1.8: bài này đã được "Thay bài" giữa buổi; giá trị là exerciseId cũ. */
+  replacedFrom?: string;
 }
 
 export interface WorkoutSession {

@@ -156,6 +156,7 @@ export const setEntrySchema = z.object({
   rir: z.number().int().min(0).max(10).nullable(),
   isWarmup: z.boolean(),
   done: z.boolean(),
+  replacedFrom: id.optional(),
 });
 
 export const sessionSchema = z.object({
@@ -176,6 +177,7 @@ export const sessionSchema = z.object({
         target: targetSchema.nullable(),
         note: z.string().max(2000),
         sets: z.array(setEntrySchema).max(50),
+        replacedFrom: id.optional(),
       }),
     )
     .max(40),

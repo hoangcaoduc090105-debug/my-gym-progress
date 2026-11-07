@@ -1,7 +1,7 @@
 import type { BodyMetric, Exercise, WorkoutSession } from '../db/types';
 import { BODY_FIELDS, BODY_FIELD_LABELS } from '../db/types';
 import { estimate1RM, type OneRmFormula } from '../domain/oneRepMax';
-import { isWorkingSet } from '../domain/sets';
+import { isWorkingSet, splitByExercise } from '../domain/sets';
 
 /** Escape theo RFC 4180: bọc ngoặc kép khi có dấu phẩy, ngoặc kép, xuống dòng. Chặn CSV injection. */
 export function csvCell(v: unknown): string {
@@ -38,7 +38,7 @@ export function workoutsToCsv(sessions: WorkoutSession[], exercises: Map<string,
     .filter((s) => s.status === 'completed' && !s.deletedAt)
     .sort((a, b) => a.date.localeCompare(b.date) || a.startedAt.localeCompare(b.startedAt));
   for (const s of sorted) {
-    for (const se of s.exercises) {
+    for (const se of s.exercises.flatMap(splitByExercise)) {
       const ex = exercises.get(se.exerciseId);
       se.sets.forEach((set, i) => {
         rows.push([

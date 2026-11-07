@@ -15,7 +15,6 @@ import { useSettings } from './useAppData';
 import { RestTimerProvider } from '../features/workout/RestTimer';
 import { Dashboard } from '../features/dashboard/Dashboard';
 import { WorkoutHome } from '../features/workout/WorkoutHome';
-import { SessionLogger } from '../features/workout/SessionLogger';
 
 // Trang có biểu đồ (Recharts) tải lười để mở app nhanh hơn.
 const BodyPage = lazy(() => import('../features/body/BodyPage'));
@@ -29,6 +28,8 @@ const Onboarding = lazy(() => import('../features/onboarding/Onboarding').then((
 const ProgramEditor = lazy(() => import('../features/workout/ProgramEditor').then((m) => ({ default: m.ProgramEditor })));
 const MorePage = lazy(() => import('../features/more/MorePage').then((m) => ({ default: m.MorePage })));
 const SettingsPage = lazy(() => import('../features/settings/SettingsPage').then((m) => ({ default: m.SettingsPage })));
+// Trang ghi buổi tập (kèm thay bài, lịch sử, đĩa tạ…) => chunk riêng; được precache nên vẫn mở offline.
+const SessionLogger = lazy(() => import('../features/workout/SessionLogger').then((m) => ({ default: m.SessionLogger })));
 const SessionDetail = lazy(() => import('../features/workout/SessionDetail').then((m) => ({ default: m.SessionDetail })));
 const AnalyticsPage = lazy(() => import('../features/analytics/AnalyticsPage'));
 

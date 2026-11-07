@@ -22,7 +22,7 @@ import type {
 } from './types';
 import { nowISO, todayISO } from '../lib/date';
 import { uid } from '../lib/id';
-import { isWorkingSet } from '../domain/sets';
+import { isWorkingSet, splitByExercise } from '../domain/sets';
 import { isArrayBuffer } from '../lib/image';
 import { checkFreeSpace, notifyStorageChanged, SPACE_FACTOR } from '../lib/storage';
 
@@ -122,6 +122,24 @@ export async function deleteCustomExercise(id: string): Promise<void> {
 }
 
 // ---------------- GIÁO ÁN ----------------
+
+/**
+ * "Thay bài" áp dụng cho CẢ giáo án: đổi exerciseId của bài đầu tiên khớp `oldExerciseId`
+ * trong ĐÚNG ngày `programDayId`; ngày khác giữ nguyên. Ghi qua saveProgram (có kiểm tra).
+ */
+export async function replaceExerciseInProgramDay(programId: string, programDayId: string, oldExerciseId: string, newExerciseId: string): Promise<Program> {
+  await loadSchemas();
+  const p = await db.programs.get(programId);
+  if (!p) throw new AppError('Không tìm thấy giáo án.');
+  const day = p.days.find((d) => d.id === programDayId);
+  if (!day) throw new AppError('Không tìm thấy buổi trong giáo án.');
+  const idx = day.exercises.findIndex((e) => e.exerciseId === oldExerciseId);
+  if (idx < 0) throw new AppError('Bài cũ không còn trong buổi này của giáo án.');
+  const days = p.days.map((d) =>
+    d.id !== programDayId ? d : { ...d, exercises: d.exercises.map((e, k) => (k === idx ? { ...e, exerciseId: newExerciseId } : e)) },
+  );
+  return saveProgram({ ...p, days });
+}
 
 export async function saveProgram(p: Omit<Program, 'createdAt' | 'updatedAt'> & { createdAt?: string }): Promise<Program> {
   await loadSchemas();
@@ -225,7 +243,7 @@ export async function lastPerformances(exerciseIds: string[], excludeSessionId?:
     .until((s) => done(s.date))
     .each((s) => {
       if (s.deletedAt || s.id === excludeSessionId) return;
-      for (const e of s.exercises) {
+      for (const e of s.exercises.flatMap(splitByExercise)) {
         if (!want.has(e.exerciseId) || !e.sets.some(isWorkingSet)) continue;
         const cur = best.get(e.exerciseId);
         if (!cur || s.date > cur.date || (s.date === cur.date && s.startedAt > cur.startedAt)) {

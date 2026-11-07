@@ -276,6 +276,23 @@ try {
     await cancelCurrent();
   });
 
+  await check('Thay bài giữa buổi bằng bài gợi ý', async () => {
+    await page.goto(BASE + '#/lich-tap');
+    await page.getByRole('button', { name: /^Bắt đầu Buổi/ }).click();
+    await page.getByRole('heading', { name: 'Đang tập' }).waitFor();
+    await page.getByRole('button', { name: 'Thay bài' }).first().click();
+    const dlg = page.getByRole('dialog', { name: /^Thay bài:/ });
+    await dlg.getByText('Bài thay thế gợi ý').waitFor();
+    const alt = dlg.getByRole('button', { name: /^Thay bằng / }).first();
+    const newName = (await alt.getAttribute('aria-label')).replace(/^Thay bằng /, '');
+    await shot('12-swap');
+    await alt.click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Chỉ buổi này' }).click();
+    await page.getByText('Đã thay bài giữa buổi').first().waitFor();
+    await page.getByRole('link', { name: newName, exact: true }).first().waitFor();
+    await cancelCurrent();
+  });
+
   await check('Tạo giáo án mới, đổi tên; rời trang khi chưa lưu thì hỏi', async () => {
     await page.goto(BASE + '#/lich-tap?tab=programs');
     await page.getByRole('button', { name: 'Tạo giáo án mới' }).click();

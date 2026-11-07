@@ -283,3 +283,53 @@ describe('buổi tập dở — kiểm tra trong giao dịch', () => {
     expect((await db.sessions.get(b.id))?.deletedAt).toBeNull();
   });
 });
+
+describe('Thay bài cho cả giáo án (v1.8.0)', () => {
+  it('đổi exerciseId đúng ngày; ngày khác (kể cả có cùng bài) không đổi', async () => {
+    const p = (await repo.getActiveProgram())!;
+    // Cho ngày C cũng có goblet-squat để chắc chắn chỉ ngày A đổi
+    const withDup = structuredClone(p);
+    withDup.days[2]!.exercises[0]!.exerciseId = 'goblet-squat';
+    await repo.saveProgram(withDup);
+    const r = await repo.replaceExerciseInProgramDay(p.id, 'day-a', 'goblet-squat', 'leg-press');
+    const a = r.days.find((d) => d.id === 'day-a')!;
+    expect(a.exercises[0]!.exerciseId).toBe('leg-press');
+    expect(a.exercises[0]!.id).toBe(withDup.days[0]!.exercises[0]!.id);
+    expect(a.exercises.slice(1)).toEqual(withDup.days[0]!.exercises.slice(1));
+    expect(r.days.find((d) => d.id === 'day-b')).toEqual(withDup.days[1]);
+    expect(r.days.find((d) => d.id === 'day-c')).toEqual(withDup.days[2]);
+    expect((await db.programs.get(p.id))!.days[0]!.exercises[0]!.exerciseId).toBe('leg-press');
+  });
+  it('bài cũ không có trong ngày => báo lỗi, không ghi', async () => {
+    const p = (await repo.getActiveProgram())!;
+    await expect(repo.replaceExerciseInProgramDay(p.id, 'day-b', 'goblet-squat', 'leg-press')).rejects.toBeInstanceOf(AppError);
+    expect((await db.programs.get(p.id))!.days).toEqual(p.days);
+  });
+  it('lastPerformances gán hiệp đã làm trước khi thay cho bài cũ', async () => {
+    const s = await repo.startSession({});
+    await repo.saveSession({
+      ...s,
+      status: 'completed',
+      exercises: [
+        {
+          id: 'se-x',
+          exerciseId: 'leg-press',
+          replacedFrom: 'goblet-squat',
+          target: null,
+          note: '',
+          sets: [
+            { id: 'a', weightKg: 16, reps: 12, rir: 2, isWarmup: false, done: true, replacedFrom: 'goblet-squat' },
+            { id: 'b', weightKg: 80, reps: 10, rir: 2, isWarmup: false, done: true },
+          ],
+        },
+      ],
+    });
+    const m = await repo.lastPerformances(['goblet-squat', 'leg-press']);
+    expect(m.get('goblet-squat')!.exercise.sets.map((x) => x.weightKg)).toEqual([16]);
+    expect(m.get('leg-press')!.exercise.sets.map((x) => x.weightKg)).toEqual([80]);
+    // Lưu qua schema không làm mất replacedFrom
+    const saved = (await db.sessions.get(s.id))!;
+    expect(saved.exercises[0]!.replacedFrom).toBe('goblet-squat');
+    expect(saved.exercises[0]!.sets[0]!.replacedFrom).toBe('goblet-squat');
+  });
+});

@@ -1,3 +1,4 @@
+import { db } from '../../src/db/db';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import * as repo from '../../src/db/repo';
@@ -75,5 +76,42 @@ describe('SessionLogger — hàng đợi ghi', () => {
     await waitFor(() => expect(saveSpy.mock.calls.length).toBe(before + 1));
     await waitFor(() => expect(screen.getByTestId('save-status')).toHaveTextContent('Đã lưu'));
     expect(saveSpy.mock.calls.at(-1)![0].notes).toBe('Tập nặng');
+  });
+});
+
+describe('SessionLogger — Thay bài (v1.8.0)', () => {
+  afterEach(() => saveSpy.mockReset());
+
+  it('thay bài: target, note giữ nguyên; hiệp chưa làm bị xóa số; hiệp đã làm giữ nguyên và có replacedFrom', async () => {
+    const s = await renderLogger();
+    const before = (await repo.getActiveProgram())!;
+    // Bài đầu (goblet-squat): ✓ hiệp 1, nhập dở hiệp 2, ghi cảm nhận
+    fireEvent.change(screen.getAllByLabelText('Mức tạ hiệp 1')[0]!, { target: { value: '16' } });
+    fireEvent.change(screen.getAllByLabelText('Số lần hiệp 1')[0]!, { target: { value: '12' } });
+    fireEvent.click(screen.getAllByRole('button', { name: 'Hoàn thành hiệp 1' })[0]!);
+    fireEvent.change(screen.getAllByLabelText('Mức tạ hiệp 2')[0]!, { target: { value: '18' } });
+    fireEvent.change(screen.getAllByLabelText('Số lần hiệp 2')[0]!, { target: { value: '10' } });
+    fireEvent.change(screen.getAllByLabelText('Cảm nhận bài tập')[0]!, { target: { value: 'gối hơi đau' } });
+    await sleep(600);
+    const orig = (await db.sessions.get(s.id))!.exercises[0]!;
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Thay bài' })[0]!);
+    fireEvent.click(await screen.findByRole('button', { name: 'Thay bằng Đạp đùi máy' }));
+    // Buổi theo giáo án => hỏi phạm vi; chọn "Chỉ buổi này"
+    fireEvent.click(await screen.findByRole('button', { name: 'Chỉ buổi này' }));
+    await waitFor(async () => expect((await db.sessions.get(s.id))!.exercises[0]!.exerciseId).toBe('leg-press'));
+
+    const se = (await db.sessions.get(s.id))!.exercises[0]!;
+    expect(se.id).toBe(orig.id);
+    expect(se.target).toEqual(orig.target);
+    expect(se.note).toBe('gối hơi đau');
+    expect(se.replacedFrom).toBe('goblet-squat');
+    expect(se.sets).toHaveLength(orig.sets.length);
+    expect(se.sets[0]).toMatchObject({ weightKg: 16, reps: 12, done: true, replacedFrom: 'goblet-squat' });
+    expect(se.sets[1]).toMatchObject({ weightKg: null, reps: null, rir: null, done: false });
+    expect(se.sets[1]!.replacedFrom).toBeUndefined();
+    // "Chỉ buổi này" => giáo án không đổi
+    expect((await repo.getActiveProgram())!.days).toEqual(before.days);
+    expect(await screen.findByRole('link', { name: 'Đạp đùi máy' })).toBeInTheDocument();
   });
 });

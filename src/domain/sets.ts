@@ -1,4 +1,4 @@
-import type { Exercise, SetEntry, WorkoutSession } from '../db/types';
+import type { Exercise, SessionExercise, SetEntry, WorkoutSession } from '../db/types';
 
 /** Hiệp làm việc = đã đánh dấu hoàn thành, số lần > 0, không phải hiệp khởi động. */
 export function isWorkingSet(s: SetEntry): boolean {
@@ -22,6 +22,25 @@ export interface FlatSet {
   setIndex: number;
 }
 
+/** Bài mà một hiệp thực sự thuộc về (hiệp làm trước khi "Thay bài" thuộc bài cũ). */
+export function setExerciseId(se: SessionExercise, set: SetEntry): string {
+  return set.replacedFrom ?? se.exerciseId;
+}
+
+/**
+ * Tách một SessionExercise thành từng phần theo bài thực sự (bài hiện tại + bài cũ trước khi thay).
+ * Bài không bị thay => trả về chính nó (không sao chép).
+ */
+export function splitByExercise(se: SessionExercise): SessionExercise[] {
+  if (!se.sets.some((x) => x.replacedFrom && x.replacedFrom !== se.exerciseId)) return [se];
+  const groups = new Map<string, SetEntry[]>();
+  for (const set of se.sets) {
+    const k = setExerciseId(se, set);
+    groups.set(k, [...(groups.get(k) ?? []), set]);
+  }
+  return [...groups].map(([exerciseId, sets]) => ({ ...se, exerciseId, sets }));
+}
+
 export function flattenWorkingSets(sessions: WorkoutSession[]): FlatSet[] {
   const out: FlatSet[] = [];
   for (const sess of sessions) {
@@ -30,7 +49,7 @@ export function flattenWorkingSets(sessions: WorkoutSession[]): FlatSet[] {
       for (const set of ex.sets) {
         if (!isWorkingSet(set)) continue;
         idx += 1;
-        out.push({ id: set.id, weightKg: set.weightKg ?? 0, reps: set.reps ?? 0, rir: set.rir, sessionId: sess.id, date: sess.date, exerciseId: ex.exerciseId, setIndex: idx });
+        out.push({ id: set.id, weightKg: set.weightKg ?? 0, reps: set.reps ?? 0, rir: set.rir, sessionId: sess.id, date: sess.date, exerciseId: setExerciseId(ex, set), setIndex: idx });
       }
     }
   }
