@@ -1,0 +1,65 @@
+import { addDays, diffDays, isISODate, startOfWeek } from '../../src/lib/date';
+import { parseNumber } from '../../src/lib/format';
+import { csvCell, toCsv, workoutsToCsv } from '../../src/backup/csv';
+import { arrayBufferToBase64, base64ToArrayBuffer } from '../../src/backup/base64';
+import { exMap, session, set } from './fixtures';
+
+describe('date utils', () => {
+  it('startOfWeek = Thứ Hai', () => {
+    expect(startOfWeek('2026-11-07')).toBe('2026-11-02'); // Thứ Bảy
+    expect(startOfWeek('2026-11-08')).toBe('2026-11-02'); // Chủ Nhật
+    expect(startOfWeek('2026-11-09')).toBe('2026-11-09'); // Thứ Hai
+  });
+  it('addDays / diffDays qua tháng và năm', () => {
+    expect(addDays('2026-12-30', 3)).toBe('2027-01-02');
+    expect(diffDays('2027-01-02', '2026-12-30')).toBe(3);
+  });
+  it('isISODate', () => {
+    expect(isISODate('2026-02-29')).toBe(false);
+    expect(isISODate('2028-02-29')).toBe(true);
+    expect(isISODate('2026-1-1')).toBe(false);
+  });
+  it('parseNumber chấp nhận dấu phẩy', () => {
+    expect(parseNumber('62,5')).toBe(62.5);
+    expect(parseNumber('')).toBeNull();
+    expect(parseNumber('abc')).toBeNull();
+  });
+});
+
+describe('csv', () => {
+  it('escape dấu phẩy, ngoặc kép, xuống dòng', () => {
+    expect(csvCell('a,b')).toBe('"a,b"');
+    expect(csvCell('say "hi"')).toBe('"say ""hi"""');
+    expect(csvCell('line\nbreak')).toBe('"line\nbreak"');
+    expect(csvCell(null)).toBe('');
+  });
+  it('chặn CSV injection nhưng giữ số âm', () => {
+    expect(csvCell('=SUM(A1)')).toBe("'=SUM(A1)");
+    expect(csvCell('-2.5')).toBe('-2.5');
+  });
+  it('có BOM UTF-8 và CRLF', () => {
+    const out = toCsv([['Ngực', 1]]);
+    expect(out.startsWith('﻿')).toBe(true);
+    expect(out.endsWith('\r\n')).toBe(true);
+  });
+  it('xuất lịch sử tập: 1 dòng mỗi hiệp, chỉ buổi đã hoàn thành', () => {
+    const s = [
+      session('2026-11-01', [{ exerciseId: 'db-bench-press', sets: [set(20, 10), set(20, 9)] }]),
+      session('2026-11-02', [{ exerciseId: 'db-curl', sets: [set(10, 10)] }], { status: 'draft' }),
+      session('2026-11-03', [{ exerciseId: 'db-curl', sets: [set(10, 10)] }], { deletedAt: 'x' }),
+    ];
+    const lines = workoutsToCsv(s, exMap, 'epley').trim().split('\r\n');
+    expect(lines).toHaveLength(3);
+    expect(lines[1]).toContain('Đẩy ngực tạ đơn');
+    expect(lines[1]).toContain('26.7');
+  });
+});
+
+describe('base64', () => {
+  it('khứ hồi ArrayBuffer', () => {
+    const bytes = new Uint8Array(70000).map((_, i) => i % 256);
+    const back = new Uint8Array(base64ToArrayBuffer(arrayBufferToBase64(bytes.buffer)));
+    expect(back.length).toBe(70000);
+    expect(back[12345]).toBe(12345 % 256);
+  });
+});

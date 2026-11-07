@@ -1,0 +1,17 @@
+node_modules
+dist
+dev-dist
+*.local
+.DS_Store
+coverage
+test-results
+playwright-report
+# Không bao giờ commit dữ liệu cá nhân / bản sao lưu
+*.backup.json
+my-gym-progress-*.json
+my-gym-progress-*.csv
+backups/
+personal-data/
+*.jpg
+*.jpeg
+*.heic

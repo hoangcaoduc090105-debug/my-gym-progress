@@ -1,0 +1,165 @@
+import { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { ArrowDown, ArrowUp, Plus, Save, Trash2 } from 'lucide-react';
+import { db } from '../../db/db';
+import type { Program, ProgramDay, ProgramExercise } from '../../db/types';
+import { Button, Card, Field, IconButton, NumberInput, PageHeader, Spinner, Toggle } from '../../components/ui';
+import { useFeedback } from '../../components/feedback';
+import { useExerciseMap, useSettings } from '../../app/useAppData';
+import { saveProgram } from '../../db/repo';
+import { uid } from '../../lib/id';
+import { ExercisePicker } from './ExercisePicker';
+import { formatClock, nowISO } from '../../lib/date';
+
+function move<T>(arr: T[], i: number, d: number): T[] {
+  const j = i + d;
+  if (j < 0 || j >= arr.length) return arr;
+  const c = [...arr];
+  [c[i], c[j]] = [c[j]!, c[i]!];
+  return c;
+}
+
+export function ProgramEditor() {
+  const { id } = useParams();
+  const nav = useNavigate();
+  const settings = useSettings();
+  const exMap = useExerciseMap();
+  const { toast, toastError, confirm } = useFeedback();
+  const [p, setP] = useState<Program | null>(null);
+  const [pickFor, setPickFor] = useState<string | null>(null);
+  const [dirty, setDirty] = useState(false);
+
+  useEffect(() => {
+    void (async () => {
+      if (id === 'moi') {
+        const now = nowISO();
+        setP({ id: uid('prog'), name: 'Giáo án mới', description: '', isActive: false, createdAt: now, updatedAt: now, days: [{ id: uid('day'), name: 'Buổi A', exercises: [] }] });
+      } else {
+        const found = await db.programs.get(id ?? '');
+        if (!found) {
+          toast('Không tìm thấy giáo án', 'error');
+          nav('/lich-tap?tab=programs', { replace: true });
+        } else setP(structuredClone(found));
+      }
+    })();
+  }, [id, nav, toast]);
+
+  if (!p || !exMap) return <Spinner />;
+
+  const update = (fn: (x: Program) => Program) => {
+    setP((x) => (x ? fn(x) : x));
+    setDirty(true);
+  };
+  const updDay = (dayId: string, fn: (d: ProgramDay) => ProgramDay) => update((x) => ({ ...x, days: x.days.map((d) => (d.id === dayId ? fn(d) : d)) }));
+  const updEx = (dayId: string, exId: string, patch: Partial<ProgramExercise>) =>
+    updDay(dayId, (d) => ({ ...d, exercises: d.exercises.map((e) => (e.id === exId ? { ...e, ...patch } : e)) }));
+
+  async function save() {
+    if (!p) return;
+    try {
+      await saveProgram(p);
+      setDirty(false);
+      toast('Đã lưu giáo án');
+      nav('/lich-tap?tab=programs');
+    } catch (e) {
+      toastError(e);
+    }
+  }
+
+  return (
+    <div className="space-y-4 pb-20">
+      <PageHeader
+        title={id === 'moi' ? 'Tạo giáo án' : 'Sửa giáo án'}
+        back={true}
+        action={
+          <Button variant="primary" icon={<Save size={18} />} onClick={() => void save()}>
+            Lưu
+          </Button>
+        }
+      />
+      <Card>
+        <div className="space-y-3">
+          <Field label="Tên giáo án">{(fid) => <input id={fid} value={p.name} onChange={(e) => update((x) => ({ ...x, name: e.target.value }))} />}</Field>
+          <Field label="Mô tả">{(fid) => <textarea id={fid} rows={2} value={p.description ?? ''} onChange={(e) => update((x) => ({ ...x, description: e.target.value }))} />}</Field>
+          <Toggle label="Đặt làm giáo án đang dùng" checked={p.isActive} onChange={(v) => update((x) => ({ ...x, isActive: v }))} />
+        </div>
+      </Card>
+
+      {p.days.map((d, di) => (
+        <Card key={d.id}>
+          <div className="mb-3 flex items-center gap-1">
+            <input aria-label="Tên buổi" className="flex-1 font-semibold" value={d.name} onChange={(e) => updDay(d.id, (x) => ({ ...x, name: e.target.value }))} />
+            <IconButton label="Đưa buổi lên" disabled={di === 0} onClick={() => update((x) => ({ ...x, days: move(x.days, di, -1) }))}>
+              <ArrowUp size={18} />
+            </IconButton>
+            <IconButton label="Đưa buổi xuống" disabled={di === p.days.length - 1} onClick={() => update((x) => ({ ...x, days: move(x.days, di, 1) }))}>
+              <ArrowDown size={18} />
+            </IconButton>
+            <IconButton
+              label="Xóa buổi"
+              disabled={p.days.length <= 1}
+              onClick={async () => {
+                if (await confirm({ title: `Xóa "${d.name}" khỏi giáo án?`, message: 'Lịch sử buổi tập đã ghi không bị ảnh hưởng.', danger: true, confirmText: 'Xóa' }))
+                  update((x) => ({ ...x, days: x.days.filter((y) => y.id !== d.id) }));
+              }}
+            >
+              <Trash2 size={18} />
+            </IconButton>
+          </div>
+          <ul className="space-y-3">
+            {d.exercises.map((e, ei) => (
+              <li key={e.id} className="rounded-xl bg-surface2 p-3">
+                <div className="mb-2 flex items-center gap-1">
+                  <div className="min-w-0 flex-1 font-medium">{exMap.get(e.exerciseId)?.nameVi ?? 'Bài tập đã bị xóa'}</div>
+                  <IconButton label="Đưa lên" disabled={ei === 0} onClick={() => updDay(d.id, (x) => ({ ...x, exercises: move(x.exercises, ei, -1) }))}>
+                    <ArrowUp size={16} />
+                  </IconButton>
+                  <IconButton label="Đưa xuống" disabled={ei === d.exercises.length - 1} onClick={() => updDay(d.id, (x) => ({ ...x, exercises: move(x.exercises, ei, 1) }))}>
+                    <ArrowDown size={16} />
+                  </IconButton>
+                  <IconButton label="Bỏ bài này" onClick={() => updDay(d.id, (x) => ({ ...x, exercises: x.exercises.filter((y) => y.id !== e.id) }))}>
+                    <Trash2 size={16} />
+                  </IconButton>
+                </div>
+                <div className="grid grid-cols-5 gap-2 text-xs">
+                  <Field label="Hiệp">{(fid) => <NumberInput id={fid} value={e.sets} onChange={(v) => updEx(d.id, e.id, { sets: Math.round(v ?? 1) })} className="px-2 text-center" />}</Field>
+                  <Field label="Lần từ">{(fid) => <NumberInput id={fid} value={e.repMin} onChange={(v) => updEx(d.id, e.id, { repMin: Math.round(v ?? 1) })} className="px-2 text-center" />}</Field>
+                  <Field label="đến">{(fid) => <NumberInput id={fid} value={e.repMax} onChange={(v) => updEx(d.id, e.id, { repMax: Math.round(v ?? 1) })} className="px-2 text-center" />}</Field>
+                  <Field label="RIR">{(fid) => <NumberInput id={fid} value={e.targetRIR} onChange={(v) => updEx(d.id, e.id, { targetRIR: Math.round(v ?? 0) })} className="px-2 text-center" />}</Field>
+                  <Field label="Nghỉ (s)">{(fid) => <NumberInput id={fid} value={e.restSec} onChange={(v) => updEx(d.id, e.id, { restSec: Math.round(v ?? 0) })} className="px-2 text-center" />}</Field>
+                </div>
+                <div className="mt-1 text-xs text-muted">
+                  {e.sets} × {e.repMin}–{e.repMax} lần · RIR {e.targetRIR} · nghỉ {formatClock(e.restSec)}
+                  {e.repMax < e.repMin && <span className="text-danger"> · số lần tối đa phải ≥ tối thiểu</span>}
+                </div>
+              </li>
+            ))}
+          </ul>
+          <Button className="mt-3" block icon={<Plus size={18} />} onClick={() => setPickFor(d.id)}>
+            Thêm bài tập
+          </Button>
+        </Card>
+      ))}
+      <Button
+        block
+        variant="outline"
+        icon={<Plus size={18} />}
+        onClick={() => update((x) => ({ ...x, days: [...x.days, { id: uid('day'), name: `Buổi ${String.fromCharCode(65 + x.days.length)}`, exercises: [] }] }))}
+      >
+        Thêm buổi
+      </Button>
+      {dirty && <p className="text-center text-xs text-warn">Có thay đổi chưa lưu.</p>}
+      <ExercisePicker
+        open={!!pickFor}
+        onClose={() => setPickFor(null)}
+        onPick={(exerciseId) =>
+          pickFor &&
+          updDay(pickFor, (x) => ({
+            ...x,
+            exercises: [...x.exercises, { id: uid('pe'), exerciseId, sets: 3, repMin: 8, repMax: 12, targetRIR: 2, restSec: settings.restTimerDefaultSec }],
+          }))
+        }
+      />
+    </div>
+  );
+}

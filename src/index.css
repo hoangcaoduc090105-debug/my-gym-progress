@@ -1,0 +1,68 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    color-scheme: dark;
+    -webkit-tap-highlight-color: transparent;
+    text-size-adjust: 100%;
+  }
+  body {
+    @apply bg-bg text-text font-sans antialiased;
+    min-height: 100dvh;
+    overscroll-behavior-y: none;
+  }
+  input,
+  select,
+  textarea {
+    @apply bg-surface2 border border-line rounded-xl px-3 text-text placeholder:text-muted/60 outline-none;
+    font-size: 16px; /* chặn iOS tự zoom khi focus */
+  }
+  input,
+  select {
+    @apply h-11;
+  }
+  textarea {
+    @apply py-2;
+  }
+  input:focus,
+  select:focus,
+  textarea:focus {
+    @apply border-accent/70 ring-2 ring-accent/20;
+  }
+  input[type='number']::-webkit-inner-spin-button,
+  input[type='number']::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type='number'] {
+    -moz-appearance: textfield;
+  }
+  input[type='checkbox'] {
+    @apply h-5 w-5 accent-accent p-0;
+  }
+  :focus-visible {
+    @apply outline-none ring-2 ring-accent/60;
+  }
+}
+
+@layer components {
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .pt-safe {
+    padding-top: env(safe-area-inset-top);
+  }
+}
+
+.recharts-cartesian-axis-tick-value {
+  fill: #8a97a8;
+  font-size: 11px;
+}
+.recharts-tooltip-wrapper {
+  outline: none;
+}
