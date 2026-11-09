@@ -99,8 +99,8 @@ Xuất CSV từ app cũ (Strong: Settings → Export Strong Data; Hevy: Settings
 
 ## Tính năng mới ở bản 1.10
 
-### Logo mới (1.10.1)
-Biểu tượng app đổi sang tạ đơn vẽ nét màu xanh ngọc trên nền tối, dấu tích cam. Nếu đã cài app lên màn hình chính, biểu tượng cũ có thể còn giữ cho tới khi bạn gỡ và cài lại từ trình duyệt; dữ liệu không bị ảnh hưởng.
+### Logo mới (1.10.2)
+Biểu tượng app là chữ G·Y·M trên nền tối: chữ G và M màu xanh ngọc, chữ Y là hình người đang gồng tay màu cam. Bản chữ nằm ngang "GYM PROGRESS" lưu ở `docs/brand/wordmark.svg`. Nếu đã cài app lên màn hình chính, biểu tượng cũ có thể còn giữ cho tới khi bạn gỡ và cài lại từ trình duyệt; dữ liệu không bị ảnh hưởng.
 
 ### Hai giáo án mẫu mới, thành lộ trình từ người mới đến Physique
 Tập → Giáo án → **Thêm từ mẫu** nay có 5 mẫu, xếp theo trình độ:
