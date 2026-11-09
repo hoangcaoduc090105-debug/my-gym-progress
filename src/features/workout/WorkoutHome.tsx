@@ -346,6 +346,13 @@ function CalendarTab({ programs, sessions, schedule }: { programs: Program[]; se
   );
 }
 
+/** Nhãn trình độ của giáo án mẫu (v1.10 thêm 'advanced'). */
+const LEVEL_BADGE: Record<ProgramTemplate['level'], { label: string; tone: 'ok' | 'warn' | 'danger' }> = {
+  beginner: { label: 'Người mới', tone: 'ok' },
+  intermediate: { label: 'Đã tập ≥ 6 tháng', tone: 'warn' },
+  advanced: { label: 'Đã tập ≥ 1 năm', tone: 'danger' },
+};
+
 function ProgramsTab({ programs }: { programs: Program[] }) {
   const nav = useNavigate();
   const { confirm, toast, toastError } = useFeedback();
@@ -435,11 +442,14 @@ function ProgramsTab({ programs }: { programs: Program[] }) {
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-semibold">{t.name}</span>
                     <Badge tone="info">{t.daysPerWeek} buổi/tuần</Badge>
-                    <Badge tone={t.level === 'beginner' ? 'ok' : 'warn'}>{t.level === 'beginner' ? 'Người mới' : 'Đã tập ≥ 6 tháng'}</Badge>
+                    <Badge tone={LEVEL_BADGE[t.level].tone}>{LEVEL_BADGE[t.level].label}</Badge>
                     {existed && <Badge>Đã có</Badge>}
                   </div>
                   <div className="mt-0.5 text-sm text-muted">{t.days.map((d) => d.name).join(' · ')}</div>
                   <p className="mt-2 text-xs text-muted">{t.description}</p>
+                  <p className="mt-1 text-xs text-muted">
+                    <span className="font-medium text-text">Khi nào đổi:</span> {t.nextStep}
+                  </p>
                   <div className="mt-3 flex gap-2">
                     <Button size="sm" variant="primary" disabled={adding != null} onClick={() => void addTemplate(t.key, true)}>
                       {existed ? 'Dùng ngay' : 'Thêm và dùng ngay'}

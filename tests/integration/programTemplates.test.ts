@@ -24,7 +24,37 @@ describe('giáo án mẫu (v1.9)', () => {
         }
       }
     }
-    expect(PROGRAM_TEMPLATES.map((t) => t.key)).toEqual(['fullbody-2', 'upper-lower-4', 'ppl-6']);
+    expect(PROGRAM_TEMPLATES.map((t) => t.key)).toEqual(['fullbody-2', 'fullbody-3-plus', 'upper-lower-4', 'ppl-6', 'physique-5']);
+  });
+
+  it('v1.10: mọi mẫu có gợi ý "khi nào đổi"; mẫu Physique nhấn vai/lưng, chân vừa phải; thứ tự theo trình độ', () => {
+    const primary = new Map(BUILTIN_EXERCISES.map((e) => [e.id, e.primaryMuscle]));
+    const setsBy = (key: string) => {
+      const t = PROGRAM_TEMPLATES.find((x) => x.key === key)!;
+      const m = new Map<string, number>();
+      for (const d of t.days) for (const [exId, sets] of d.rows) m.set(primary.get(exId)!, (m.get(primary.get(exId)!) ?? 0) + sets);
+      return m;
+    };
+    for (const t of PROGRAM_TEMPLATES) expect(t.nextStep.length, t.key).toBeGreaterThan(20);
+
+    const ph = setsBy('physique-5');
+    expect(PROGRAM_TEMPLATES.find((t) => t.key === 'physique-5')!.level).toBe('advanced');
+    expect(ph.get('shoulders')!).toBeGreaterThanOrEqual(14);
+    expect(ph.get('back')!).toBeGreaterThanOrEqual(14);
+    expect(ph.get('chest')!).toBeGreaterThanOrEqual(10);
+    expect(ph.get('abs')!).toBeGreaterThanOrEqual(8);
+    expect(ph.get('quads')!).toBeLessThan(ph.get('back')!);
+
+    // Trung cấp 3 buổi: 3 buổi, mỗi nhóm cơ lớn ≥ 6 hiệp/tuần, nhiều hiệp hơn mẫu 2 buổi
+    const mid = setsBy('fullbody-3-plus');
+    expect(PROGRAM_TEMPLATES.find((t) => t.key === 'fullbody-3-plus')!.level).toBe('intermediate');
+    for (const g of ['chest', 'back', 'quads', 'hamstrings', 'shoulders']) expect(mid.get(g)!, g).toBeGreaterThanOrEqual(6);
+    const total = (m: Map<string, number>) => [...m.values()].reduce((a, b) => a + b, 0);
+    expect(total(mid)).toBeGreaterThan(total(setsBy('fullbody-2')));
+
+    const order = { beginner: 0, intermediate: 1, advanced: 2 };
+    const levels = PROGRAM_TEMPLATES.map((t) => order[t.level]);
+    expect([...levels].sort((a, b) => a - b)).toEqual(levels);
   });
 
   it('programFromTemplate tạo id mới mỗi lần và qua được schema (saveProgram)', async () => {

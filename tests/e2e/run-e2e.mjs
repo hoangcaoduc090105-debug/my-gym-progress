@@ -410,6 +410,12 @@ try {
     const dlg2 = page.getByRole('dialog', { name: 'Giáo án mẫu' });
     await dlg2.getByText('Đẩy/Kéo/Chân 6 buổi').waitFor();
     assert.equal(await dlg2.getByText('Đã có', { exact: true }).count(), 1);
+    // v1.10: hai mẫu mới và nhãn trình độ
+    await dlg2.getByText('Toàn thân 3 buổi — Nâng cao', { exact: true }).waitFor();
+    await dlg2.getByText('Physique 5 buổi — Dáng chữ V', { exact: true }).waitFor();
+    assert.equal(await dlg2.getByText('Đã tập ≥ 1 năm', { exact: true }).count(), 1);
+    assert.equal(await dlg2.getByText('Khi nào đổi:', { exact: true }).count(), 5);
+    await noOverflow();
     await page.keyboard.press('Escape');
     // Quay về giáo án mặc định cho các bước sau
     const def = page.locator('section').filter({ hasText: 'Toàn thân 3 buổi — Người mới' }).filter({ has: page.getByRole('button', { name: 'Dùng giáo án này' }) }).first();

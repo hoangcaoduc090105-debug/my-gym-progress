@@ -97,6 +97,24 @@ Xuất CSV từ app cũ (Strong: Settings → Export Strong Data; Hevy: Settings
 - Cài đặt → Tập luyện → bật **Thông báo khi có buổi đến hạn**: khi mở app vào ngày có lịch, app báo một lần trong ngày. Trên iPhone, cần cài app lên màn hình chính trước.
 - App không có máy chủ nên **không nhắc được khi đang đóng**. Muốn điện thoại tự nhắc: Tập → tab **Lịch** → **Thêm vào Lịch (.ics)**, mở tệp vừa tải để thêm vào ứng dụng Lịch. Lịch sẽ nhắc trước 1 giờ (giờ mặc định 18:00, sửa được trong Lịch).
 
+## Tính năng mới ở bản 1.10
+
+### Hai giáo án mẫu mới, thành lộ trình từ người mới đến Physique
+Tập → Giáo án → **Thêm từ mẫu** nay có 5 mẫu, xếp theo trình độ:
+
+| Mẫu | Buổi/tuần | Dành cho | Khi nào đổi |
+|---|---|---|---|
+| Toàn thân 2 buổi — Người bận | 2 | Người mới | Có 3 ngày/tuần → Toàn thân 3 buổi (mặc định) |
+| Toàn thân 3 buổi — Người mới (có sẵn) | 3 | Người mới | Sau ~6 tháng → Toàn thân 3 buổi — Nâng cao |
+| **Toàn thân 3 buổi — Nâng cao** (mới) | 3 | Đã tập 6–12 tháng | Chậm tiến bộ, có 4–5 ngày → Trên/Dưới hoặc Physique |
+| Trên/Dưới 4 buổi | 4 | Đã tập ≥ 6 tháng | Muốn ưu tiên vai, lưng → Physique |
+| Đẩy/Kéo/Chân 6 buổi | 6 | Đã tập ≥ 6 tháng | Mệt kéo dài → Trên/Dưới; muốn dáng chữ V → Physique |
+| **Physique 5 buổi — Dáng chữ V** (mới) | 5 | Đã tập ≥ 1 năm | Giáo án đích; chững lại thì thay bài hoặc xen tuần nhẹ |
+
+Mẫu **Physique** nhắm dáng Men's Physique: vai tròn rộng, lưng xòe chữ V, ngực trên đầy, eo nhỏ, bụng rõ; chân chỉ 1 buổi. Vai bên và lưng được tập 2–3 buổi mỗi tuần. Lưu ý: giáo án xây cơ, còn để cơ lộ rõ cần thêm giai đoạn ăn thâm hụt calo và đủ protein, dùng mục Ăn uống để theo dõi.
+
+Mỗi thẻ mẫu nay có dòng **Khi nào đổi** gợi ý lúc nên chuyển sang mẫu kế tiếp.
+
 ## Tính năng mới ở bản 1.9
 
 ### Màn hình tập gọn hơn trên điện thoại

@@ -68,3 +68,7 @@ Service worker dùng chế độ `prompt`. Khi có bản mới, app chỉ hiện
 | `meta` | `fix.typo.czhinh` | Đã chạy `fixKnownTypos()` một lần (sửa mô tả giáo án seed cũ) | — |
 
 Giáo án mẫu (`src/data/programTemplates.ts`) là dữ liệu tĩnh tải lười, tạo giáo án mới với id riêng qua `repo.addProgramFromTemplate`; không nằm trong seed.
+
+### v1.10.0 — không đổi schema, không đổi định dạng sao lưu
+
+Chỉ thêm dữ liệu tĩnh: `PROGRAM_TEMPLATES` có thêm `fullbody-3-plus` (trung cấp 3 buổi) và `physique-5` (5 buổi, `level: 'advanced'`), cùng trường `nextStep` (gợi ý khi nào đổi mẫu) cho mọi mẫu. Kiểm thử tích hợp bảo đảm mẫu Physique có ≥ 14 hiệp vai, ≥ 14 hiệp lưng và ít hiệp chân hơn lưng; các mẫu xếp theo trình độ tăng dần.
